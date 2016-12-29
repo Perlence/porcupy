@@ -47,8 +47,11 @@ def test_tuples():
 
     assert compile_('x = (1, 2, 3); y = x') == 'p1z 2 p2z 1 p3z 2 p4z 3 p5z p1z'
 
-    with pytest.skip():
-        assert compile_('x = ((1, 2), (3, 4))') == 'p1z 1 p2z 2 p3z 3 p4z 4 p5z 1 p6z 3'
+    with pytest.raises(NotImplementedError) as exc_info:
+        compile_('x = ((1, 2), (3, 4))')
+    assert 'cannot declare item' in str(exc_info.value)
+
+    assert compile_('x = (1, 2); y = (3, 4); z = (x, y)') == 'p1z 2 p2z 1 p3z 2 p4z 5 p5z 3 p6z 4 p7z 8 p8z p1z p9z p4z'
 
 
 @pytest.mark.skip
