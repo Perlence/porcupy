@@ -53,7 +53,7 @@ bots = [Bot(x) for x in range(1, 10)]
 @attr.s
 class Yegik:
     _number = attr.ib()
-    frags = attr.ib(default=0)
+    frags = attr.ib(default=0, metadata={'letter': 'f'})
     pos_x = attr.ib(default=0.0)
     pos_y = attr.ib(default=0.0)
     speed_x = attr.ib(default=0.0)
@@ -64,6 +64,7 @@ class Yegik:
     weapon = attr.ib(default=0)
     ammo = attr.ib(default=0)
     view_angle = attr.ib(default=0.0)
+    _letter = 'e'
 
     def spawn(self, point):
         pass

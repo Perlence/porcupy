@@ -3,7 +3,7 @@ from numbers import Number
 
 import attr
 
-# from . import runtime as rt
+from . import runtime
 
 
 def compile(source, filename='<unknown>'):
@@ -43,9 +43,8 @@ class NodeVisitor(ast.NodeVisitor):
         if self.is_const(target):
             self.scope.define_const(target.id, value.n)
             return
-        type = Number
         if slot is None:
-            slot = self.scope.define_slot(target.id, type)
+            slot = self.scope.define(NumberSlot, target.id)
         value = format_number(value.n)
         self.output_assign(slot, value)
 
@@ -53,9 +52,8 @@ class NodeVisitor(ast.NodeVisitor):
         if self.is_const(target):
             self.scope.define_const(target.id, value.s)
             return
-        type = str
         if slot is None:
-            slot = self.scope.define_slot(target.id, type)
+            slot = self.scope.define(StringSlot, target.id)
         value = format_string(value.s)
         self.output_assign(slot, value)
 
@@ -65,14 +63,13 @@ class NodeVisitor(ast.NodeVisitor):
     def assign_name(self, target, value, dest_slot):
         src_slot = self.scope.get(value.id)
         if dest_slot is None:
-            dest_slot = self.scope.define_slot(target.id, src_slot.type)
+            if isinstance(src_slot, NumberConst):
+                dest_slot = self.scope.define(NumberSlot, target.id)
+            elif isinstance(src_slot, StringConst):
+                dest_slot = self.scope.define(StringSlot, target.id)
+            else:
+                dest_slot = self.scope.copy(src_slot, target.id)
         self.output_assign(dest_slot, src_slot)
-
-    def assign_call(self, target, value, slot):
-        if value.func.id == 'const':
-            self.assign_const(target, value)
-        else:
-            raise NotImplementedError('functions are not implemented yet')
 
     def assign_const(self, target, call):
         const_arg = call.args[0]
@@ -85,7 +82,7 @@ class NodeVisitor(ast.NodeVisitor):
 
         length = len(value.elts)
         if slot is None:
-            tuple_pointer = self.scope.define_tuple(target.id, length)
+            tuple_pointer = self.scope.define(TuplePointerSlot, target.id, length)
         else:
             tuple_pointer = slot
         slots = self.scope.allocate_many(tuple_type, length)
@@ -105,19 +102,15 @@ class NodeVisitor(ast.NodeVisitor):
                 type_set.add(str)
             elif isinstance(item, ast.Name):
                 slot = self.scope.get(item.id)
-                type_set.add(slot.type)
+                type_set.add(slot.slot_type)
             else:
                 raise NotImplementedError("cannot declare item '{}' in a container yet".format(item))
             if len(type_set) > 1:
                 return
         return next(iter(type_set))
 
-    def assign_subscript(self, target, value, var):
-        z
-
     def output_assign(self, dest, value):
-        letter = type_letter(dest.type)
-        self.output += '{}{}z {} '.format(letter, dest.slot_number, value)
+        self.output += '{}{}z {} '.format(dest.letter, dest.slot_number, value)
 
 
 @attr.s
@@ -126,42 +119,50 @@ class Scope:
     numeric_slots = attr.ib(default=attr.Factory(lambda: Slots(1)))
     string_slots = attr.ib(default=attr.Factory(lambda: Slots()))
 
-    def define(self, name, type):
     def define_const(self, name, value):
-        const = Const(value, type(value))
+        if isinstance(value, Number):
+            const = NumberConst(value)
+        elif isinstance(value, str):
+            const = StringConst(value)
         self.names[name] = const
         return const
 
-    def define_tuple(self, name, length):
-        slot = self.define_slot(name, Number)
-        return TuplePointer(slot, length)
-
-    def define_slot(self, name, type):
+    def copy(self, src_slot, name):
         slot = self.names.get(name)
         if slot is not None:
+            # TODO: Check destination type
             return slot
-        slot = self.allocate(type)
-        self.names[name] = slot
+        slot_number = self.allocate(src_slot.slot_type)
+        print(src_slot)
+        slot = self.names[name] = attr.assoc(src_slot, slot_number=slot_number)
+        return slot
+
+    def define(self, type, name, *attrs):
+        slot = self.names.get(name)
+        if slot is not None:
+            # TODO: Check destination type
+            return slot
+        slot_number = self.allocate(type.slot_type)
+        slot = self.names[name] = type(slot_number, *attrs)
         return slot
 
     def allocate(self, type):
         if issubclass(type, Number):
             slot_number = self.numeric_slots.allocate()
-            return Slot(slot_number, type)
         elif issubclass(type, str):
             slot_number = self.string_slots.allocate()
-            return Slot(slot_number, type)
         else:
             raise TypeError("cannot allocate slot of type '{}'".format(type))
+        return slot_number
 
     def allocate_many(self, type, length):
         # TODO: Ensure the memory region is one block
-        if type in (Number, tuple):
+        if issubclass(type, Number):
             slotnums = [self.numeric_slots.allocate() for _ in range(length)]
-            return list(map(Slot.number, slotnums))
-        elif type == str:
+            return list(map(NumberSlot, slotnums))
+        elif issubclass(type, str):
             slotnums = [self.string_slots.allocate() for _ in range(length)]
-            return list(map(Slot.string, slotnums))
+            return list(map(StringSlot, slotnums))
 
     def get(self, name):
         slot = self.names.get(name)
@@ -191,54 +192,44 @@ RESERVED = object()
 
 
 @attr.s
-class Const:
+class NumberConst:
     value = attr.ib()
-    type = attr.ib()
 
     def __str__(self):
-        if isinstance(self.value, Number):
-            return format_number(self.value)
-        elif isinstance(self.value, str):
-            return format_string(self.value)
+        return format_number(self.value)
 
 
 @attr.s
-class Slot:
+class StringConst:
+    value = attr.ib()
+
+    def __str__(self):
+        return format_string(self.value)
+
+
+@attr.s
+class NumberSlot:
     slot_number = attr.ib()
-    type = attr.ib()
-
-    @classmethod
-    def number(cls, number):
-        return cls(number, Number)
-
-    @classmethod
-    def string(cls, number):
-        return cls(number, str)
+    slot_type = Number
+    letter = 'p'
 
     def __str__(self):
-        letter = type_letter(self.type)
-        return '{}{}z'.format(letter, self.slot_number)
+        return 'p{}z'.format(self.slot_number)
 
 
 @attr.s
-class TuplePointer:
-    starts_at = attr.ib()
-    length = attr.ib(default=0)
-    type = int
+class StringSlot:
+    slot_number = attr.ib()
+    slot_type = str
+    letter = 's'
 
-    @property
-    def slot_number(self):
-        return self.starts_at.slot_number
+    def __str__(self):
+        return 's{}z'.format(self.slot_number)
 
 
-def type_letter(type):
-    if issubclass(type, (Number, tuple)):
-        type_letter = 'p'
-    elif issubclass(type, str):
-        type_letter = 's'
-    else:
-        raise TypeError("variable has unsupported type '{}'".format(type))
-    return type_letter
+@attr.s
+class TuplePointerSlot(NumberSlot):
+    length = attr.ib()
 
 
 def format_number(n):

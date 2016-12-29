@@ -17,6 +17,7 @@ def test_numbers():
     assert compile_('x = 4') == 'p1z 4'
     assert compile_('x = 4.0') == 'p1z 4,0'
     assert compile_('x = 4; y = 5') == 'p1z 4 p2z 5'
+    assert compile_('x = 4; x = 5') == 'p1z 4 p1z 5'
 
 
 def test_multiple_assign():
@@ -66,6 +67,18 @@ def test_tuples():
                  '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'
                  '0,0,0,0,0,0,0,0,0,0,0,0)')
     assert str(exc_info.value) == 'ran out of variable slots'
+
+    # with pytest.raises(NotImplementedError) as exc_info:
+    #     assert compile_('x = (1, 2); y = x[0]') == 'p1z 2 p2z 1 p3z 2 p4z p1z+0 p4z p^4z'
+
+
+# def test_game_vars():
+#     assert compile_('x = yegiks[0]') == 'p1z 1'
+    # assert compile_('x = (yegiks[0], yegiks[1])') == 'p1z 2 p2z 1 p3z 2'
+
+    # assert compile_('x = yegiks[0].frags') == 'p1z e1f'
+
+    # assert compile_('x = yegiks[0]; x.frags = 0') == 'p1z 1 e^1z 0'
 
 
 @pytest.mark.skip
