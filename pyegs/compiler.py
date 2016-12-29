@@ -34,14 +34,17 @@ class NodeVisitor(ast.NodeVisitor):
             raise NotImplementedError('assigning unary operations is not implemented yet')
         elif isinstance(node.value, ast.BinOp):
             raise NotImplementedError('assigning binary operations is not implemented yet')
-        elif isinstance(node.value, ast.Call):
-            self.assign_call(target, node.value, var)
         elif isinstance(node.value, ast.Tuple):
             self.assign_tuple(target, node.value, var)
+        elif isinstance(node.value, ast.Subscript):
+            self.assign_subscript(target, node.value, var)
         else:
             raise NotImplementedError("unable to assign the value '{}'".format(node.value))
 
     def assign_num(self, target, value, var):
+        if self.is_const(target):
+            self.scope.define_const(target.id, value.n)
+            return
         type = Number
         if var is None:
             var = self.scope.define(target.id, type)
@@ -49,11 +52,17 @@ class NodeVisitor(ast.NodeVisitor):
         self.output_assign(var, value)
 
     def assign_str(self, target, value, var):
+        if self.is_const(target):
+            self.scope.define_const(target.id, value.s)
+            return
         type = str
         if var is None:
             var = self.scope.define(target.id, type)
         value = format_string(value.s)
         self.output_assign(var, value)
+
+    def is_const(self, target):
+        return target.id is not None and target.id.isupper()
 
     def assign_name(self, target, value, dest_var):
         src_var = self.scope.get(value.id)
@@ -104,6 +113,9 @@ class NodeVisitor(ast.NodeVisitor):
                 return
         return next(iter(type_set))
 
+    def assign_subscript(self, target, value, var):
+        z
+
     def output_assign(self, var, value):
         letter = type_letter(var.type())
         self.output += '{}{}z {} '.format(letter, var.varnum, value)
@@ -141,10 +153,7 @@ class Scope:
             return list(map(Variable.string, varnums))
 
     def define_const(self, name, value):
-        if isinstance(value, ast.Num):
-            self.names[name] = Const(value.n)
-        elif isinstance(value, ast.Str):
-            self.names[name] = Const(value.s)
+        self.names[name] = Const(value)
 
     def get(self, name):
         var = self.names.get(name)

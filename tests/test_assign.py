@@ -9,8 +9,8 @@ def test_assign():
 
 
 def test_consts():
-    assert compile_('x = const(4)') == ''
-    assert compile_('x = const(4); y = x') == 'p1z 4'
+    assert compile_('X = 4') == ''
+    assert compile_('X = 4; y = X') == 'p1z 4'
 
 
 def test_numbers():
@@ -44,6 +44,7 @@ def test_tuples():
     assert compile_('x = 1; y = (2, 3)') == 'p1z 1 p2z 3 p3z 2 p4z 3'
 
     assert compile_('x = 1; y = ("1", "2")') == 'p1z 1 p2z 0 s0z 1 s1z 2'
+    assert compile_('x = 1; y = ("Hello World", "beep boop")') == 'p1z 1 p2z 0 s0z Hello_World s1z beep_boop'
 
     assert compile_('x = (1, 2, 3); y = x') == 'p1z 2 p2z 1 p3z 2 p4z 3 p5z p1z'
 

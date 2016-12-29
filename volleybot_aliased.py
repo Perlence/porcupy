@@ -1,7 +1,6 @@
-from pyegs.language import const
 from pyegs.runtime import timers, system, yegiks, bots, points
 
-punch_force = const(-15)
+PUNCH_FORCE = -15
 
 if timers[1].value <= 1:
     players = (yegiks[0], yegiks[1])  # p1z 1 p2z 2
@@ -56,7 +55,7 @@ for player_num, player in enumerate(players):
         if player_ball_distance_x < 0:
             ball.speed_x = -10
 
-        ball.speed_y = punch_force  # e^3v -15
+        ball.speed_y = PUNCH_FORCE  # e^3v -15
 
 # Check touches
 if player_touches[0] == 3 or player_touches[1] == 3:
