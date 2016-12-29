@@ -105,8 +105,11 @@ class NodeVisitor(ast.NodeVisitor):
 class Variables:
     start = attr.ib(default=0)
     stop = attr.ib(default=100)
-    variables = attr.ib(default=attr.Factory(lambda: [None for x in range(100)]))
+    variables = attr.ib(init=False)
     names = attr.ib(default=attr.Factory(dict))
+
+    def __attrs_post_init__(self):
+        self.variables = [None for x in range(self.start, self.stop)]
 
     def allocate_one(self, name):
         number = self.names.get(name)
