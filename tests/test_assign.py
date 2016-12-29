@@ -3,7 +3,7 @@ import pytest
 from pyegs.compiler import compile as compile_
 
 
-def test_assign():
+def test_tuple_assign():
     with pytest.raises(NotImplementedError):
         compile_('x, y = 1, 2')
 
@@ -17,6 +17,11 @@ def test_numbers():
     assert compile_('x = 4') == 'p1z 4'
     assert compile_('x = 4.0') == 'p1z 4,0'
     assert compile_('x = 4; y = 5') == 'p1z 4 p2z 5'
+
+
+def test_multiple_assign():
+    assert compile_('x = y = 5') == 'p1z 5 p2z 5'
+    assert compile_('x = y = (1, 2)') == 'p1z 2 p2z 1 p3z 2 p4z 5 p5z 1 p6z 2'
 
 
 def test_other_names():

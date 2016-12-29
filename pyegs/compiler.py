@@ -20,26 +20,24 @@ class NodeVisitor(ast.NodeVisitor):
     output = attr.ib(default='')
 
     def visit_Assign(self, node, var=None):
-        target = node.targets[0]
-        if isinstance(target, ast.Tuple):
-            raise NotImplementedError('iterable destruction is not implemented yet')
+        for target in node.targets:
+            if isinstance(target, ast.Tuple):
+                raise NotImplementedError('iterable destruction is not implemented yet')
 
-        if isinstance(node.value, ast.Num):
-            self.assign_num(target, node.value, var)
-        elif isinstance(node.value, ast.Str):
-            self.assign_str(target, node.value, var)
-        elif isinstance(node.value, ast.Name):
-            self.assign_name(target, node.value, var)
-        elif isinstance(node.value, ast.UnaryOp):
-            raise NotImplementedError('assigning unary operations is not implemented yet')
-        elif isinstance(node.value, ast.BinOp):
-            raise NotImplementedError('assigning binary operations is not implemented yet')
-        elif isinstance(node.value, ast.Tuple):
-            self.assign_tuple(target, node.value, var)
-        elif isinstance(node.value, ast.Subscript):
-            self.assign_subscript(target, node.value, var)
-        else:
-            raise NotImplementedError("unable to assign the value '{}'".format(node.value))
+            if isinstance(node.value, ast.Num):
+                self.assign_num(target, node.value, var)
+            elif isinstance(node.value, ast.Str):
+                self.assign_str(target, node.value, var)
+            elif isinstance(node.value, ast.Name):
+                self.assign_name(target, node.value, var)
+            elif isinstance(node.value, ast.UnaryOp):
+                raise NotImplementedError('assigning unary operations is not implemented yet')
+            elif isinstance(node.value, ast.BinOp):
+                raise NotImplementedError('assigning binary operations is not implemented yet')
+            elif isinstance(node.value, ast.Tuple):
+                self.assign_tuple(target, node.value, var)
+            else:
+                raise NotImplementedError("unable to assign the value '{}'".format(node.value))
 
     def assign_num(self, target, value, var):
         if self.is_const(target):
