@@ -72,8 +72,8 @@ def test_tuples():
     #     assert compile_('x = (1, 2); y = x[0]') == 'p1z 2 p2z 1 p3z 2 p4z p1z+0 p4z p^4z'
 
 
-# def test_game_vars():
-#     assert compile_('x = yegiks[0]') == 'p1z 1'
+def test_game_vars():
+    assert compile_('x = yegiks[0]') == 'p1z 1'
     # assert compile_('x = (yegiks[0], yegiks[1])') == 'p1z 2 p2z 1 p3z 2'
 
     # assert compile_('x = yegiks[0].frags') == 'p1z e1f'

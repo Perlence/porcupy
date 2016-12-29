@@ -36,6 +36,8 @@ class NodeVisitor(ast.NodeVisitor):
                 raise NotImplementedError('assigning binary operations is not implemented yet')
             elif isinstance(node.value, ast.Tuple):
                 self.assign_tuple(target, node.value, slot)
+            elif isinstance(node.value, ast.Subscript):
+                self.assign_subscript(target, node.value, slot)
             else:
                 raise NotImplementedError("unable to assign the value '{}'".format(node.value))
 
@@ -109,6 +111,14 @@ class NodeVisitor(ast.NodeVisitor):
                 return
         return next(iter(type_set))
 
+    def assign_subscript(self, target, value, slot):
+        container_name = value.value.id
+        var = self.scope.get(container_name)
+        if isinstance(var, GameVariable):
+            ref = self.scope.define(Reference, target.id, type(var))
+            index = value.slice.value.n
+            self.output_assign(ref, getattr(runtime, container_name)[index]._number)
+
     def output_assign(self, dest, value):
         self.output += '{}{}z {} '.format(dest.letter, dest.slot_number, value)
 
@@ -118,6 +128,12 @@ class Scope:
     names = attr.ib(default=attr.Factory(dict))
     numeric_slots = attr.ib(default=attr.Factory(lambda: Slots(1)))
     string_slots = attr.ib(default=attr.Factory(lambda: Slots()))
+
+    def __attrs_post_init__(self):
+        self.populate_game_vars()
+
+    def populate_game_vars(self):
+        self.names['yegiks'] = GameVariable(runtime.Yegik)
 
     def define_const(self, name, value):
         if isinstance(value, Number):
@@ -232,5 +248,26 @@ class TuplePointerSlot(NumberSlot):
     length = attr.ib()
 
 
+@attr.s
+class GameVariable:
+    # slot_number = attr.ib()
+    type = attr.ib()
+
+    # def __str__(self):
+    #     return str(self.slot_number)
 
 
+@attr.s
+class GameAttribute:
+    game_var = attr.ib()
+    attrib = attr.ib()
+
+    def __str__(self):
+        return '{}{}{}'.format(self.game_var._type._letter,
+                               self.game_var.slot_number,
+                               self.attrib.metadata['letter'])
+
+
+@attr.s
+class Reference(NumberSlot):
+    gamevar_type = attr.ib()
