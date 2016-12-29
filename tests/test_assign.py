@@ -53,6 +53,14 @@ def test_tuples():
 
     assert compile_('x = (1, 2); y = (3, 4); z = (x, y)') == 'p1z 2 p2z 1 p3z 2 p4z 5 p5z 3 p6z 4 p7z 8 p8z p1z p9z p4z'
 
+    # tuple with 99 elements in it causes a MemoryError
+    with pytest.raises(MemoryError) as exc_info:
+        compile_('x = (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'
+                 '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'
+                 '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'
+                 '0,0,0,0,0,0,0,0,0,0,0,0)')
+    assert str(exc_info.value) == 'ran out of variable slots'
+
 
 @pytest.mark.skip
 def test_static_type():

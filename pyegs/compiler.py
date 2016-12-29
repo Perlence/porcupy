@@ -167,6 +167,7 @@ class Variables:
             if value is None:
                 self.variables[i] = RESERVED
                 return i + self.start
+        raise MemoryError('ran out of variable slots')
 
 
 RESERVED = object()
