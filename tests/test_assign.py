@@ -4,6 +4,9 @@ from pyegs.compiler import compile as compile_
 
 
 def test_assign():
+    with pytest.raises(NotImplementedError):
+        compile_('x, y = 1, 2')
+
     assert compile_('x = const(4)') == ''
     assert compile_('x = const(4); y = x') == 'p1z 4'
 

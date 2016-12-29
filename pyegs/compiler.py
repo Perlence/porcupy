@@ -24,75 +24,76 @@ class NodeVisitor(ast.NodeVisitor):
     def visit_Assign(self, node):
         if len(node.targets) > 1:
             raise NotImplementedError('iterable destruction is not implemented yet')
-
         target = node.targets[0]
-        is_str = False
-        is_num = False
-
         if isinstance(node.value, ast.Num):
-            value = node.value.n
-            is_num = True
-
+            self.assign_num(target, node.value)
         elif isinstance(node.value, ast.Str):
-            value = node.value.s
-            is_str = True
-
+            self.assign_str(target, node.value)
         elif isinstance(node.value, ast.Name):
-            name = node.value.id
-            value, is_num, is_str = self.reference_name(name)
-
+            self.assign_name(target, node.value)
         elif isinstance(node.value, ast.UnaryOp):
             raise NotImplementedError('assigning unary operations is not implemented yet')
-
         elif isinstance(node.value, ast.BinOp):
             raise NotImplementedError('assigning binary operations is not implemented yet')
-
         elif isinstance(node.value, ast.Call):
-            if node.value.func.id == 'const':
-                self.set_const(target.id, node.value)
-                return
+            self.assign_call(target, node.value)
+        else:
+            raise NotImplementedError("unable to assign the value '{}'".format(node.value))
 
-        if is_num:
-            variable_number = self.numeric_variables.allocate_one(target.id)
-            value = self.format_number(value)
-            register = 'p'
-        elif is_str:
-            variable_number = self.string_variables.allocate_one(target.id)
-            value = self.format_string(value)
-            register = 's'
-        self.output += '{}{}z {} '.format(register, variable_number, value)
+    def assign_num(self, target, value):
+        self.output_assign(target, value.n, type='p')
+
+    def assign_str(self, target, value):
+        self.output_assign(target, value.s, type='s')
+
+    def assign_name(self, target, value):
+        name = value.id
+        value, type = self.reference_name(name)
+        self.output_assign(target, value, type)
 
     def reference_name(self, name):
-        is_num = False
-        is_str = False
-
         const = self.consts.get(name)
         if const is not None:
             value = const
-            is_num = isinstance(value, numbers.Number)
-            is_str = isinstance(value, str)
-            return value, is_num, is_str
+            if isinstance(value, numbers.Number):
+                type = 'p'
+            if isinstance(value, str):
+                type = 's'
+            return value, type
 
         variable_number = self.numeric_variables.names.get(name)
         if variable_number is not None:
             value = 'p{}z'.format(variable_number)
-            is_num = True
-            return value, is_num, is_str
+            return value, 'p'
 
         variable_number = self.string_variables.names.get(name)
         if variable_number is not None:
             value = 's{}z'.format(variable_number)
-            is_str = True
-            return value, is_num, is_str
+            return value, 's'
 
         raise NameError("name '{}' is not defined".format(name))
 
-    def set_const(self, name, call):
+    def assign_call(self, target, value):
+        if value.func.id == 'const':
+            self.assign_const(target, value)
+        else:
+            raise NotImplementedError('functions are not implemented yet')
+
+    def assign_const(self, target, call):
         const_arg = call.args[0]
         if isinstance(const_arg, ast.Num):
-            self.consts[name] = const_arg.n
+            self.consts[target.id] = const_arg.n
         elif isinstance(const_arg, ast.Str):
-            self.consts[name] = const_arg.s
+            self.consts[target.id] = const_arg.s
+
+    def output_assign(self, target, value, type):
+        if type == 'p':
+            variable_number = self.numeric_variables.allocate_one(target.id)
+            value = self.format_number(value)
+        elif type == 's':
+            variable_number = self.string_variables.allocate_one(target.id)
+            value = self.format_string(value)
+        self.output += '{}{}z {} '.format(type, variable_number, value)
 
     def format_number(self, n):
         return str(n).replace('.', ',')
