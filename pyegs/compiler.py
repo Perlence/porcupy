@@ -36,8 +36,8 @@ class NodeVisitor(ast.NodeVisitor):
             raise NotImplementedError('assigning binary operations is not implemented yet')
         elif isinstance(node.value, ast.Call):
             self.assign_call(target, node.value)
-        # elif isinstance(node.value, ast.Tuple):
-        #     self.assign_tuple(target, node.value)
+        elif isinstance(node.value, ast.Tuple):
+            self.assign_tuple(target, node.value)
         else:
             raise NotImplementedError("unable to assign the value '{}'".format(node.value))
 
@@ -68,44 +68,33 @@ class NodeVisitor(ast.NodeVisitor):
         const_arg = call.args[0]
         self.scope.define_const(target.id, const_arg)
 
-    # def assign_tuple(self, target, value):
-    #     tuple_type = self.type_of_items(value.elts)
-    #     if tuple_type is None:
-    #         raise TypeError('tuple items must be of the same type')
+    def assign_tuple(self, target, value):
+        tuple_type = self.type_of_items(value.elts)
+        if tuple_type is None:
+            raise TypeError('tuple items must be of the same type')
 
-    #     tuple_pointer = self.numeric_variables.allocate_or_set(target.id)
-    #     for i, item in enumerate(value.elts):
-    #         item_target = ast.Name(id=None)
-    #         node = ast.Assign(targets=[item_target], value=item)
-    #         variable_number = vself.visit_Assign(node)
-    #     return tuple_start
+        tuple_pointer = self.scope.define(target.id, 'p')
+        variables = self.scope.allocate_many(tuple_type, len(value.elts))
+        first_item = variables[0]
+        self.output_assign(tuple_pointer, first_item.varnum)
+        for dest, src in zip(variables, value.elts):
+            self.output_assign(dest, ...)
 
-    # def type_of_items(self, items):
-    #     type_set = set()
-    #     for item in items:
-    #         if isinstance(item, ast.Num):
-    #             type_set.add(numbers.Number)
-    #         elif isinstance(item, ast.Str):
-    #             type_set.add(str)
-    #         elif isinstance(item, ast.Name):
-    #             vartype = self.type_of_variable(item.id)
-    #             if vartype is numbers.Number:
-    #                 type_set.add(ast.Num)
-    #             elif vartype is str:
-    #                 type_set.add(ast.Str)
-    #             elif vartype is None:
-    #                 raise NameError("name '{}' is not defined".format(item.id))
-    #         if len(type_set) > 1:
-    #             return
-    #     return next(iter(type_set))
-
-    # def type_of_variable(self, name):
-    #     if name in self.numeric_variables.names:
-    #         return numbers.Number
-    #     elif name in self.string_variables.names:
-    #         return str
-    #     else:
-    #         return None
+    def type_of_items(self, items):
+        type_set = set()
+        for item in items:
+            if isinstance(item, ast.Num):
+                type_set.add('p')
+            elif isinstance(item, ast.Str):
+                type_set.add('s')
+            elif isinstance(item, ast.Name):
+                var = self.scope.get(item.id)
+                type_set.add(var.type())
+            else:
+                raise NotImplementedError("cannot store item '{}' in a tuple yet".format(item))
+            if len(type_set) > 1:
+                return
+        return next(iter(type_set))
 
     def output_assign(self, var, value):
         self.output += '{}{}z {} '.format(var.type(), var.varnum, value)
@@ -121,16 +110,26 @@ class Scope:
         var = self.names.get(name)
         if var is not None:
             return var
-
-        if type == 'p':
-            varnum = self.numeric_variables.allocate_one()
-            var = Variable.number(varnum)
-        elif type == 's':
-            varnum = self.string_variables.allocate_one()
-            var = Variable.string(varnum)
-
+        var = self.allocate(type)
         self.names[name] = var
         return var
+
+    def allocate(self, type):
+        if type == 'p':
+            varnum = self.numeric_variables.allocate()
+            return Variable.number(varnum)
+        elif type == 's':
+            varnum = self.string_variables.allocate()
+            return Variable.string(varnum)
+
+    def allocate_many(self, type, length):
+        # TODO: Ensure the memory region is one block
+        if type == 'p':
+            varnums = [self.numeric_variables.allocate() for _ in range(length)]
+            return list(map(Variable.number, varnums))
+        elif type == 's':
+            varnums = [self.string_variables.allocate() for _ in range(length)]
+            return list(map(Variable.string, varnums))
 
     def define_const(self, name, value):
         if isinstance(value, ast.Num):
@@ -154,7 +153,7 @@ class Variables:
     def __attrs_post_init__(self):
         self.variables = [None for x in range(self.start, self.stop)]
 
-    def allocate_one(self):
+    def allocate(self):
         for i, value in enumerate(self.variables):
             if value is None:
                 self.variables[i] = RESERVED

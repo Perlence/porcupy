@@ -35,7 +35,6 @@ def test_undefined():
     assert str(exc_info.value) == "name 'y' is not defined"
 
 
-@pytest.mark.skip
 def test_tuples():
     with pytest.raises(TypeError) as exc_info:
         assert compile_('x = (1, "2")')
