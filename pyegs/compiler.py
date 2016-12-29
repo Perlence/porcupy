@@ -65,7 +65,7 @@ class NodeVisitor(ast.NodeVisitor):
     def assign_name(self, target, value, dest_slot):
         src_slot = self.scope.get(value.id)
         if dest_slot is None:
-            dest_slot = self.scope.define(target.id, src_slot.type())
+            dest_slot = self.scope.define(target.id, src_slot.type)
         self.output_assign(dest_slot, src_slot)
 
     def assign_call(self, target, value, slot):
@@ -104,7 +104,7 @@ class NodeVisitor(ast.NodeVisitor):
                 type_set.add(str)
             elif isinstance(item, ast.Name):
                 slot = self.scope.get(item.id)
-                type_set.add(slot.type())
+                type_set.add(slot.type)
             else:
                 raise NotImplementedError("cannot declare item '{}' in a container yet".format(item))
             if len(type_set) > 1:
@@ -114,9 +114,9 @@ class NodeVisitor(ast.NodeVisitor):
     def assign_subscript(self, target, value, var):
         z
 
-    def output_assign(self, slot, value):
-        letter = type_letter(slot.type())
-        self.output += '{}{}z {} '.format(letter, slot.slot_number, value)
+    def output_assign(self, dest, value):
+        letter = type_letter(dest.type)
+        self.output += '{}{}z {} '.format(letter, dest.slot_number, value)
 
 
 @attr.s
@@ -134,12 +134,14 @@ class Scope:
         return slot
 
     def allocate(self, type):
-        if type in (Number, tuple):
+        if issubclass(type, (Number, tuple)):
             slot_number = self.numeric_slots.allocate()
             return Slot(slot_number, type)
-        elif type == str:
+        elif issubclass(type, str):
             slot_number = self.string_slots.allocate()
             return Slot(slot_number, type)
+        else:
+            raise TypeError("cannot allocate slot of type '{}'".format(type))
 
     def allocate_many(self, type, length):
         # TODO: Ensure the memory region is one block
@@ -151,7 +153,7 @@ class Scope:
             return list(map(Slot.string, slotnums))
 
     def define_const(self, name, value):
-        self.names[name] = Const(value)
+        self.names[name] = Const(value, type(value))
 
     def get(self, name):
         slot = self.names.get(name)
@@ -183,12 +185,7 @@ RESERVED = object()
 @attr.s
 class Const:
     value = attr.ib()
-
-    def type(self):
-        if isinstance(self.value, Number):
-            return Number
-        elif isinstance(self.value, str):
-            return str
+    type = attr.ib()
 
     def __str__(self):
         if isinstance(self.value, Number):
@@ -200,7 +197,7 @@ class Const:
 @attr.s
 class Slot:
     slot_number = attr.ib()
-    _type = attr.ib()
+    type = attr.ib()
 
     @classmethod
     def number(cls, number):
@@ -210,18 +207,15 @@ class Slot:
     def string(cls, number):
         return cls(number, str)
 
-    def type(self):
-        return self._type
-
     def __str__(self):
-        letter = type_letter(self._type)
+        letter = type_letter(self.type)
         return '{}{}z'.format(letter, self.slot_number)
 
 
 def type_letter(type):
-    if type in (Number, tuple):
+    if issubclass(type, (Number, tuple)):
         type_letter = 'p'
-    elif type is str:
+    elif issubclass(type, str):
         type_letter = 's'
     else:
         raise TypeError("variable has unsupported type '{}'".format(type))
