@@ -45,7 +45,7 @@ class NodeVisitor(ast.NodeVisitor):
             return
         if slot is None:
             slot = self.scope.define(NumberSlot, target.id)
-        value = format_number(value.n)
+        value = NumberConst(value.n)
         self.output_assign(slot, value)
 
     def assign_str(self, target, value, slot):
@@ -54,7 +54,7 @@ class NodeVisitor(ast.NodeVisitor):
             return
         if slot is None:
             slot = self.scope.define(StringSlot, target.id)
-        value = format_string(value.s)
+        value = StringConst(value.s)
         self.output_assign(slot, value)
 
     def is_const(self, target):
@@ -196,7 +196,7 @@ class NumberConst:
     value = attr.ib()
 
     def __str__(self):
-        return format_number(self.value)
+        return str(self.value).replace('.', ',')
 
 
 @attr.s
@@ -204,7 +204,7 @@ class StringConst:
     value = attr.ib()
 
     def __str__(self):
-        return format_string(self.value)
+        return self.value.replace(' ', '_')
 
 
 @attr.s
@@ -232,9 +232,5 @@ class TuplePointerSlot(NumberSlot):
     length = attr.ib()
 
 
-def format_number(n):
-    return str(n).replace('.', ',')
 
 
-def format_string(s):
-    return s.replace(' ', '_')
