@@ -45,7 +45,7 @@ class NodeVisitor(ast.NodeVisitor):
             return
         type = Number
         if slot is None:
-            slot = self.scope.define(target.id, type)
+            slot = self.scope.define_slot(target.id, type)
         value = format_number(value.n)
         self.output_assign(slot, value)
 
@@ -55,7 +55,7 @@ class NodeVisitor(ast.NodeVisitor):
             return
         type = str
         if slot is None:
-            slot = self.scope.define(target.id, type)
+            slot = self.scope.define_slot(target.id, type)
         value = format_string(value.s)
         self.output_assign(slot, value)
 
@@ -65,7 +65,7 @@ class NodeVisitor(ast.NodeVisitor):
     def assign_name(self, target, value, dest_slot):
         src_slot = self.scope.get(value.id)
         if dest_slot is None:
-            dest_slot = self.scope.define(target.id, src_slot.type)
+            dest_slot = self.scope.define_slot(target.id, src_slot.type)
         self.output_assign(dest_slot, src_slot)
 
     def assign_call(self, target, value, slot):
@@ -83,11 +83,12 @@ class NodeVisitor(ast.NodeVisitor):
         if tuple_type is None:
             raise TypeError('tuple items must be of the same type')
 
+        length = len(value.elts)
         if slot is None:
-            tuple_pointer = self.scope.define(target.id, tuple)
+            tuple_pointer = self.scope.define_tuple(target.id, length)
         else:
             tuple_pointer = slot
-        slots = self.scope.allocate_many(tuple_type, len(value.elts))
+        slots = self.scope.allocate_many(tuple_type, length)
         first_item = slots[0]
         self.output_assign(tuple_pointer, first_item.slot_number)
         for dest, src in zip(slots, value.elts):
@@ -126,6 +127,16 @@ class Scope:
     string_slots = attr.ib(default=attr.Factory(lambda: Slots()))
 
     def define(self, name, type):
+    def define_const(self, name, value):
+        const = Const(value, type(value))
+        self.names[name] = const
+        return const
+
+    def define_tuple(self, name, length):
+        slot = self.define_slot(name, Number)
+        return TuplePointer(slot, length)
+
+    def define_slot(self, name, type):
         slot = self.names.get(name)
         if slot is not None:
             return slot
@@ -134,7 +145,7 @@ class Scope:
         return slot
 
     def allocate(self, type):
-        if issubclass(type, (Number, tuple)):
+        if issubclass(type, Number):
             slot_number = self.numeric_slots.allocate()
             return Slot(slot_number, type)
         elif issubclass(type, str):
@@ -151,9 +162,6 @@ class Scope:
         elif type == str:
             slotnums = [self.string_slots.allocate() for _ in range(length)]
             return list(map(Slot.string, slotnums))
-
-    def define_const(self, name, value):
-        self.names[name] = Const(value, type(value))
 
     def get(self, name):
         slot = self.names.get(name)
@@ -210,6 +218,17 @@ class Slot:
     def __str__(self):
         letter = type_letter(self.type)
         return '{}{}z'.format(letter, self.slot_number)
+
+
+@attr.s
+class TuplePointer:
+    starts_at = attr.ib()
+    length = attr.ib(default=0)
+    type = int
+
+    @property
+    def slot_number(self):
+        return self.starts_at.slot_number
 
 
 def type_letter(type):
