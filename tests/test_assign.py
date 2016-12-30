@@ -64,8 +64,19 @@ def test_lists():
                  '0,0,0,0,0,0,0,0,0,0,0,0]')
     assert str(exc_info.value) == 'ran out of variable slots'
 
+    assert compile_('x = [1, 2]; y = x[0]') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p4z p^4z'
+    assert compile_('x = [1, 2]; y = 0; z = x[y]') == 'p1z 1 p2z 2 p3z 1 p4z 0 p5z p3z+p4z p5z p^5z'
+
+    with pytest.raises(IndexError) as exc_info:
+        compile_('x = [1, 2]; y = x[2]')
+    assert 'list index out of range' in str(exc_info.value)
+
     with pytest.skip('Not implemented yet'):
-        assert compile_('x = [1, 2]; y = x[0]') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p4z p^4z'
+        assert compile_('x = [0] * 3') == 'p1z 0 p2z 0 p3z 0 p4z 1'
+
+    with pytest.skip('Not implemented yet'):
+        # Constant list pointer
+        assert compile_('X = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33'
 
 
 def test_multiple_assign():

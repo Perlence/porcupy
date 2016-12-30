@@ -23,7 +23,7 @@ if timers[1].value <= 1:
     player_bot.ai = False  # a^5i 0
     player_bot.goto(waypoint)  # a^5g p7z
 
-    ball.spawn(2)
+    ball.spawn(ball_spawns[0])
     ball_bot.ai = 0
     ball.speed_y = 0
     ball.speed_x = 0

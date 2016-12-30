@@ -100,6 +100,15 @@ class NodeVisitor(ast.NodeVisitor):
                 return Slot(register, slice_slot.value, None, int, metadata=metadata)
             else:
                 return attr.assoc(slice_slot, metadata=metadata)
+        elif issubclass(value_slot.type, ListPointer):
+            if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.metadata['capacity']:
+                raise IndexError('list index out of range')
+            pointer_math_slot = self.scope.allocate(ListPointer)
+            addition = BinaryOp(value_slot, ast.Add(), slice_slot)
+            self.output_assign(pointer_math_slot, addition)
+            slot = attr.assoc(pointer_math_slot, ref=True)
+            self.scope.free(pointer_math_slot)
+            return slot
         else:
             raise NotImplementedError
 
@@ -166,6 +175,12 @@ class Scope:
     def allocate_many(self, type, length):
         return [self.allocate(type) for _ in range(length)]
 
+    def free(self, slot):
+        if issubclass(slot.type, Number):
+            self.numeric_slots.free(slot.number)
+        elif issubclass(slot.type, str):
+            self.string_slots.free(slot.number)
+
     def get(self, name):
         slot = self.names.get(name)
         if slot is None:
@@ -183,11 +198,14 @@ class Slots:
         self.slots = [None for x in range(self.start, self.stop)]
 
     def allocate(self):
-        for i, value in enumerate(self.slots):
+        for addr, value in enumerate(self.slots):
             if value is None:
-                self.slots[i] = RESERVED
-                return i + self.start
+                self.slots[addr] = RESERVED
+                return addr + self.start
         raise MemoryError('ran out of variable slots')
+
+    def free(self, addr):
+        self.slots[addr-self.start] = None
 
 
 RESERVED = object()
@@ -238,3 +256,17 @@ class ListPointer(Number):
 @attr.s
 class GameObjectList:
     type = attr.ib()
+
+
+@attr.s
+class BinaryOp:
+    left = attr.ib()
+    op = attr.ib()
+    right = attr.ib()
+
+    def __str__(self):
+        if isinstance(self.op, ast.Add):
+            op = '+'
+        else:
+            raise NotImplementedError
+        return '{}{}{}'.format(self.left, op, self.right)
