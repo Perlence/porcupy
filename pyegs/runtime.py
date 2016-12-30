@@ -5,19 +5,22 @@ __all__ = ('timers', 'system', 'yegiks', 'bots', 'points')
 
 @attr.s
 class Timer:
-    _number = attr.ib()
-    value = attr.ib(default=0)
-    enabled = attr.ib(default=0)
+    value = attr.ib(default=0, metadata={'abbrev': 'i'})
+    enabled = attr.ib(default=0, metadata={'abbrev': 'r'})
+
+    _abbrev = 't'
 
 
-timers = [Timer(x) for x in range(100)]
+timers = [Timer() for x in range(100)]
 timers[1].enabled = 1
 
 
 @attr.s
 class System:
-    bots = attr.ib(default=0)
-    color = attr.ib(default=0)
+    bots = attr.ib(default=0, metadata={'abbrev': 'b'})
+    color = attr.ib(default=0, metadata={'abbrev': 'c'})
+
+    _abbrev = 'y'
 
     def message(self, s):
         pass
@@ -37,47 +40,49 @@ system = System()
 
 @attr.s
 class Bot:
-    _number = attr.ib()
-    ai = attr.ib(default=False)
-    target = attr.ib(default=0)
-    level = attr.ib(default=0)
-    point = attr.ib(default=0)
+    ai = attr.ib(default=False, metadata={'abbrev': 'i'})
+    target = attr.ib(default=0, metadata={'abbrev': 't'})
+    level = attr.ib(default=0, metadata={'abbrev': 'l'})
+    point = attr.ib(default=0, metadata={'abbrev': 'p'})
+
+    _abbrev = 'a'
 
     def goto(self, point):
         pass
 
 
-bots = [Bot(x) for x in range(1, 10)]
+bots = [Bot() for x in range(1, 10)]
 
 
 @attr.s
 class Yegik:
-    _number = attr.ib()
-    frags = attr.ib(default=0, metadata={'letter': 'f'})
-    pos_x = attr.ib(default=0.0)
-    pos_y = attr.ib(default=0.0)
-    speed_x = attr.ib(default=0.0)
-    speed_y = attr.ib(default=0.0)
-    health = attr.ib(default=0)
-    armor = attr.ib(default=0)
-    has_weapon = attr.ib(default=False)
-    weapon = attr.ib(default=0)
-    ammo = attr.ib(default=0)
-    view_angle = attr.ib(default=0.0)
-    _letter = 'e'
+    frags = attr.ib(default=0, metadata={'abbrev': 'f'})
+    pos_x = attr.ib(default=0.0, metadata={'abbrev': 'x'})
+    pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y'})
+    speed_x = attr.ib(default=0.0, metadata={'abbrev': 'u'})
+    speed_y = attr.ib(default=0.0, metadata={'abbrev': 'v'})
+    health = attr.ib(default=0, metadata={'abbrev': 'p'})
+    armor = attr.ib(default=0, metadata={'abbrev': 'n'})
+    has_weapon = attr.ib(default=False, metadata={'abbrev': 'e'})
+    weapon = attr.ib(default=0, metadata={'abbrev': 'w'})
+    ammo = attr.ib(default=0, metadata={'abbrev': 's'})
+    view_angle = attr.ib(default=0.0, metadata={'abbrev': 'a'})
+
+    _abbrev = 'e'
 
     def spawn(self, point):
         pass
 
 
-yegiks = [Yegik(x) for x in range(1, 10)]
+yegiks = [Yegik() for x in range(1, 10)]
 
 
 @attr.s
 class Point:
-    _number = attr.ib()
-    pos_x = attr.ib(default=0.0)
-    pos_y = attr.ib(default=0.0)
+    pos_x = attr.ib(default=0.0, metadata={'abbrev': 'x'})
+    pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y'})
+
+    _abbrev = 'c'
 
 
-points = [Point(x) for x in range(1, 100)]
+points = [Point() for x in range(1, 100)]

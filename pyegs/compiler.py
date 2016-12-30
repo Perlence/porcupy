@@ -3,6 +3,8 @@ from numbers import Number
 
 import attr
 
+from . import runtime
+
 
 def compile(source, filename='<unknown>'):
     top = ast.parse(source, filename)
@@ -37,10 +39,14 @@ class NodeVisitor(ast.NodeVisitor):
                 return self.load_list(value)
             elif isinstance(value, ast.Name):
                 return self.scope.get(value.id)
+            elif isinstance(value, ast.Attribute):
+                return self.load_attribute(value)
+            elif isinstance(value, ast.Subscript):
+                return self.load_subscript(value)
             elif isinstance(value, ast.Index):
                 return self.load_value(value.value)
             else:
-                raise NotImplementedError()
+                raise NotImplementedError
 
         try:
             slot = self.loaded_values[value]
@@ -54,7 +60,6 @@ class NodeVisitor(ast.NodeVisitor):
             raise TypeError('list items must be of the same type')
 
         capacity = len(value.elts)
-        print(list_type)
         item_slots = self.scope.allocate_many(list_type, capacity)
         for dest_slot, item in zip(item_slots, value.elts):
             src_slot = self.load_value(item)
@@ -72,14 +77,44 @@ class NodeVisitor(ast.NodeVisitor):
         if type_set:
             return next(iter(type_set))
 
+    def load_attribute(self, value):
+        value_slot = self.load_value(value.value)
+        game_obj_type = value_slot.metadata.get('game_obj_type')
+        if game_obj_type is not None:
+            register = game_obj_type._abbrev
+            attrib = getattr(game_obj_type, value.attr)
+            if value_slot.is_variable():
+                value_slot = attr.assoc(value_slot, register=register, ref=True)
+            value_slot = attr.assoc(value_slot, attrib=attrib.metadata['abbrev'])
+            return value_slot
+        else:
+            raise NotImplementedError
+
+    def load_subscript(self, value):
+        value_slot = self.load_value(value.value)
+        slice_slot = self.load_value(value.slice)
+        if isinstance(value_slot, GameObjectList):
+            register = value_slot.type._abbrev
+            metadata = {'game_obj_type': value_slot.type}
+            if isinstance(slice_slot, Const):
+                return Slot(register, slice_slot.value, None, int, metadata=metadata)
+            else:
+                return attr.assoc(slice_slot, metadata=metadata)
+        else:
+            raise NotImplementedError
+
     def store_value(self, target, src_slot):
         if isinstance(target, ast.Name):
             if self.is_const(target):
                 self.scope.define_const(target.id, src_slot)
             else:
                 return self.scope.assign(target.id, src_slot)
+        elif isinstance(target, ast.Attribute):
+            return self.load_attribute(target)
+        elif isinstance(target, ast.Subscript):
+            return self.load_subscript(target)
         else:
-            raise NotImplementedError()
+            raise NotImplementedError
 
     def is_const(self, target):
         return target.id is not None and target.id.isupper()
@@ -93,6 +128,16 @@ class Scope:
     names = attr.ib(default=attr.Factory(dict))
     numeric_slots = attr.ib(default=attr.Factory(lambda: Slots(1)))
     string_slots = attr.ib(default=attr.Factory(lambda: Slots()))
+
+    def __attrs_post_init__(self):
+        self.populate_game_objects()
+
+    def populate_game_objects(self):
+        self.names['yegiks'] = GameObjectList(runtime.Yegik)
+        self.names['points'] = GameObjectList(runtime.Point)
+        self.names['bots'] = GameObjectList(runtime.Bot)
+        self.names['timers'] = GameObjectList(runtime.Timer)
+        self.names['system'] = Slot(runtime.System._abbrev, None, None, int, metadata={'game_obj_type': runtime.System})
 
     def define_const(self, name, value):
         self.names[name] = value
@@ -170,22 +215,26 @@ class Slot:
     attrib = attr.ib()
     type = attr.ib()
     metadata = attr.ib(default=attr.Factory(dict))
+    ref = attr.ib(default=False)
+
+    def is_variable(self):
+        return self.register in ('p', 's')
 
     def __str__(self):
-        return '{}{}{}'.format(self.register, self.number, self.attrib)
-
-
-@attr.s
-class SlotRef:
-    type = attr.ib()
-    register = attr.ib()
-    reference = attr.ib()
-    attrib = attr.ib()
-    metadata = attr.ib(default=attr.Factory(dict))
-
-    def __str__(self):
-        return '{}^{}{}'.format(self.register, self.reference, self.attrib)
+        if self.attrib is not None:
+            return '{}{}{}{}'.format(
+                self.register,
+                '^' if self.ref else '',
+                self.number if self.number is not None else '',
+                self.attrib)
+        else:
+            return str(self.number)
 
 
 class ListPointer(Number):
     pass
+
+
+@attr.s
+class GameObjectList:
+    type = attr.ib()

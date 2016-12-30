@@ -73,23 +73,21 @@ def test_multiple_assign():
     assert compile_('x = y = [1, 2]') == 'p1z 1 p2z 2 p3z 1 p4z 1'
 
 
-@pytest.mark.skip('Not implemented yet')
 def test_game_objects():
-    # NumberSlot.slot(1) := Slot(name='e', attrib='f', slot_number=1)
     assert compile_('x = yegiks[1].frags') == 'p1z e1f'
-    # NumberSlot.slot(1) := NumberSlot.const(1); NumberSlot.slot(2) := SlotRef(name='e', reference=1, attrib='f')
     assert compile_('x = 1; y = yegiks[x].frags') == 'p1z 1 p2z e^1f'
+    assert compile_('x = 1; y = yegiks[x]') == 'p1z 1 p2z p1z'
 
-    # Slot(letter='e', slot_number=1, attrib='f')
     assert compile_('yegiks[1].frags = 99') == 'e1f 99'
-    # Slot(letter='e', by_reference=NumberSlot.slot(1), attrib='f')
     assert compile_('x = yegiks[1]; x.frags = 99') == 'p1z 1 e^1f 99'
 
-    # GameObjectRef.const(1, type=Yegik), class GameObjectRef(NumberSlot)
     assert compile_('x = yegiks[1]') == 'p1z 1'
-    # GameObjectRef.slot(1, type=Yegik)
-    assert compile_('x = 1; y = yegiks[x]') == 'p1z 1 p2z p1z'
     assert compile_('x = [yegiks[1], yegiks[2]]') == 'p1z 1 p2z 2 p3z 1'
+
+    assert compile_('x = timers[2]; x.value = 0') == 'p1z 2 t^1i 0'
+
+    assert compile_('system.bots = 4') == 'yb 4'
+    assert compile_('system.color = 256') == 'yc 256'
 
 
 @pytest.mark.skip('Not implemented yet')
