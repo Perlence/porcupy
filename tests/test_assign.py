@@ -3,14 +3,18 @@ import pytest
 from pyegs.compiler import compile as compile_
 
 
+@pytest.mark.skip('Not implemented yet')
 def test_tuple_assign():
-    with pytest.raises(NotImplementedError):
-        compile_('x, y = 1, 2')
+    compile_('x, y = 1, 2')
 
 
 def test_consts():
     assert compile_('X = 4') == ''
     assert compile_('X = 4; y = X') == 'p1z 4'
+    assert compile_('X = "HELLO"; y = X') == 's0z HELLO'
+
+    with pytest.skip('Not implemented yet'):
+        assert compile_('X = 4; Y = X; z = Y') == 'p1z 4'
 
 
 def test_numbers():
@@ -18,11 +22,6 @@ def test_numbers():
     assert compile_('x = 4.0') == 'p1z 4,0'
     assert compile_('x = 4; y = 5') == 'p1z 4 p2z 5'
     assert compile_('x = 4; x = 5') == 'p1z 4 p1z 5'
-
-
-def test_multiple_assign():
-    assert compile_('x = y = 5') == 'p1z 5 p2z 5'
-    assert compile_('x = y = [1, 2]') == 'p1z 2 p2z 1 p3z 2 p4z 5 p5z 1 p6z 2'
 
 
 def test_other_names():
@@ -41,24 +40,22 @@ def test_undefined():
     assert str(exc_info.value) == "name 'y' is not defined"
 
 
-def test_tuples():
+def test_lists():
     with pytest.raises(TypeError) as exc_info:
         assert compile_('x = [1, "2"]')
     assert str(exc_info.value) == 'list items must be of the same type'
 
-    assert compile_('x = [1, 2]') == 'p1z 2 p2z 1 p3z 2'
-    assert compile_('x = 1; y = [2, 3]') == 'p1z 1 p2z 3 p3z 2 p4z 3'
+    assert compile_('x = [1, 2]') == 'p1z 1 p2z 2 p3z 1'
+    assert compile_('x = 1; y = [2, 3]') == 'p1z 1 p2z 2 p3z 3 p4z 2'
 
-    assert compile_('x = 1; y = ["1", "2"]') == 'p1z 1 p2z 0 s0z 1 s1z 2'
-    assert compile_('x = 1; y = ["Hello World", "beep boop"]') == 'p1z 1 p2z 0 s0z Hello_World s1z beep_boop'
+    assert compile_('x = 1; y = ["1", "2"]') == 'p1z 1 s0z 1 s1z 2 p2z 0'
+    assert compile_('x = 1; y = ["Hello World", "beep boop"]') == 'p1z 1 s0z Hello_World s1z beep_boop p2z 0'
 
-    assert compile_('x = [1, 2, 3]; y = x') == 'p1z 2 p2z 1 p3z 2 p4z 3 p5z p1z'
+    assert compile_('x = [1, 2, 3]; y = x') == 'p1z 1 p2z 2 p3z 3 p4z 1 p5z p4z'
 
-    with pytest.raises(NotImplementedError) as exc_info:
-        compile_('x = [[1, 2], [3, 4]]')
-    assert 'cannot declare item' in str(exc_info.value)
+    assert compile_('x = [[11, 22], [33, 44]]') == 'p1z 11 p2z 22 p3z 33 p4z 44 p5z 1 p6z 3 p7z 5'
 
-    assert compile_('x = [1, 2]; y = [3, 4]; z = [x, y]') == 'p1z 2 p2z 1 p3z 2 p4z 5 p5z 3 p6z 4 p7z 8 p8z p1z p9z p4z'
+    assert compile_('x = [1, 2]; y = [3, 4]; z = [x, y]') == 'p1z 1 p2z 2 p3z 1 p4z 3 p5z 4 p6z 4 p7z p3z p8z p6z p9z 7'
 
     # list with 99 elements in it causes a MemoryError
     with pytest.raises(MemoryError) as exc_info:
@@ -68,20 +65,29 @@ def test_tuples():
                  '0,0,0,0,0,0,0,0,0,0,0,0]')
     assert str(exc_info.value) == 'ran out of variable slots'
 
-    # with pytest.raises(NotImplementedError) as exc_info:
-    #     assert compile_('x = [1, 2]; y = x[0]') == 'p1z 2 p2z 1 p3z 2 p4z p1z+0 p4z p^4z'
+    with pytest.skip('Not implemented yet'):
+        assert compile_('x = [1, 2]; y = x[0]') == 'p1z 2 p2z 1 p3z 2 p4z p1z+0 p4z p^4z'
 
 
+def test_multiple_assign():
+    assert compile_('x = y = 5') == 'p1z 5 p2z 5'
+    assert compile_('x = y = [1, 2]') == 'p1z 1 p2z 2 p3z 1 p4z 1'
+
+
+@pytest.mark.skip('Not implemented yet')
 def test_game_vars():
     assert compile_('x = yegiks[0]') == 'p1z 1'
     # assert compile_('x = [yegiks[0], yegiks[1]]') == 'p1z 2 p2z 1 p3z 2'
 
-    # assert compile_('x = yegiks[0].frags') == 'p1z e1f'
+    assert compile_('x = yegiks[0].frags') == 'p1z e1f'
 
     # assert compile_('x = yegiks[0]; x.frags = 0') == 'p1z 1 e^1z 0'
 
+    assert compile_('x = "Hello World"; system.message(x)') == 's0z Hello_World ym $0'
+    assert compile_('x = [1, 2]; system.message(x[0])') == 'p1z 2 p2z 1 p3z 2 p4z p1z+0 p4z p^4z ym ^4'
 
-@pytest.mark.skip
+
+@pytest.mark.skip('Not implemented yet')
 def test_static_type():
     with pytest.raises(TypeError) as exc_info:
         assert compile_('x = 1; x = "s"')

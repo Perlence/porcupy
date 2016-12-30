@@ -18,106 +18,71 @@ def compile(source, filename='<unknown>'):
 class NodeVisitor(ast.NodeVisitor):
     scope = attr.ib(default=attr.Factory(lambda: Scope()))
     output = attr.ib(default='')
+    loaded_values = attr.ib(default=attr.Factory(dict))
 
     def visit_Assign(self, node, slot=None):
         for target in node.targets:
             if isinstance(target, ast.List):
                 raise NotImplementedError('iterable destruction is not implemented yet')
+            src_slot = self.load_value(node.value)
+            dest_slot = self.store_value(target, src_slot)
+            if dest_slot is not None:
+                self.output_assign(dest_slot, src_slot)
 
-            if isinstance(node.value, ast.Num):
-                self.assign_num(target, node.value, slot)
-            elif isinstance(node.value, ast.Str):
-                self.assign_str(target, node.value, slot)
-            elif isinstance(node.value, ast.Name):
-                self.assign_name(target, node.value, slot)
-            elif isinstance(node.value, ast.UnaryOp):
-                raise NotImplementedError('assigning unary operations is not implemented yet')
-            elif isinstance(node.value, ast.BinOp):
-                raise NotImplementedError('assigning binary operations is not implemented yet')
-            elif isinstance(node.value, ast.List):
-                self.assign_list(target, node.value, slot)
-            elif isinstance(node.value, ast.Subscript):
-                self.assign_subscript(target, node.value, slot)
+    def load_value(self, value):
+        def fn():
+            if isinstance(value, ast.Num):
+                return NumberSlot.const(value.n)
+            elif isinstance(value, ast.Str):
+                return StringSlot.const(value.s)
+            elif isinstance(value, ast.List):
+                return self.load_list(value)
+            elif isinstance(value, ast.Name):
+                return self.scope.get(value.id)
+                return self.load_value(value.value)
             else:
-                raise NotImplementedError("unable to assign the value '{}'".format(node.value))
+                raise NotImplementedError()
 
-    def assign_num(self, target, value, slot):
-        if self.is_const(target):
-            self.scope.define_const(target.id, value.n)
-            return
-        if slot is None:
-            slot = self.scope.define(NumberSlot, target.id)
-        value = NumberConst(value.n)
-        self.output_assign(slot, value)
+        try:
+            slot = self.loaded_values[value]
+        except KeyError:
+            slot = self.loaded_values[value] = fn()
+        return slot
 
-    def assign_str(self, target, value, slot):
-        if self.is_const(target):
-            self.scope.define_const(target.id, value.s)
-            return
-        if slot is None:
-            slot = self.scope.define(StringSlot, target.id)
-        value = StringConst(value.s)
-        self.output_assign(slot, value)
-
-    def is_const(self, target):
-        return target.id is not None and target.id.isupper()
-
-    def assign_name(self, target, value, dest_slot):
-        src_slot = self.scope.get(value.id)
-        if dest_slot is None:
-            if isinstance(src_slot, NumberConst):
-                dest_slot = self.scope.define(NumberSlot, target.id)
-            elif isinstance(src_slot, StringConst):
-                dest_slot = self.scope.define(StringSlot, target.id)
-            else:
-                dest_slot = self.scope.copy(src_slot, target.id)
-        self.output_assign(dest_slot, src_slot)
-
-    def assign_const(self, target, call):
-        const_arg = call.args[0]
-        self.scope.define_const(target.id, const_arg)
-
-    def assign_list(self, target, value, slot):
+    def load_list(self, value):
         list_type = self.type_of_items(value.elts)
         if list_type is None:
             raise TypeError('list items must be of the same type')
 
         capacity = len(value.elts)
-        if slot is None:
-            list_pointer = self.scope.define(ListPointerSlot, target.id, capacity)
-        else:
-            list_pointer = slot
-        slots = self.scope.allocate_many(list_type, capacity)
-        first_item = slots[0]
-        self.output_assign(list_pointer, first_item.slot_number)
-        for dest, src in zip(slots, value.elts):
-            target = ast.Name(id=None)
-            assign = ast.Assign(targets=[target], value=src)
-            self.visit_Assign(assign, slot=dest)
+        item_slots = self.scope.allocate_many(list_type.slot_type, capacity)
+        for dest_slot, item in zip(item_slots, value.elts):
+            src_slot = self.load_value(item)
+            self.output_assign(dest_slot, src_slot)
+        first_item = item_slots[0]
+        return ListPointerSlot.const(first_item.slot_number, capacity)
 
     def type_of_items(self, items):
         type_set = set()
         for item in items:
-            if isinstance(item, ast.Num):
-                type_set.add(Number)
-            elif isinstance(item, ast.Str):
-                type_set.add(str)
-            elif isinstance(item, ast.Name):
-                slot = self.scope.get(item.id)
-                type_set.add(slot.slot_type)
-            else:
-                raise NotImplementedError("cannot declare item '{}' in a container yet".format(item))
+            src_slot = self.load_value(item)
+            type_set.add(type(src_slot))
             if len(type_set) > 1:
                 return
-        return next(iter(type_set))
+        if type_set:
+            return next(iter(type_set))
 
-    def assign_subscript(self, target, value, slot):
-        container_name = value.value.id
-        var = self.scope.get(container_name)
-        if isinstance(var, GameVariable):
-            ref = self.scope.define(Reference, target.id, type(var))
-            index = value.slice.value.n
-            self.output_assign(ref, getattr(runtime, container_name)[index]._number)
+    def store_value(self, target, src_slot):
+        if isinstance(target, ast.Name):
+            if self.is_const(target):
+                self.scope.define_const(target.id, src_slot)
+            else:
+                return self.scope.copy(src_slot, target.id)
+        else:
+            raise NotImplementedError()
+
+    def is_const(self, target):
+        return target.id is not None and target.id.isupper()
 
     def output_assign(self, dest, value):
         self.output += '{}{}z {} '.format(dest.letter, dest.slot_number, value)
@@ -133,15 +98,10 @@ class Scope:
         self.populate_game_vars()
 
     def populate_game_vars(self):
-        self.names['yegiks'] = GameVariable(runtime.Yegik)
+        self.names['yegiks'] = GameList(runtime.Yegik)
 
     def define_const(self, name, value):
-        if isinstance(value, Number):
-            const = NumberConst(value)
-        elif isinstance(value, str):
-            const = StringConst(value)
-        self.names[name] = const
-        return const
+        self.names[name] = value
 
     def copy(self, src_slot, name):
         slot = self.names.get(name)
@@ -149,17 +109,7 @@ class Scope:
             # TODO: Check destination type
             return slot
         slot_number = self.allocate(src_slot.slot_type)
-        print(src_slot)
-        slot = self.names[name] = attr.assoc(src_slot, slot_number=slot_number)
-        return slot
-
-    def define(self, type, name, *attrs):
-        slot = self.names.get(name)
-        if slot is not None:
-            # TODO: Check destination type
-            return slot
-        slot_number = self.allocate(type.slot_type)
-        slot = self.names[name] = type(slot_number, *attrs)
+        slot = self.names[name] = attr.assoc(src_slot, slot_number=slot_number, value=None)
         return slot
 
     def allocate(self, type):
@@ -175,10 +125,10 @@ class Scope:
         # TODO: Ensure the memory region is one block
         if issubclass(type, Number):
             slotnums = [self.numeric_slots.allocate() for _ in range(length)]
-            return list(map(NumberSlot, slotnums))
+            return list(map(NumberSlot.slot, slotnums))
         elif issubclass(type, str):
             slotnums = [self.string_slots.allocate() for _ in range(length)]
-            return list(map(StringSlot, slotnums))
+            return list(map(StringSlot.slot, slotnums))
 
     def get(self, name):
         slot = self.names.get(name)
@@ -208,39 +158,49 @@ RESERVED = object()
 
 
 @attr.s
-class NumberConst:
-    value = attr.ib()
-
-    def __str__(self):
-        return str(self.value).replace('.', ',')
-
-
-@attr.s
-class StringConst:
-    value = attr.ib()
-
-    def __str__(self):
-        return self.value.replace(' ', '_')
-
-
-@attr.s
 class NumberSlot:
     slot_number = attr.ib()
+    value = attr.ib()
+
     slot_type = Number
     letter = 'p'
 
+    @classmethod
+    def slot(cls, slot_number, *attrs, **kwattrs):
+        return cls(slot_number, None, *attrs, **kwattrs)
+
+    @classmethod
+    def const(cls, value, *attrs, **kwattrs):
+        return cls(None, value, *attrs, **kwattrs)
+
     def __str__(self):
-        return 'p{}z'.format(self.slot_number)
+        if self.slot_number is not None:
+            return 'p{}z'.format(self.slot_number)
+        elif self.value is not None:
+            return str(self.value).replace('.', ',')
 
 
 @attr.s
 class StringSlot:
     slot_number = attr.ib()
+    value = attr.ib()
+
     slot_type = str
     letter = 's'
 
+    @classmethod
+    def slot(cls, slot_number, *attrs, **kwattrs):
+        return cls(slot_number, None, *attrs, **kwattrs)
+
+    @classmethod
+    def const(cls, value, *attrs, **kwattrs):
+        return cls(None, value=value, *attrs, **kwattrs)
+
     def __str__(self):
-        return 's{}z'.format(self.slot_number)
+        if self.slot_number is not None:
+            return 's{}z'.format(self.slot_number)
+        elif self.value is not None:
+            return self.value.replace(' ', '_')
 
 
 @attr.s
@@ -249,8 +209,13 @@ class ListPointerSlot(NumberSlot):
 
 
 @attr.s
+class GameList:
+    type = attr.ib()
+
+
+@attr.s
 class GameVariable:
-    # slot_number = attr.ib()
+    slot = attr.ib()
     type = attr.ib()
 
     # def __str__(self):
