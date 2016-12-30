@@ -3,7 +3,7 @@ from pyegs.runtime import timers, system, yegiks, bots, points
 PUNCH_FORCE = -15
 
 if timers[1].value <= 1:
-    players = (yegiks[0], yegiks[1])  # p1z 1 p2z 2
+    players = [yegiks[0], yegiks[1]]  # p1z 1 p2z 2
     ball = yegiks[2]  # p3z 3
 
     player_bot = bots[1]  # p4z 2
@@ -12,8 +12,8 @@ if timers[1].value <= 1:
     net = points[0]  # p6z 1
     waypoint = points[1]  # p7z 2
 
-    player_spawns = (1, 4)  # p8z 1 p9z 4
-    ball_spawns = (2, 3)  # p10z 2 p11z 3
+    player_spawns = [1, 4]  # p8z 1 p9z 4
+    ball_spawns = [2, 3]  # p10z 2 p11z 3
     ball_speed_x = 0  # p12z 0
     player_touches = (0, 0)  # p13z 0 p14z 0
 

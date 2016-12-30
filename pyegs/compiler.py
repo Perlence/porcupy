@@ -21,7 +21,7 @@ class NodeVisitor(ast.NodeVisitor):
 
     def visit_Assign(self, node, slot=None):
         for target in node.targets:
-            if isinstance(target, ast.Tuple):
+            if isinstance(target, ast.List):
                 raise NotImplementedError('iterable destruction is not implemented yet')
 
             if isinstance(node.value, ast.Num):
@@ -34,8 +34,8 @@ class NodeVisitor(ast.NodeVisitor):
                 raise NotImplementedError('assigning unary operations is not implemented yet')
             elif isinstance(node.value, ast.BinOp):
                 raise NotImplementedError('assigning binary operations is not implemented yet')
-            elif isinstance(node.value, ast.Tuple):
-                self.assign_tuple(target, node.value, slot)
+            elif isinstance(node.value, ast.List):
+                self.assign_list(target, node.value, slot)
             elif isinstance(node.value, ast.Subscript):
                 self.assign_subscript(target, node.value, slot)
             else:
@@ -77,19 +77,19 @@ class NodeVisitor(ast.NodeVisitor):
         const_arg = call.args[0]
         self.scope.define_const(target.id, const_arg)
 
-    def assign_tuple(self, target, value, slot):
-        tuple_type = self.type_of_items(value.elts)
-        if tuple_type is None:
-            raise TypeError('tuple items must be of the same type')
+    def assign_list(self, target, value, slot):
+        list_type = self.type_of_items(value.elts)
+        if list_type is None:
+            raise TypeError('list items must be of the same type')
 
-        length = len(value.elts)
+        capacity = len(value.elts)
         if slot is None:
-            tuple_pointer = self.scope.define(TuplePointerSlot, target.id, length)
+            list_pointer = self.scope.define(ListPointerSlot, target.id, capacity)
         else:
-            tuple_pointer = slot
-        slots = self.scope.allocate_many(tuple_type, length)
+            list_pointer = slot
+        slots = self.scope.allocate_many(list_type, capacity)
         first_item = slots[0]
-        self.output_assign(tuple_pointer, first_item.slot_number)
+        self.output_assign(list_pointer, first_item.slot_number)
         for dest, src in zip(slots, value.elts):
             target = ast.Name(id=None)
             assign = ast.Assign(targets=[target], value=src)
@@ -244,8 +244,8 @@ class StringSlot:
 
 
 @attr.s
-class TuplePointerSlot(NumberSlot):
-    length = attr.ib()
+class ListPointerSlot(NumberSlot):
+    capacity = attr.ib()
 
 
 @attr.s
