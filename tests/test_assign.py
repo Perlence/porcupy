@@ -13,8 +13,7 @@ def test_consts():
     assert compile_('X = 4; y = X') == 'p1z 4'
     assert compile_('X = "HELLO"; y = X') == 's0z HELLO'
 
-    with pytest.skip('Not implemented yet'):
-        assert compile_('X = 4; Y = X; z = Y') == 'p1z 4'
+    assert compile_('X = 4; Y = X; z = Y') == 'p1z 4'
 
 
 def test_numbers():
@@ -66,7 +65,7 @@ def test_lists():
     assert str(exc_info.value) == 'ran out of variable slots'
 
     with pytest.skip('Not implemented yet'):
-        assert compile_('x = [1, 2]; y = x[0]') == 'p1z 2 p2z 1 p3z 2 p4z p1z+0 p4z p^4z'
+        assert compile_('x = [1, 2]; y = x[0]') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p4z p^4z'
 
 
 def test_multiple_assign():
@@ -75,16 +74,22 @@ def test_multiple_assign():
 
 
 @pytest.mark.skip('Not implemented yet')
-def test_game_vars():
-    assert compile_('x = yegiks[0]') == 'p1z 1'
-    # assert compile_('x = [yegiks[0], yegiks[1]]') == 'p1z 2 p2z 1 p3z 2'
+def test_game_objects():
+    # NumberSlot.slot(1) := Slot(name='e', attrib='f', slot_number=1)
+    assert compile_('x = yegiks[1].frags') == 'p1z e1f'
+    # NumberSlot.slot(1) := NumberSlot.const(1); NumberSlot.slot(2) := SlotRef(name='e', reference=1, attrib='f')
+    assert compile_('x = 1; y = yegiks[x].frags') == 'p1z 1 p2z e^1f'
 
-    assert compile_('x = yegiks[0].frags') == 'p1z e1f'
+    # Slot(letter='e', slot_number=1, attrib='f')
+    assert compile_('yegiks[1].frags = 99') == 'e1f 99'
+    # Slot(letter='e', by_reference=NumberSlot.slot(1), attrib='f')
+    assert compile_('x = yegiks[1]; x.frags = 99') == 'p1z 1 e^1f 99'
 
-    # assert compile_('x = yegiks[0]; x.frags = 0') == 'p1z 1 e^1z 0'
-
-    assert compile_('x = "Hello World"; system.message(x)') == 's0z Hello_World ym $0'
-    assert compile_('x = [1, 2]; system.message(x[0])') == 'p1z 2 p2z 1 p3z 2 p4z p1z+0 p4z p^4z ym ^4'
+    # GameObjectRef.const(1, type=Yegik), class GameObjectRef(NumberSlot)
+    assert compile_('x = yegiks[1]') == 'p1z 1'
+    # GameObjectRef.slot(1, type=Yegik)
+    assert compile_('x = 1; y = yegiks[x]') == 'p1z 1 p2z p1z'
+    assert compile_('x = [yegiks[1], yegiks[2]]') == 'p1z 1 p2z 2 p3z 1'
 
 
 @pytest.mark.skip('Not implemented yet')
