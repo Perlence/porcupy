@@ -37,6 +37,8 @@ class NodeVisitor(ast.NodeVisitor):
                 return Const(value.s, str)
             elif isinstance(value, ast.List):
                 return self.load_list(value)
+            elif isinstance(value, ast.NameConstant):
+                return Const(value.value, type(value.value))
             elif isinstance(value, ast.Name):
                 return self.scope.get(value.id)
             elif isinstance(value, ast.Attribute):
@@ -218,7 +220,9 @@ class Const:
     metadata = attr.ib(default=attr.Factory(dict))
 
     def __str__(self):
-        if issubclass(self.type, Number):
+        if issubclass(self.type, bool):
+            return str(int(self.value))
+        elif issubclass(self.type, Number):
             return str(self.value).replace('.', ',')
         elif issubclass(self.type, str):
             return self.value.replace(' ', '_')

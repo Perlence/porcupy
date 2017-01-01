@@ -15,6 +15,11 @@ def test_consts():
 
     assert compile_('X = 4; Y = X; z = Y') == 'p1z 4'
 
+    with pytest.skip('Not implemented yet'):
+        with pytest.raises(TypeError) as exc_info:
+            compile_('X = 4; X = 5')
+        assert str(exc_info.value) == 'cannot redefine a constant'
+
 
 def test_numbers():
     assert compile_('x = 4') == 'p1z 4'
@@ -31,6 +36,11 @@ def test_other_names():
 
 def test_strings():
     assert compile_('s = "Hello World"') == 's0z Hello_World'
+
+
+def test_bools():
+    assert compile_('x = False') == 'p1z 0'
+    assert compile_('x = True') == 'p1z 1'
 
 
 def test_undefined():
@@ -74,9 +84,13 @@ def test_lists():
     with pytest.skip('Not implemented yet'):
         assert compile_('x = [0] * 3') == 'p1z 0 p2z 0 p3z 0 p4z 1'
 
-    with pytest.skip('Not implemented yet'):
-        # Constant list pointer
-        assert compile_('X = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33'
+    # Constant list pointer
+    assert compile_('X = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33'
+
+    assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p4z 1+0 p4z p^4z'
+
+    with pytest.skip('Constant list pointer subscription optimization is not implemented yet'):
+        assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p4z 11'
 
 
 def test_multiple_assign():
