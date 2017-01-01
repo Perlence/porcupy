@@ -5,8 +5,8 @@ __all__ = ('timers', 'system', 'yegiks', 'bots', 'points')
 
 @attr.s
 class Timer:
-    value = attr.ib(default=0, metadata={'abbrev': 'i'})
-    enabled = attr.ib(default=0, metadata={'abbrev': 'r'})
+    value = attr.ib(default=0, metadata={'abbrev': 'i', 'type': int})
+    enabled = attr.ib(default=0, metadata={'abbrev': 'r', 'type': bool})
 
     _abbrev = 't'
 
@@ -17,8 +17,8 @@ timers[1].enabled = 1
 
 @attr.s
 class System:
-    bots = attr.ib(default=0, metadata={'abbrev': 'b'})
-    color = attr.ib(default=0, metadata={'abbrev': 'c'})
+    bots = attr.ib(default=0, metadata={'abbrev': 'b', 'type': int})
+    color = attr.ib(default=0, metadata={'abbrev': 'c', 'type': int})
 
     _abbrev = 'y'
 
@@ -40,10 +40,10 @@ system = System()
 
 @attr.s
 class Bot:
-    ai = attr.ib(default=False, metadata={'abbrev': 'i'})
-    target = attr.ib(default=0, metadata={'abbrev': 't'})
-    level = attr.ib(default=0, metadata={'abbrev': 'l'})
-    point = attr.ib(default=0, metadata={'abbrev': 'p'})
+    ai = attr.ib(default=False, metadata={'abbrev': 'i', 'type': bool})
+    target = attr.ib(default=0, metadata={'abbrev': 't', 'type': int})
+    level = attr.ib(default=0, metadata={'abbrev': 'l', 'type': int})
+    point = attr.ib(default=0, metadata={'abbrev': 'p', 'type': int})
 
     _abbrev = 'a'
 
@@ -56,17 +56,17 @@ bots = [Bot() for x in range(1, 10)]
 
 @attr.s
 class Yegik:
-    frags = attr.ib(default=0, metadata={'abbrev': 'f'})
-    pos_x = attr.ib(default=0.0, metadata={'abbrev': 'x'})
-    pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y'})
-    speed_x = attr.ib(default=0.0, metadata={'abbrev': 'u'})
-    speed_y = attr.ib(default=0.0, metadata={'abbrev': 'v'})
-    health = attr.ib(default=0, metadata={'abbrev': 'p'})
-    armor = attr.ib(default=0, metadata={'abbrev': 'n'})
-    has_weapon = attr.ib(default=False, metadata={'abbrev': 'e'})
-    weapon = attr.ib(default=0, metadata={'abbrev': 'w'})
-    ammo = attr.ib(default=0, metadata={'abbrev': 's'})
-    view_angle = attr.ib(default=0.0, metadata={'abbrev': 'a'})
+    frags = attr.ib(default=0, metadata={'abbrev': 'f', 'type': int})
+    pos_x = attr.ib(default=0.0, metadata={'abbrev': 'x', 'type': float})
+    pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y', 'type': float})
+    speed_x = attr.ib(default=0.0, metadata={'abbrev': 'u', 'type': float})
+    speed_y = attr.ib(default=0.0, metadata={'abbrev': 'v', 'type': float})
+    health = attr.ib(default=0, metadata={'abbrev': 'p', 'type': int})
+    armor = attr.ib(default=0, metadata={'abbrev': 'n', 'type': int})
+    has_weapon = attr.ib(default=False, metadata={'abbrev': 'e', 'type': bool})
+    weapon = attr.ib(default=0, metadata={'abbrev': 'w', 'type': int})
+    ammo = attr.ib(default=0, metadata={'abbrev': 's', 'type': int})
+    view_angle = attr.ib(default=0.0, metadata={'abbrev': 'a', 'type': float})
 
     _abbrev = 'e'
 
@@ -79,8 +79,8 @@ yegiks = [Yegik() for x in range(1, 10)]
 
 @attr.s
 class Point:
-    pos_x = attr.ib(default=0.0, metadata={'abbrev': 'x'})
-    pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y'})
+    pos_x = attr.ib(default=0.0, metadata={'abbrev': 'x', 'type': float})
+    pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y', 'type': float})
 
     _abbrev = 'c'
 

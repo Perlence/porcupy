@@ -2,6 +2,7 @@ import ast
 from numbers import Number
 
 import attr
+import funcy
 
 from . import runtime
 
@@ -50,29 +51,30 @@ class NodeVisitor(ast.NodeVisitor):
             else:
                 raise NotImplementedError
 
-        try:
-            slot = self.loaded_values[value]
-        except KeyError:
+        slot = self.loaded_values.get(value)
+        if slot is None:
             slot = self.loaded_values[value] = fn()
         return slot
 
     def load_list(self, value):
-        list_type = self.type_of_items(value.elts)
-        if list_type is None:
+        item_type = self.type_of_items(value.elts)
+        if item_type is None:
             raise TypeError('list items must be of the same type')
 
         capacity = len(value.elts)
-        item_slots = self.scope.allocate_many(list_type, capacity)
+        item_slots = self.scope.allocate_many(item_type, capacity)
         for dest_slot, item in zip(item_slots, value.elts):
             src_slot = self.load_value(item)
             self.output_assign(dest_slot, src_slot)
         first_item = item_slots[0]
-        return Const(first_item.number, ListPointer, metadata={'capacity': capacity})
+        metadata = {'capacity': capacity, 'item_type': item_type}
+        return Const(first_item.number, ListPointer, metadata=metadata)
 
     def type_of_items(self, items):
         type_set = set()
         for item in items:
             src_slot = self.load_value(item)
+            print(repr(src_slot))
             type_set.add(src_slot.type)
             if len(type_set) > 1:
                 return
@@ -81,13 +83,13 @@ class NodeVisitor(ast.NodeVisitor):
 
     def load_attribute(self, value):
         value_slot = self.load_value(value.value)
-        game_obj_type = value_slot.metadata.get('game_obj_type')
-        if game_obj_type is not None:
+        if issubclass(value_slot.type, GameObjectRef):
+            game_obj_type = value_slot.type.type
             register = game_obj_type._abbrev
             attrib = getattr(game_obj_type, value.attr)
             if value_slot.is_variable():
                 value_slot = attr.assoc(value_slot, register=register, ref=True)
-            value_slot = attr.assoc(value_slot, attrib=attrib.metadata['abbrev'])
+            value_slot = attr.assoc(value_slot, type=attrib.metadata['type'], attrib=attrib.metadata['abbrev'])
             return value_slot
         else:
             raise NotImplementedError
@@ -97,18 +99,20 @@ class NodeVisitor(ast.NodeVisitor):
         slice_slot = self.load_value(value.slice)
         if isinstance(value_slot, GameObjectList):
             register = value_slot.type._abbrev
-            metadata = {'game_obj_type': value_slot.type}
+            slot_type = GameObjectRef.type(value_slot.type)
             if isinstance(slice_slot, Const):
-                return Slot(register, slice_slot.value, None, int, metadata=metadata)
+                return Slot(register, slice_slot.value, None, slot_type)
             else:
-                return attr.assoc(slice_slot, metadata=metadata)
+                return attr.assoc(slice_slot, type=slot_type)
         elif issubclass(value_slot.type, ListPointer):
             if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.metadata['capacity']:
                 raise IndexError('list index out of range')
             pointer_math_slot = self.scope.allocate(ListPointer)
             addition = BinaryOp(value_slot, ast.Add(), slice_slot)
             self.output_assign(pointer_math_slot, addition)
-            slot = attr.assoc(pointer_math_slot, ref=True)
+            slot = attr.assoc(pointer_math_slot, type=value_slot.metadata['item_type'], ref=True)
+            if issubclass(value_slot.metadata['item_type'], GameObjectRef):
+                self.output_assign(pointer_math_slot, slot)
             self.scope.free(pointer_math_slot)
             return slot
         else:
@@ -148,7 +152,7 @@ class Scope:
         self.names['points'] = GameObjectList(runtime.Point)
         self.names['bots'] = GameObjectList(runtime.Bot)
         self.names['timers'] = GameObjectList(runtime.Timer)
-        self.names['system'] = Slot(runtime.System._abbrev, None, None, int, metadata={'game_obj_type': runtime.System})
+        self.names['system'] = Slot(runtime.System._abbrev, None, None, GameObjectRef.type(runtime.System))
 
     def define_const(self, name, value):
         self.names[name] = value
@@ -253,8 +257,15 @@ class Slot:
             return str(self.number)
 
 
-class ListPointer(Number):
+class ListPointer(int):
     pass
+
+
+class GameObjectRef(int):
+    @staticmethod
+    @funcy.memoize
+    def type(game_obj_type):
+        return type('GameObjectTypedRef', (GameObjectRef,), {'type': game_obj_type})
 
 
 @attr.s

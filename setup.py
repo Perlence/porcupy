@@ -21,6 +21,7 @@ setup(
     },
     install_requires=[
         'attrs',
+        'funcy',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

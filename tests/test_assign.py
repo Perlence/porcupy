@@ -66,7 +66,7 @@ def test_lists():
 
     assert compile_('x = [1, 2]; y = [3, 4]; z = [x, y]') == 'p1z 1 p2z 2 p3z 1 p4z 3 p5z 4 p6z 4 p7z p3z p8z p6z p9z 7'
 
-    # list with 99 elements in it causes a MemoryError
+    # List with 99 elements in it causes a MemoryError
     with pytest.raises(MemoryError) as exc_info:
         compile_('x = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'
                  '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'
@@ -76,6 +76,8 @@ def test_lists():
 
     assert compile_('x = [1, 2]; y = x[0]') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p4z p^4z'
     assert compile_('x = [1, 2]; y = 0; z = x[y]') == 'p1z 1 p2z 2 p3z 1 p4z 0 p5z p3z+p4z p5z p^5z'
+
+    assert compile_('x = [1, 2]; x[0] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5'
 
     with pytest.raises(IndexError) as exc_info:
         compile_('x = [1, 2]; y = x[2]')
@@ -113,6 +115,8 @@ def test_game_objects():
 
     assert compile_('system.bots = 4') == 'yb 4'
     assert compile_('system.color = 256') == 'yc 256'
+
+    assert compile_('x = [yegiks[8], yegiks[9]]; x[0].frags = 55') == 'p1z 8 p2z 9 p3z 1 p4z p3z+0 p4z p^4z e^4f 55'
 
 
 @pytest.mark.skip('Not implemented yet')
