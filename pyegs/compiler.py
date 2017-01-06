@@ -12,16 +12,16 @@ def compile(source, filename='<unknown>'):
 
     visitor = NodeVisitor()
     visitor.visit(top)
-    return visitor.output.strip()
+    return ' '.join(visitor.output)
 
 
 @attr.s
 class NodeVisitor(ast.NodeVisitor):
     scope = attr.ib(default=attr.Factory(lambda: Scope()))
-    output = attr.ib(default='')
+    output = attr.ib(default=attr.Factory(list))
     loaded_values = attr.ib(default=attr.Factory(dict))
 
-    def visit_Assign(self, node, slot=None):
+    def visit_Assign(self, node):
         for target in node.targets:
             if isinstance(target, ast.List):
                 raise NotImplementedError('iterable destruction is not implemented yet')
@@ -29,6 +29,44 @@ class NodeVisitor(ast.NodeVisitor):
             dest_slot = self.store_value(target, src_slot)
             if dest_slot is not None:
                 self.output_assign(dest_slot, src_slot)
+
+    def visit_If(self, node):
+        self.output.append('#')
+        self.output_test(node.test)
+        self.output.append('(')
+        for body_node in node.body:
+            self.visit(body_node)
+        self.output.append(')')
+
+    def output_test(self, test):
+        if isinstance(test, ast.Compare):
+            left = self.load_value(test.left)
+            self.output.append(str(left))
+            for i, (op, comparator) in enumerate(zip(test.ops, test.comparators)):
+                if i > 0:
+                    self.output += ['&', str(left)]
+                self.output_cmpop(op)
+                comp_slot = self.load_value(comparator)
+                self.output.append(str(comp_slot))
+                left = comp_slot
+        else:
+            raise NotImplementedError
+
+    def output_cmpop(self, op):
+        if isinstance(op, ast.Eq):
+            self.output.append('=')
+        elif isinstance(op, ast.NotEq):
+            self.output.append('!')
+        elif isinstance(op, ast.Lt):
+            self.output.append('<')
+        elif isinstance(op, ast.LtE):
+            self.output.append('<=')
+        elif isinstance(op, ast.Gt):
+            self.output.append('>')
+        elif isinstance(op, ast.GtE):
+            self.output.append('>=')
+        else:
+            raise Exception("op '{}' is not a comparison operation".format(op))
 
     def load_value(self, value):
         def fn():
@@ -135,7 +173,7 @@ class NodeVisitor(ast.NodeVisitor):
         return target.id is not None and target.id.isupper()
 
     def output_assign(self, dest, value):
-        self.output += '{} {} '.format(dest, value)
+        self.output += [str(dest), str(value)]
 
 
 @attr.s
