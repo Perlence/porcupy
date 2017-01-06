@@ -40,17 +40,31 @@ class NodeVisitor(ast.NodeVisitor):
 
     def output_test(self, test):
         if isinstance(test, ast.Compare):
-            left = self.load_value(test.left)
-            self.output.append(str(left))
-            for i, (op, comparator) in enumerate(zip(test.ops, test.comparators)):
-                if i > 0:
-                    self.output += ['&', str(left)]
-                self.output_cmpop(op)
-                comp_slot = self.load_value(comparator)
-                self.output.append(str(comp_slot))
-                left = comp_slot
+            self.output_compare(test)
+        elif isinstance(test, ast.BoolOp):
+            self.output_bool_op(test)
         else:
             raise NotImplementedError
+
+    def output_compare(self, compare):
+        left = self.load_value(compare.left)
+        self.output.append(str(left))
+        for i, (op, comparator) in enumerate(zip(compare.ops, compare.comparators)):
+            if i > 0:
+                self.output += ['&', str(left)]
+            self.output_cmpop(op)
+            comp_slot = self.load_value(comparator)
+            self.output.append(str(comp_slot))
+            left = comp_slot
+
+    def output_bool_op(self, bool_op):
+        first = bool_op.values[0]
+        slot = self.load_value(first)
+        self.output.append(str(slot))
+        for value in bool_op.values[1:]:
+            slot = self.load_value(value)
+            self.output_boolop(bool_op.op)
+            self.output.append(str(slot))
 
     def output_cmpop(self, op):
         if isinstance(op, ast.Eq):
@@ -65,8 +79,12 @@ class NodeVisitor(ast.NodeVisitor):
             self.output.append('>')
         elif isinstance(op, ast.GtE):
             self.output.append('>=')
-        else:
-            raise Exception("op '{}' is not a comparison operation".format(op))
+
+    def output_boolop(self, op):
+        if isinstance(op, ast.And):
+            self.output.append('&')
+        elif isinstance(op, ast.Or):
+            self.output.append('|')
 
     def load_value(self, value):
         def fn():
