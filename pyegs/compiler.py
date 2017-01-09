@@ -49,13 +49,15 @@ class NodeVisitor(ast.NodeVisitor):
     def output_compare(self, compare):
         left = self.load_value(compare.left)
         self.output.append(str(left))
-        for i, (op, comparator) in enumerate(zip(compare.ops, compare.comparators)):
-            if i > 0:
+        and_left = False
+        for op, comparator in zip(compare.ops, compare.comparators):
+            if and_left:
                 self.output += ['&', str(left)]
             self.output_cmpop(op)
             comp_slot = self.load_value(comparator)
             self.output.append(str(comp_slot))
             left = comp_slot
+            and_left = True
 
     def output_bool_op(self, bool_op):
         first = bool_op.values[0]
