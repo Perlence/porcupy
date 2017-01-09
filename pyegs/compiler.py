@@ -21,6 +21,19 @@ class NodeVisitor(ast.NodeVisitor):
     output = attr.ib(default=attr.Factory(list))
     loaded_values = attr.ib(default=attr.Factory(dict))
 
+    def visit(self, node):
+        try:
+            return super().visit(node)
+        except Exception as e:
+            if not hasattr(node, 'lineno') or not hasattr(node, 'col_offset'):
+                raise e
+            line_col = 'line {}, column {}'.format(node.lineno, node.col_offset)
+            if not str(e):
+                msg = line_col
+            else:
+                msg = str(e) + '; ' + line_col
+            raise type(e)(msg) from e
+
     def visit_Assign(self, node):
         for target in node.targets:
             if isinstance(target, (ast.Tuple, ast.List)):
@@ -92,7 +105,7 @@ class NodeVisitor(ast.NodeVisitor):
         elif isinstance(value, ast.UnaryOp):
             return self.load_unary_op(value)
         else:
-            raise NotImplementedError
+            raise NotImplementedError("expression '{}' is not implemented yet".format(value))
 
     def load_list(self, value):
         loaded_items = map(self.load_cached_expr, value.elts)
@@ -114,7 +127,7 @@ class NodeVisitor(ast.NodeVisitor):
         if issubclass(value_slot.type, GameObjectRef):
             return self.load_game_obj_attr(value_slot, value.attr)
         else:
-            raise NotImplementedError
+            raise NotImplementedError("getting attribute of object of type '{}' is not implemented yet".format(value.slot.type))
 
     def load_game_obj_attr(self, slot, attr_name):
         game_obj_type = slot.type.type
@@ -132,7 +145,7 @@ class NodeVisitor(ast.NodeVisitor):
         elif issubclass(value_slot.type, ListPointer):
             return self.load_list_subscript(value_slot, slice_slot)
         else:
-            raise NotImplementedError
+            raise NotImplementedError("getting item of collection of type '{}' is not implemented yet".format(value_slot.type))
 
     def load_game_obj_list_subscript(self, value_slot, slice_slot):
         register = value_slot.type._abbrev
@@ -198,7 +211,7 @@ class NodeVisitor(ast.NodeVisitor):
         elif isinstance(target, ast.Subscript):
             return self.load_subscript(target)
         else:
-            raise NotImplementedError
+            raise NotImplementedError("assigning values to '{}' is not implemented yet".format(target))
 
     def is_const(self, target):
         return target.id is not None and target.id.isupper()

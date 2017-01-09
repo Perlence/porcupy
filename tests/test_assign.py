@@ -74,13 +74,13 @@ def test_unary_op():
 def test_undefined():
     with pytest.raises(NameError) as exc_info:
         compile_('x = y')
-    assert str(exc_info.value) == "name 'y' is not defined"
+    assert "name 'y' is not defined" in str(exc_info.value)
 
 
 def test_lists():
     with pytest.raises(TypeError) as exc_info:
         assert compile_('x = [1, "2"]')
-    assert str(exc_info.value) == 'list items must be of the same type'
+    assert 'list items must be of the same type' in str(exc_info.value)
 
     assert compile_('x = [1, 2]') == 'p1z 1 p2z 2 p3z 1'
     assert compile_('x = 1; y = [2, 3]') == 'p1z 1 p2z 2 p3z 3 p4z 2'
@@ -100,7 +100,7 @@ def test_lists():
                  '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'
                  '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,'
                  '0,0,0,0,0,0,0,0,0,0,0,0]')
-    assert str(exc_info.value) == 'ran out of variable slots'
+    assert 'ran out of variable slots' in str(exc_info.value)
 
     assert compile_('x = [1, 2]; y = x[0]') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p4z p^4z'
     assert compile_('x = [1, 2]; y = 0; z = x[y]') == 'p1z 1 p2z 2 p3z 1 p4z 0 p5z p3z+p4z p5z p^5z'
@@ -149,4 +149,4 @@ def test_game_objects():
 def test_static_type():
     with pytest.raises(TypeError) as exc_info:
         assert compile_('x = 1; x = "s"')
-    assert str(exc_info.value) == "cannot assign string 's' to numeric variable"
+    assert "cannot assign string 's' to numeric variable" in str(exc_info.value)
