@@ -25,14 +25,16 @@ class NodeVisitor(ast.NodeVisitor):
         try:
             return super().visit(node)
         except Exception as e:
-            if not hasattr(node, 'lineno') or not hasattr(node, 'col_offset'):
+            try:
+                lineno = node.lineno
+                col_offset = node.col_offset
+            except AttributeError:
                 raise e
-            line_col = 'line {}, column {}'.format(node.lineno, node.col_offset)
-            if not str(e):
-                msg = line_col
-            else:
-                msg = str(e) + '; ' + line_col
-            raise type(e)(msg) from e
+            old_msg = e.args[0]
+            line_col = 'line {}, column {}'.format(lineno, col_offset)
+            msg = old_msg + '; ' + line_col if old_msg else line_col
+            e.args = (msg,) + e.args[1:]
+            raise e
 
     def generic_visit(self, node):
         raise NotImplementedError("node '{}' is not implemented yet".format(node))
