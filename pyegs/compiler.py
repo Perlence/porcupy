@@ -34,6 +34,12 @@ class NodeVisitor(ast.NodeVisitor):
                 msg = str(e) + '; ' + line_col
             raise type(e)(msg) from e
 
+    def generic_visit(self, node):
+        raise NotImplementedError("node '{}' is not implemented yet".format(node))
+
+    def visit_Module(self, node):
+        super().generic_visit(node)
+
     def visit_Assign(self, node):
         for target in node.targets:
             if isinstance(target, (ast.Tuple, ast.List)):
