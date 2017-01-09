@@ -31,6 +31,24 @@ class NodeVisitor(ast.NodeVisitor):
                 self.output_assign(dest_slot, src_slot)
 
     def visit_If(self, node):
+        if isinstance(node.test, (ast.Num, ast.Str, ast.NameConstant, ast.List)):
+            self.optimized_if(node)
+        else:
+            self.generic_if(node)
+
+    def optimized_if(self, node):
+        if isinstance(node.test, ast.Num) and not node.test.n:
+            return
+        elif isinstance(node.test, ast.Str) and not node.test.s:
+            return
+        elif isinstance(node.test, ast.NameConstant) and not node.test.value:
+            return
+        elif isinstance(node.test, ast.List) and not node.test.elts:
+            return
+        for body_node in node.body:
+            self.visit(body_node)
+
+    def generic_if(self, node):
         test_expr = self.load_expr(node.test)
         self.output.append('#')
         if isinstance(test_expr, BinOp):
@@ -53,10 +71,10 @@ class NodeVisitor(ast.NodeVisitor):
             return Const(value.n, Number)
         elif isinstance(value, ast.Str):
             return Const(value.s, str)
-        elif isinstance(value, ast.List):
-            return self.load_list(value)
         elif isinstance(value, ast.NameConstant):
             return Const(value.value, type(value.value))
+        elif isinstance(value, ast.List):
+            return self.load_list(value)
         elif isinstance(value, ast.Name):
             return self.scope.get(value.id)
         elif isinstance(value, ast.Attribute):

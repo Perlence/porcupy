@@ -1,7 +1,22 @@
 from pyegs.compiler import compile as compile_
 
 
-def test_if():
+def test_optimized_if():
+    assert compile_('if 0: x = 11') == ''
+    assert compile_('if 1: x = 11') == 'p1z 11'
+
+    assert compile_("if '': x = 11") == ''
+    assert compile_("if 'beep': x = 11") == 'p1z 11'
+
+    assert compile_('if None: x = 11') == ''
+    assert compile_('if False: x = 11') == ''
+    assert compile_('if True: x = 11') == 'p1z 11'
+
+    assert compile_('if []: x = 11') == ''
+    assert compile_('if [1, 2, 3]: x = 11') == 'p1z 11'
+
+
+def test_generic_if():
     # Test is Compare
     assert compile_('x = 11\nif x > 0: y = 22') == 'p1z 11 # p1z > 0 ( p2z 22 )'
     assert compile_('x = 11\n'
@@ -23,17 +38,3 @@ def test_if():
     assert compile_('x = 1\nif x + 2: y = 22') == 'p1z 1 # p1z+2 ! 0 ( p2z 22 )'
     # # Test is UnaryOp
     # assert compile_('x = -1\nif -x: y = 22') == 'p1z -1 # -p1z ! 0 ( p2z 22 )'
-
-    # # Test is Num
-    # assert compile_('if 0: x = 11') == ''
-    # assert compile_('if 1: x = 11') == 'p1z 11'
-    # # Test is Str: pass unless str is empty
-    # assert compile_("if '': x = 11") == ''
-    # assert compile_("if 'beep': x = 11") == 'p1z 11'
-    # # Test is NameConstant
-    # assert compile_('if None: x = 11') == ''
-    # assert compile_('if False: x = 11') == ''
-    # assert compile_('if True: x = 11') == 'p1z 11'
-    # # Test is List: don't load list items into slots, pass unless list is empty
-    # assert compile_('if []: x = 11') == ''
-    # assert compile_('if [1, 2, 3]: x = 11') == 'p1z 11'
