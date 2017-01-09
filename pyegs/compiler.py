@@ -33,7 +33,10 @@ class NodeVisitor(ast.NodeVisitor):
     def visit_If(self, node):
         test_expr = self.load_expr(node.test)
         self.output.append('#')
-        self.output.append(str(test_expr))
+        if isinstance(test_expr, BinOp):
+            self.output += [str(test_expr), '!', '0']
+        else:
+            self.output.append(str(test_expr))
         self.output.append('(')
         for body_node in node.body:
             self.visit(body_node)
@@ -310,6 +313,30 @@ class GameObjectList:
 
 
 @attr.s
+class BoolOp:
+    op = attr.ib()
+    values = attr.ib()
+
+    def __str__(self):
+        result = []
+        first, *rest = self.values
+        result.append(str(first))
+        for value in rest:
+            result.append(self.translate_boolop(self.op))
+            result.append(str(value))
+        return ' '.join(result)
+
+    def translate_boolop(self, op):
+        if not isinstance(op, ast.boolop):
+            raise SyntaxError("node '{}' is not a boolean operator".format(op))
+
+        if isinstance(op, ast.And):
+            return '&'
+        elif isinstance(op, ast.Or):
+            return '|'
+
+
+@attr.s
 class BinOp:
     left = attr.ib()
     op = attr.ib()
@@ -374,27 +401,3 @@ class Compare:
             return '>'
         elif isinstance(op, ast.GtE):
             return '>='
-
-
-@attr.s
-class BoolOp:
-    op = attr.ib()
-    values = attr.ib()
-
-    def __str__(self):
-        result = []
-        first, *rest = self.values
-        result.append(str(first))
-        for value in rest:
-            result.append(self.translate_boolop(self.op))
-            result.append(str(value))
-        return ' '.join(result)
-
-    def translate_boolop(self, op):
-        if not isinstance(op, ast.boolop):
-            raise SyntaxError("node '{}' is not a boolean operator".format(op))
-
-        if isinstance(op, ast.And):
-            return '&'
-        elif isinstance(op, ast.Or):
-            return '|'

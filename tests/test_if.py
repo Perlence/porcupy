@@ -19,8 +19,8 @@ def test_if():
 
     assert compile_('x = 11\nif x < 5 + 7: y = 22') == 'p1z 11 # p1z < 5+7 ( p2z 22 )'
 
-    # # Test is BinOp
-    # assert compile_('x = -1\nif x + 2: y = 22') == 'p1z -1 # p1z+2 ! 0 ( p2z 22 )'
+    # Test is BinOp
+    assert compile_('x = 1\nif x + 2: y = 22') == 'p1z 1 # p1z+2 ! 0 ( p2z 22 )'
     # # Test is UnaryOp
     # assert compile_('x = -1\nif -x: y = 22') == 'p1z -1 # -p1z ! 0 ( p2z 22 )'
 
