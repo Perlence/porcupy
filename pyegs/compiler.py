@@ -23,8 +23,8 @@ class NodeVisitor(ast.NodeVisitor):
 
     def visit_Assign(self, node):
         for target in node.targets:
-            if isinstance(target, ast.List):
-                raise NotImplementedError('iterable destruction is not implemented yet')
+            if isinstance(target, (ast.Tuple, ast.List)):
+                raise NotImplementedError('iterable unpacking is not implemented yet')
             src_slot = self.load_value(node.value)
             dest_slot = self.store_value(target, src_slot)
             if dest_slot is not None:
