@@ -394,6 +394,7 @@ class BinOp:
     left = attr.ib()
     op = attr.ib()
     right = attr.ib()
+
     strict = attr.ib(default=True)
     type = attr.ib(init=False)
     metadata = attr.ib(default=attr.Factory(dict))
@@ -452,6 +453,12 @@ class Compare:
     left = attr.ib()
     ops = attr.ib()
     comparators = attr.ib()
+
+    type = attr.ib(init=False)
+    metadata = attr.ib(default=attr.Factory(dict))
+
+    def __attrs_post_init__(self):
+        self.type = bool
 
     def __str__(self):
         result = []

@@ -38,3 +38,5 @@ def test_generic_if():
     assert compile_('x = 1\nif x + 2: y = 22') == 'p1z 1 # p1z+2 ! 0 ( p2z 22 )'
     # # Test is UnaryOp
     # assert compile_('x = -1\nif -x: y = 22') == 'p1z -1 # -p1z ! 0 ( p2z 22 )'
+
+    # assert compile_('x = 11\nif 5 + 7 and True: y = 22') == 'p1z 11 # 5+7 ! 0 & 1 ! 0 ( p2z 22 )'

@@ -53,6 +53,25 @@ def test_binary_op():
     assert compile_('x = 1; y = x+2*3') == 'p1z 2 p2z p1z*3 p2z p2z+1'
 
 
+@pytest.mark.skip('Not implemented yet')
+def test_compare():
+    assert compile_('x = 3 < 5') == 'p1z 1'
+    assert compile_('x = 3 < 5 < 6') == 'p1z 1'
+    assert compile_('x = 3 < 5 > 6') == 'p1z 0'
+
+    assert compile_('x = 3; y = x < 5') == 'p1z 3 p2z 0 # p1z < 5 ( p2z 1 )'
+    assert compile_('x = 3; y = x < 5 < 6') == 'p1z 3 p2z 0 # p1z < 5 & 5 < 6 ( p2z 1 )'
+
+
+@pytest.mark.skip('Not implemented yet')
+def test_bool_op():
+    assert compile_('x = True and True') == 'p1z 1'
+    assert compile_('x = True or False') == 'p1z 1'
+
+    assert compile_('x = True; y = x and True') == 'p1z 1 p2z 0 # p1z ! 0 & 1 ! 0 ( p2z 1 )'
+    assert compile_('x = True; y = x or False') == 'p1z 1 p2z 0 # p1z ! 0 | 1 ! 0 ( p2z p1z )'
+
+
 def test_unary_op():
     assert compile_('x = +4') == 'p1z 4'
     assert compile_('x = -4') == 'p1z -4'
