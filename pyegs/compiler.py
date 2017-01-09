@@ -25,94 +25,51 @@ class NodeVisitor(ast.NodeVisitor):
         for target in node.targets:
             if isinstance(target, (ast.Tuple, ast.List)):
                 raise NotImplementedError('iterable unpacking is not implemented yet')
-            src_slot = self.load_value(node.value)
+            src_slot = self.load_cached_expr(node.value)
             dest_slot = self.store_value(target, src_slot)
             if dest_slot is not None:
                 self.output_assign(dest_slot, src_slot)
 
     def visit_If(self, node):
+        test_expr = self.load_expr(node.test)
         self.output.append('#')
-        self.output_test(node.test)
+        self.output.append(str(test_expr))
         self.output.append('(')
         for body_node in node.body:
             self.visit(body_node)
         self.output.append(')')
 
-    def output_test(self, test):
-        if isinstance(test, ast.Compare):
-            self.output_compare(test)
-        elif isinstance(test, ast.BoolOp):
-            self.output_bool_op(test)
-        else:
-            raise NotImplementedError
-
-    def output_compare(self, compare):
-        left = self.load_value(compare.left)
-        self.output.append(str(left))
-        and_left = False
-        for op, comparator in zip(compare.ops, compare.comparators):
-            if and_left:
-                self.output += ['&', str(left)]
-            self.output_cmpop(op)
-            comp_slot = self.load_value(comparator)
-            self.output.append(str(comp_slot))
-            left = comp_slot
-            and_left = True
-
-    def output_bool_op(self, bool_op):
-        first = bool_op.values[0]
-        slot = self.load_value(first)
-        self.output.append(str(slot))
-        for value in bool_op.values[1:]:
-            slot = self.load_value(value)
-            self.output_boolop(bool_op.op)
-            self.output.append(str(slot))
-
-    def output_cmpop(self, op):
-        if isinstance(op, ast.Eq):
-            self.output.append('=')
-        elif isinstance(op, ast.NotEq):
-            self.output.append('!')
-        elif isinstance(op, ast.Lt):
-            self.output.append('<')
-        elif isinstance(op, ast.LtE):
-            self.output.append('<=')
-        elif isinstance(op, ast.Gt):
-            self.output.append('>')
-        elif isinstance(op, ast.GtE):
-            self.output.append('>=')
-
-    def output_boolop(self, op):
-        if isinstance(op, ast.And):
-            self.output.append('&')
-        elif isinstance(op, ast.Or):
-            self.output.append('|')
-
-    def load_value(self, value):
-        def fn():
-            if isinstance(value, ast.Num):
-                return Const(value.n, Number)
-            elif isinstance(value, ast.Str):
-                return Const(value.s, str)
-            elif isinstance(value, ast.List):
-                return self.load_list(value)
-            elif isinstance(value, ast.NameConstant):
-                return Const(value.value, type(value.value))
-            elif isinstance(value, ast.Name):
-                return self.scope.get(value.id)
-            elif isinstance(value, ast.Attribute):
-                return self.load_attribute(value)
-            elif isinstance(value, ast.Subscript):
-                return self.load_subscript(value)
-            elif isinstance(value, ast.Index):
-                return self.load_value(value.value)
-            else:
-                raise NotImplementedError
-
+    def load_cached_expr(self, value):
         slot = self.loaded_values.get(value)
         if slot is None:
-            slot = self.loaded_values[value] = fn()
+            slot = self.loaded_values[value] = self.load_expr(value)
         return slot
+
+    def load_expr(self, value):
+        if isinstance(value, ast.Num):
+            return Const(value.n, Number)
+        elif isinstance(value, ast.Str):
+            return Const(value.s, str)
+        elif isinstance(value, ast.List):
+            return self.load_list(value)
+        elif isinstance(value, ast.NameConstant):
+            return Const(value.value, type(value.value))
+        elif isinstance(value, ast.Name):
+            return self.scope.get(value.id)
+        elif isinstance(value, ast.Attribute):
+            return self.load_attribute(value)
+        elif isinstance(value, ast.Subscript):
+            return self.load_subscript(value)
+        elif isinstance(value, ast.Index):
+            return self.load_cached_expr(value.value)
+        elif isinstance(value, ast.Compare):
+            return self.load_compare(value)
+        elif isinstance(value, ast.BoolOp):
+            return self.load_bool_op(value)
+        elif isinstance(value, ast.BinOp):
+            return self.load_bin_op(value)
+        else:
+            raise NotImplementedError
 
     def load_list(self, value):
         item_type = self.type_of_items(value.elts)
@@ -122,7 +79,7 @@ class NodeVisitor(ast.NodeVisitor):
         capacity = len(value.elts)
         item_slots = self.scope.allocate_many(item_type, capacity)
         for dest_slot, item in zip(item_slots, value.elts):
-            src_slot = self.load_value(item)
+            src_slot = self.load_cached_expr(item)
             self.output_assign(dest_slot, src_slot)
         first_item = item_slots[0]
         metadata = {'capacity': capacity, 'item_type': item_type}
@@ -131,8 +88,7 @@ class NodeVisitor(ast.NodeVisitor):
     def type_of_items(self, items):
         type_set = set()
         for item in items:
-            src_slot = self.load_value(item)
-            print(repr(src_slot))
+            src_slot = self.load_cached_expr(item)
             type_set.add(src_slot.type)
             if len(type_set) > 1:
                 return
@@ -140,7 +96,7 @@ class NodeVisitor(ast.NodeVisitor):
             return next(iter(type_set))
 
     def load_attribute(self, value):
-        value_slot = self.load_value(value.value)
+        value_slot = self.load_cached_expr(value.value)
         if issubclass(value_slot.type, GameObjectRef):
             return self.load_game_obj_attr(value_slot, value.attr)
         else:
@@ -155,8 +111,8 @@ class NodeVisitor(ast.NodeVisitor):
         return attr.assoc(slot, type=attrib.metadata['type'], attrib=attrib.metadata['abbrev'])
 
     def load_subscript(self, value):
-        value_slot = self.load_value(value.value)
-        slice_slot = self.load_value(value.slice)
+        value_slot = self.load_cached_expr(value.value)
+        slice_slot = self.load_cached_expr(value.slice)
         if isinstance(value_slot, GameObjectList):
             return self.load_game_obj_list_subscript(value_slot, slice_slot)
         elif issubclass(value_slot.type, ListPointer):
@@ -176,13 +132,27 @@ class NodeVisitor(ast.NodeVisitor):
         if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.metadata['capacity']:
             raise IndexError('list index out of range')
         pointer_math_slot = self.scope.allocate(ListPointer)
-        addition = BinaryOp(value_slot, ast.Add(), slice_slot)
+        addition = BinOp(value_slot, ast.Add(), slice_slot)
         self.output_assign(pointer_math_slot, addition)
         slot = attr.assoc(pointer_math_slot, type=value_slot.metadata['item_type'], ref=True)
         if issubclass(value_slot.metadata['item_type'], GameObjectRef):
             self.output_assign(pointer_math_slot, slot)
         self.scope.free(pointer_math_slot)
         return slot
+
+    def load_compare(self, value):
+        left = self.load_cached_expr(value.left)
+        comparators = [self.load_cached_expr(comparator) for comparator in value.comparators]
+        return Compare(left, value.ops, comparators)
+
+    def load_bool_op(self, value):
+        values = [self.load_cached_expr(bool_op_value) for bool_op_value in value.values]
+        return BoolOp(value.op, values)
+
+    def load_bin_op(self, value):
+        left = self.load_cached_expr(value.left)
+        right = self.load_cached_expr(value.right)
+        return BinOp(left, value.op, right)
 
     def store_value(self, target, src_slot):
         if isinstance(target, ast.Name):
@@ -340,14 +310,91 @@ class GameObjectList:
 
 
 @attr.s
-class BinaryOp:
+class BinOp:
     left = attr.ib()
     op = attr.ib()
     right = attr.ib()
 
     def __str__(self):
-        if isinstance(self.op, ast.Add):
-            op = '+'
+        return '{}{}{}'.format(self.left, self.translate_operator(self.op), self.right)
+
+    def translate_operator(self, op):
+        if not isinstance(op, ast.operator):
+            raise SyntaxError("node '{}' is not a binary operator".format(op))
+
+        if isinstance(op, ast.Add):
+            return '+'
+        elif isinstance(op, ast.Sub):
+            return '-'
+        elif isinstance(op, ast.Mult):
+            return '*'
+        elif isinstance(op, ast.Div):
+            return '/'
+        elif isinstance(op, ast.FloorDiv):
+            return '{'
+        elif isinstance(op, ast.Mod):
+            return '}'
         else:
-            raise NotImplementedError
-        return '{}{}{}'.format(self.left, op, self.right)
+            raise NotImplementedError("operation '{}' is not implemented yet".format(op))
+
+
+@attr.s
+class Compare:
+    left = attr.ib()
+    ops = attr.ib()
+    comparators = attr.ib()
+
+    def __str__(self):
+        result = []
+        left = self.left
+        result.append(str(left))
+        and_left = False
+        for op, comparator in zip(self.ops, self.comparators):
+            if and_left:
+                result += ['&', str(left)]
+            result.append(self.translate_cmpop(op))
+            result.append(str(comparator))
+            left = comparator
+            and_left = True
+        return ' '.join(result)
+
+    def translate_cmpop(self, op):
+        if not isinstance(op, ast.cmpop):
+            raise SyntaxError("node '{}' is not a comparison operator".format(op))
+
+        if isinstance(op, ast.Eq):
+            return '='
+        elif isinstance(op, ast.NotEq):
+            return '!'
+        elif isinstance(op, ast.Lt):
+            return '<'
+        elif isinstance(op, ast.LtE):
+            return '<='
+        elif isinstance(op, ast.Gt):
+            return '>'
+        elif isinstance(op, ast.GtE):
+            return '>='
+
+
+@attr.s
+class BoolOp:
+    op = attr.ib()
+    values = attr.ib()
+
+    def __str__(self):
+        result = []
+        first, *rest = self.values
+        result.append(str(first))
+        for value in rest:
+            result.append(self.translate_boolop(self.op))
+            result.append(str(value))
+        return ' '.join(result)
+
+    def translate_boolop(self, op):
+        if not isinstance(op, ast.boolop):
+            raise SyntaxError("node '{}' is not a boolean operator".format(op))
+
+        if isinstance(op, ast.And):
+            return '&'
+        elif isinstance(op, ast.Or):
+            return '|'
