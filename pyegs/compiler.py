@@ -95,7 +95,8 @@ class NodeVisitor(ast.NodeVisitor):
             raise NotImplementedError
 
     def load_list(self, value):
-        item_type = self.type_of_items(value.elts)
+        loaded_items = map(self.load_cached_expr, value.elts)
+        item_type = type_of_objects(loaded_items)
         if item_type is None:
             raise TypeError('list items must be of the same type')
 
@@ -107,16 +108,6 @@ class NodeVisitor(ast.NodeVisitor):
         first_item = item_slots[0]
         metadata = {'capacity': capacity, 'item_type': item_type}
         return Const(first_item.number, ListPointer, metadata=metadata)
-
-    def type_of_items(self, items):
-        type_set = set()
-        for item in items:
-            src_slot = self.load_cached_expr(item)
-            type_set.add(src_slot.type)
-            if len(type_set) > 1:
-                return
-        if type_set:
-            return next(iter(type_set))
 
     def load_attribute(self, value):
         value_slot = self.load_cached_expr(value.value)
@@ -155,7 +146,7 @@ class NodeVisitor(ast.NodeVisitor):
         if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.metadata['capacity']:
             raise IndexError('list index out of range')
         pointer_math_slot = self.scope.allocate(ListPointer)
-        addition = BinOp(value_slot, ast.Add(), slice_slot)
+        addition = BinOp(value_slot, ast.Add(), slice_slot, strict=False)
         self.output_assign(pointer_math_slot, addition)
         slot = attr.assoc(pointer_math_slot, type=value_slot.metadata['item_type'], ref=True)
         if issubclass(value_slot.metadata['item_type'], GameObjectRef):
@@ -188,6 +179,11 @@ class NodeVisitor(ast.NodeVisitor):
                 return attr.assoc(operand, usub=(not operand.usub))
             else:
                 raise NotImplementedError("unary subtraction is not implemented for '{}' yet".format(operand))
+        elif isinstance(value.op, ast.Invert):
+            if isinstance(operand, Const):
+                return attr.assoc(operand, value=~operand.value)
+            else:
+                return BinOp(Const(-1, Number), ast.Sub(), operand)
         else:
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(value.op))
 
@@ -322,12 +318,12 @@ class Slot:
 
     def __str__(self):
         if self.attrib is not None:
-            return '{}{}{}{}{}'.format(
-                '-' if self.usub else '',
-                self.register,
-                '^' if self.ref else '',
-                self.number if self.number is not None else '',
-                self.attrib)
+            return '{usub}{register}{ref}{number}{attrib}'.format(
+                usub='-' if self.usub else '',
+                register=self.register,
+                ref='^' if self.ref else '',
+                number=self.number if self.number is not None else '',
+                attrib=self.attrib)
         else:
             return str(self.number)
 
@@ -377,6 +373,16 @@ class BinOp:
     left = attr.ib()
     op = attr.ib()
     right = attr.ib()
+    strict = attr.ib(default=True)
+    type = attr.ib(init=False)
+    metadata = attr.ib(default=attr.Factory(dict))
+
+    def __attrs_post_init__(self):
+        if not self.strict:
+            return
+        self.type = type_of_objects([self.left, self.right])
+        if self.type is None:
+            raise TypeError("operands '{}' and '{}' are not of the same type".format(self.left, self.right))
 
     def __str__(self):
         return '{}{}{}'.format(self.left, self.translate_operator(self.op), self.right)
@@ -456,3 +462,13 @@ class Compare:
             return '>'
         elif isinstance(op, ast.GtE):
             return '>='
+
+
+def type_of_objects(objects):
+    type_set = set()
+    for obj in objects:
+        type_set.add(obj.type)
+        if len(type_set) > 1:
+            return
+    if type_set:
+        return next(iter(type_set))

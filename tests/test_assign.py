@@ -58,11 +58,11 @@ def test_unary_op():
     assert compile_('x = -4') == 'p1z -4'
     assert compile_('x = 4; y = -x') == 'p1z 4 p2z -p1z'
 
-    # assert compile_('x = ~5') == 'p1z -6'
-    # assert compile_('x = ~-6') == 'p1z 5'
-    # assert compile_('x = ~True') == 'p1z -2'
-    # assert compile_('x = ~False') == 'p1z -1'
-    # assert compile_('x = 5; y = ~x') == 'p1z 5 p2z -p1z-1'
+    assert compile_('x = ~5') == 'p1z -6'
+    assert compile_('x = ~-6') == 'p1z 5'
+    assert compile_('x = ~True') == 'p1z -2'
+    assert compile_('x = ~False') == 'p1z -1'
+    assert compile_('x = 5; y = ~x') == 'p1z 5 p2z -1-p1z'
 
     # assert compile_('x = not 4') == 'p1z 0'
     # assert compile_('x = not 0') == 'p1z 1'
