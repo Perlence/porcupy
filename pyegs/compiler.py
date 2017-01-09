@@ -196,15 +196,13 @@ class NodeVisitor(ast.NodeVisitor):
         elif isinstance(value.op, ast.USub):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=-operand.value)
-            elif isinstance(operand, Slot):
-                return attr.assoc(operand, usub=(not operand.usub))
             else:
-                raise NotImplementedError("unary subtraction is not implemented for '{}' yet".format(operand))
+                return BinOp(operand, ast.Mult(), Const(-1, Number))
         elif isinstance(value.op, ast.Invert):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=~operand.value)
             else:
-                return BinOp(Const(-1, Number), ast.Sub(), operand)
+                return BinOp(BinOp(operand, ast.Mult(), Const(-1, Number)), ast.Sub(), Const(1, Number))
         else:
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(value.op))
 
