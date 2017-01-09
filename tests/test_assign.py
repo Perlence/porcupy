@@ -42,6 +42,35 @@ def test_bools():
     assert compile_('x = True') == 'p1z 1'
 
 
+@pytest.mark.skip('Not implemented yet')
+def test_binary_op():
+    assert compile_('x = 1+2') == 'p1z 3'
+    assert compile_('x = 1+2+3') == 'p1z 6'
+    assert compile_('x = 1+2*3') == 'p1z 7'
+
+    assert compile_('x = 1; y = x+2') == 'p1z 1 p2z p1z+2'
+    assert compile_('x = 1; y = x+2+3') == 'p1z 1 p2z p1z+2 p2z p2z+3'
+    assert compile_('x = 1; y = x+2*3') == 'p1z 2 p2z p1z*3 p2z p2z+1'
+
+
+def test_unary_op():
+    assert compile_('x = +4') == 'p1z 4'
+    assert compile_('x = -4') == 'p1z -4'
+    assert compile_('x = 4; y = -x') == 'p1z 4 p2z -p1z'
+
+    # assert compile_('x = ~5') == 'p1z -6'
+    # assert compile_('x = ~-6') == 'p1z 5'
+    # assert compile_('x = ~True') == 'p1z -2'
+    # assert compile_('x = ~False') == 'p1z -1'
+    # assert compile_('x = 5; y = ~x') == 'p1z 5 p2z -p1z-1'
+
+    # assert compile_('x = not 4') == 'p1z 0'
+    # assert compile_('x = not 0') == 'p1z 1'
+    # assert compile_('x = not True') == 'p1z 0'
+    # assert compile_('x = not False') == 'p1z 1'
+    # assert compile_('x = 4; y = not z') == 'p1z 4 p2z 0 # p1z = 0 ( p2z 1 )'
+
+
 def test_undefined():
     with pytest.raises(NameError) as exc_info:
         compile_('x = y')

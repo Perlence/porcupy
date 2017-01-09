@@ -89,6 +89,8 @@ class NodeVisitor(ast.NodeVisitor):
             return self.load_bool_op(value)
         elif isinstance(value, ast.BinOp):
             return self.load_bin_op(value)
+        elif isinstance(value, ast.UnaryOp):
+            return self.load_unary_op(value)
         else:
             raise NotImplementedError
 
@@ -174,6 +176,20 @@ class NodeVisitor(ast.NodeVisitor):
         left = self.load_cached_expr(value.left)
         right = self.load_cached_expr(value.right)
         return BinOp(left, value.op, right)
+
+    def load_unary_op(self, value):
+        operand = self.load_cached_expr(value.operand)
+        if isinstance(value.op, ast.UAdd):
+            return operand
+        elif isinstance(value.op, ast.USub):
+            if isinstance(operand, Const):
+                return attr.assoc(operand, value=-operand.value)
+            elif isinstance(operand, Slot):
+                return attr.assoc(operand, usub=(not operand.usub))
+            else:
+                raise NotImplementedError("unary subtraction is not implemented for '{}' yet".format(operand))
+        else:
+            raise NotImplementedError("unary operation '{}' is not implemented yet".format(value.op))
 
     def store_value(self, target, src_slot):
         if isinstance(target, ast.Name):
@@ -299,13 +315,15 @@ class Slot:
     type = attr.ib()
     metadata = attr.ib(default=attr.Factory(dict))
     ref = attr.ib(default=False)
+    usub = attr.ib(default=False)
 
     def is_variable(self):
         return self.register in ('p', 's')
 
     def __str__(self):
         if self.attrib is not None:
-            return '{}{}{}{}'.format(
+            return '{}{}{}{}{}'.format(
+                '-' if self.usub else '',
                 self.register,
                 '^' if self.ref else '',
                 self.number if self.number is not None else '',
@@ -381,6 +399,25 @@ class BinOp:
             return '}'
         else:
             raise NotImplementedError("operation '{}' is not implemented yet".format(op))
+
+
+# @attr.s
+# class UnaryOp:
+#     op = attr.ib()
+#     operand = attr.ib()
+
+#     def __str__(self):
+#         return '{}{}'.format(self.translate_unaryop(self.op), self.operand)
+
+#     def translate_unaryop(self, op):
+#         if isinstance(op, ast.UAdd):
+#             return ''
+#         elif isinstance(op, ast.USub):
+#             return '-'
+#         # elif isinstance(op, ast.Invert):
+#         # elif isinstance(op, ast.Not):
+#         else:
+#             raise NotImplementedError("operation '{}' is not implemented yet".format(op))
 
 
 @attr.s
