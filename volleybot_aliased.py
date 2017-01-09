@@ -15,14 +15,14 @@ BALL_SPAWNS = [2, 3]
 PUNCH_FORCE = -15
 
 if timers[1].value <= 1:
-    ball_speed_x = 0  # p12z 0
-    player_touches = [0, 0]  # p13z 0 p14z 0
+    ball_speed_x = 0
+    player_touches = [0, 0]
 
-    system.bots = 2  # yb 2
-    PLAYERS[0].spawn(PLAYER_SPAWNS[0])  # p15z 1+0 p16z 8+0 e^15b p16z
-    PLAYERS[1].spawn(PLAYER_SPAWNS[1])  # p15z 1+0 p16z 8+0 e^15b p16z
-    PLAYER_BOT.ai = False  # a^5i 0
-    PLAYER_BOT.goto(WAYPOINT)  # a^5g p7z
+    system.bots = 2
+    PLAYERS[0].spawn(PLAYER_SPAWNS[0])
+    PLAYERS[1].spawn(PLAYER_SPAWNS[1])
+    PLAYER_BOT.ai = False
+    PLAYER_BOT.goto(WAYPOINT)
 
     BALL.spawn(BALL_SPAWNS[0])
     BALL_BOT.ai = 0
@@ -56,7 +56,7 @@ for player_num, player in enumerate(PLAYERS):
         if player_ball_distance_x < 0:
             BALL.speed_x = -10
 
-        BALL.speed_y = PUNCH_FORCE  # e^3v -15
+        BALL.speed_y = PUNCH_FORCE
 
 # Check touches
 if player_touches[0] == 3 or player_touches[1] == 3:
