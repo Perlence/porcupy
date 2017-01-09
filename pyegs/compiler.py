@@ -142,38 +142,46 @@ class NodeVisitor(ast.NodeVisitor):
     def load_attribute(self, value):
         value_slot = self.load_value(value.value)
         if issubclass(value_slot.type, GameObjectRef):
-            game_obj_type = value_slot.type.type
-            register = game_obj_type._abbrev
-            attrib = getattr(game_obj_type, value.attr)
-            if value_slot.is_variable():
-                value_slot = attr.assoc(value_slot, register=register, ref=True)
-            value_slot = attr.assoc(value_slot, type=attrib.metadata['type'], attrib=attrib.metadata['abbrev'])
-            return value_slot
+            return self.load_game_obj_attr(value_slot, value.attr)
         else:
             raise NotImplementedError
+
+    def load_game_obj_attr(self, slot, attr_name):
+        game_obj_type = slot.type.type
+        register = game_obj_type._abbrev
+        attrib = getattr(game_obj_type, attr_name)
+        if slot.is_variable():
+            slot = attr.assoc(slot, register=register, ref=True)
+        return attr.assoc(slot, type=attrib.metadata['type'], attrib=attrib.metadata['abbrev'])
 
     def load_subscript(self, value):
         value_slot = self.load_value(value.value)
         slice_slot = self.load_value(value.slice)
         if isinstance(value_slot, GameObjectList):
-            register = value_slot.type._abbrev
-            slot_type = GameObjectRef.type(value_slot.type)
-            if isinstance(slice_slot, Const):
-                return Slot(register, slice_slot.value, None, slot_type)
-            else:
-                return attr.assoc(slice_slot, type=slot_type)
+            return self.load_game_obj_list_subscript(value_slot, slice_slot)
         elif issubclass(value_slot.type, ListPointer):
-            if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.metadata['capacity']:
-                raise IndexError('list index out of range')
-            pointer_math_slot = self.scope.allocate(ListPointer)
-            self.output_assign(pointer_math_slot, '{}+{}'.format(value_slot, slice_slot))
-            slot = attr.assoc(pointer_math_slot, type=value_slot.metadata['item_type'], ref=True)
-            if issubclass(value_slot.metadata['item_type'], GameObjectRef):
-                self.output_assign(pointer_math_slot, slot)
-            self.scope.free(pointer_math_slot)
-            return slot
+            return self.load_list_subscript(value_slot, slice_slot)
         else:
             raise NotImplementedError
+
+    def load_game_obj_list_subscript(self, value_slot, slice_slot):
+        register = value_slot.type._abbrev
+        slot_type = GameObjectRef.type(value_slot.type)
+        if isinstance(slice_slot, Const):
+            return Slot(register, slice_slot.value, None, slot_type)
+        else:
+            return attr.assoc(slice_slot, type=slot_type)
+
+    def load_list_subscript(self, value_slot, slice_slot):
+        if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.metadata['capacity']:
+            raise IndexError('list index out of range')
+        pointer_math_slot = self.scope.allocate(ListPointer)
+        self.output_assign(pointer_math_slot, '{}+{}'.format(value_slot, slice_slot))
+        slot = attr.assoc(pointer_math_slot, type=value_slot.metadata['item_type'], ref=True)
+        if issubclass(value_slot.metadata['item_type'], GameObjectRef):
+            self.output_assign(pointer_math_slot, slot)
+        self.scope.free(pointer_math_slot)
+        return slot
 
     def store_value(self, target, src_slot):
         if isinstance(target, ast.Name):
