@@ -176,7 +176,8 @@ class NodeVisitor(ast.NodeVisitor):
         if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.metadata['capacity']:
             raise IndexError('list index out of range')
         pointer_math_slot = self.scope.allocate(ListPointer)
-        self.output_assign(pointer_math_slot, '{}+{}'.format(value_slot, slice_slot))
+        addition = BinaryOp(value_slot, ast.Add(), slice_slot)
+        self.output_assign(pointer_math_slot, addition)
         slot = attr.assoc(pointer_math_slot, type=value_slot.metadata['item_type'], ref=True)
         if issubclass(value_slot.metadata['item_type'], GameObjectRef):
             self.output_assign(pointer_math_slot, slot)
@@ -336,3 +337,17 @@ class GameObjectRef(int):
 @attr.s
 class GameObjectList:
     type = attr.ib()
+
+
+@attr.s
+class BinaryOp:
+    left = attr.ib()
+    op = attr.ib()
+    right = attr.ib()
+
+    def __str__(self):
+        if isinstance(self.op, ast.Add):
+            op = '+'
+        else:
+            raise NotImplementedError
+        return '{}{}{}'.format(self.left, op, self.right)
