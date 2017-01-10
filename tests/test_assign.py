@@ -167,6 +167,13 @@ def test_game_objects():
     assert compile_('x = [yegiks[8], yegiks[9]]; x[0].frags = 55') == 'p1z 8 p2z 9 p3z 1 p4z p3z+0 p4z p^4z e^4f 55'
 
 
+def test_aug_assign():
+    assert compile_('x = 5; x += 4') == 'p1z 5 p1z p1z+4'
+    assert compile_('x = 5; x -= 4') == 'p1z 5 p1z p1z-4'
+    assert compile_('x = 5; x *= 4') == 'p1z 5 p1z p1z*4'
+    assert compile_('x = 5; x /= 4') == 'p1z 5 p1z p1z/4'
+
+
 @pytest.mark.skip('Not implemented yet')
 def test_static_type():
     with pytest.raises(TypeError) as exc_info:

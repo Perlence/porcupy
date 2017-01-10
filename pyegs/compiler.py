@@ -48,8 +48,17 @@ class NodeVisitor(ast.NodeVisitor):
                 raise NotImplementedError('iterable unpacking is not implemented yet')
             src_slot = self.load_cached_expr(node.value)
             dest_slot = self.store_value(target, src_slot)
-            if dest_slot is not None:
-                self.output_assign(dest_slot, src_slot)
+            if dest_slot is None:
+                continue
+            self.output_assign(dest_slot, src_slot)
+
+    def visit_AugAssign(self, node):
+        src_slot = self.load_cached_expr(node.value)
+        dest_slot = self.store_value(node.target, src_slot)
+        if dest_slot is None:
+            return
+        bin_op = BinOp(dest_slot, node.op, src_slot)
+        self.output_assign(dest_slot, bin_op)
 
     def visit_If(self, node):
         if isinstance(node.test, (ast.Num, ast.Str, ast.NameConstant, ast.List)):
