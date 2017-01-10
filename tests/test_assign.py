@@ -142,6 +142,10 @@ def test_lists():
 
     # assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p4z 11'
 
+    # assert compile_('x = [11, 22, 33]; x = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33 p4z 1 p1z 11 p2z 22 p3z 33'
+
+    assert compile_('x = [1, 2]; x[0] = x[1] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5 p4z p3z+1 p^4z 5'
+
 
 def test_multiple_assign():
     assert compile_('x = y = 5') == 'p1z 5 p2z 5'

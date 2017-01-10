@@ -15,7 +15,6 @@ BALL_SPAWNS = [2, 3]
 PUNCH_FORCE = -15
 
 if timers[1].value <= 1:
-    ball_speed_x = 0
     player_touches = [0, 0]
 
     system.bots = 2
@@ -26,8 +25,7 @@ if timers[1].value <= 1:
 
     BALL.spawn(BALL_SPAWNS[0])
     BALL_BOT.ai = 0
-    BALL.speed_y = 0
-    BALL.speed_x = 0
+    ball_speed_x = BALL.speed_x = BALL.speed_y = 0
 
 # Ball movement
 BALL.health = 100
@@ -75,15 +73,12 @@ if player_num_scores > -1:
     PLAYERS[player_num].frags += 1
 
     BALL.spawn(BALL_SPAWNS[player_num])
-    BALL.speed_y = 0
-    BALL.speed_x = 0
+    ball_speed_x = BALL.speed_x = BALL.speed_y = 0
 
-    ball_speed_x = 0
-    ball_speed_y = 0
-
-    player_touches = (0, 0)
+    # player_touches = [0, 0]
+    player_touches[0] = player_touches[1] = 0
 
 # Bot intelligence
 WAYPOINT.pos_y = 425
 WAYPOINT.pos_x = BALL.pos_x
-PLAYER_BOT.goto(2)
+PLAYER_BOT.goto(WAYPOINT)
