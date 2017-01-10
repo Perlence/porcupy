@@ -1,1 +1,0 @@
-def const(value): pass
