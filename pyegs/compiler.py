@@ -60,6 +60,13 @@ class NodeVisitor(ast.NodeVisitor):
         bin_op = BinOp(dest_slot, node.op, src_slot)
         self.output_assign(dest_slot, bin_op)
 
+    def visit_Expr(self, node):
+        if isinstance(node.value, ast.Call):
+            expr = self.load_cached_expr(node.value)
+            self.output.append(str(expr))
+        else:
+            raise NotImplementedError('plain expressions are not implemented yet')
+
     def visit_If(self, node):
         if isinstance(node.test, (ast.Num, ast.Str, ast.NameConstant, ast.List)):
             self.optimized_if(node)
@@ -121,6 +128,8 @@ class NodeVisitor(ast.NodeVisitor):
             return self.load_bin_op(value)
         elif isinstance(value, ast.UnaryOp):
             return self.load_unary_op(value)
+        elif isinstance(value, ast.Call):
+            return self.load_call(value)
         else:
             raise NotImplementedError("expression '{}' is not implemented yet".format(value))
 
@@ -148,11 +157,18 @@ class NodeVisitor(ast.NodeVisitor):
 
     def load_game_obj_attr(self, slot, attr_name):
         game_obj_type = slot.type.type
-        register = game_obj_type._abbrev
+        register = game_obj_type.metadata['abbrev']
         attrib = getattr(game_obj_type, attr_name)
         if slot.is_variable():
             slot = attr.assoc(slot, register=register, ref=True)
-        return attr.assoc(slot, type=attrib.metadata['type'], attrib=attrib.metadata['abbrev'])
+
+        metadata_stub = {**attrib.metadata}
+        attrib_type = metadata_stub.pop('type')
+        attrib_abbrev = metadata_stub.pop('abbrev')
+        metadata = {**slot.metadata, **metadata_stub}
+
+        return attr.assoc(slot, type=attrib_type, attrib=attrib_abbrev,
+                          metadata=metadata)
 
     def load_subscript(self, value):
         value_slot = self.load_cached_expr(value.value)
@@ -165,7 +181,7 @@ class NodeVisitor(ast.NodeVisitor):
             raise NotImplementedError("getting item of collection of type '{}' is not implemented yet".format(value_slot.type))
 
     def load_game_obj_list_subscript(self, value_slot, slice_slot):
-        register = value_slot.type._abbrev
+        register = value_slot.type.metadata['abbrev']
         slot_type = GameObjectRef.type(value_slot.type)
         if isinstance(slice_slot, Const):
             return Slot(register, slice_slot.value, None, slot_type)
@@ -215,6 +231,14 @@ class NodeVisitor(ast.NodeVisitor):
         else:
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(value.op))
 
+    def load_call(self, value):
+        func = self.load_cached_expr(value.func)
+        args = [self.load_cached_expr(arg) for arg in value.args]
+        if value.keywords:
+            raise NotImplementedError('function keywords are not implemented yet')
+        func.type.signature.bind(None, *args)  # pass None as 'self' argument
+        return Call(func, args, [])
+
     def store_value(self, target, src_slot):
         if isinstance(target, ast.Name):
             if self.is_const(target):
@@ -249,7 +273,7 @@ class Scope:
         self.names['points'] = GameObjectList(runtime.Point)
         self.names['bots'] = GameObjectList(runtime.Bot)
         self.names['timers'] = GameObjectList(runtime.Timer)
-        self.names['system'] = Slot(runtime.System._abbrev, None, None, GameObjectRef.type(runtime.System))
+        self.names['system'] = Slot(runtime.System.metadata['abbrev'], None, None, GameObjectRef.type(runtime.System))
 
     def define_const(self, name, value):
         self.names[name] = value
@@ -339,15 +363,13 @@ class Slot:
     type = attr.ib()
     metadata = attr.ib(default=attr.Factory(dict))
     ref = attr.ib(default=False)
-    usub = attr.ib(default=False)
 
     def is_variable(self):
         return self.register in ('p', 's')
 
     def __str__(self):
         if self.attrib is not None:
-            return '{usub}{register}{ref}{number}{attrib}'.format(
-                usub='-' if self.usub else '',
+            return '{register}{ref}{number}{attrib}'.format(
                 register=self.register,
                 ref='^' if self.ref else '',
                 number=self.number if self.number is not None else '',
@@ -507,3 +529,14 @@ def type_of_objects(objects):
             return
     if type_set:
         return next(iter(type_set))
+
+
+@attr.s
+class Call:
+    func = attr.ib()
+    args = attr.ib()
+    keywords = attr.ib()
+
+    def __str__(self):
+        positional_args = ' '.join(map(str, self.args))
+        return '{} {}'.format(self.func, positional_args)
