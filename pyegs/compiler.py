@@ -43,8 +43,11 @@ class NodeVisitor(ast.NodeVisitor):
         super().generic_visit(node)
 
     def visit_Assign(self, node):
+        # TODO: Reassign lists to list pointers without allocating more memory:
+        # 'x = [11, 22]; x = [11, 22]' -> 'p1z 11 p2z 22 p4z 1 p1z 11 p2z 22'
         for target in node.targets:
             if isinstance(target, (ast.Tuple, ast.List)):
+                # TODO: Implement iterable unpacking
                 raise NotImplementedError('iterable unpacking is not implemented yet')
             src_slot = self.load_cached_expr(node.value)
             self.scope.free_deferred()
@@ -54,6 +57,7 @@ class NodeVisitor(ast.NodeVisitor):
             self.output_assign(dest_slot, src_slot)
 
     def visit_AugAssign(self, node):
+        # TODO: Raise NameError if target is not defined
         src_slot = self.load_cached_expr(node.value)
         dest_slot = self.store_value(node.target, src_slot)
         if dest_slot is None:
@@ -66,9 +70,11 @@ class NodeVisitor(ast.NodeVisitor):
             expr = self.load_cached_expr(node.value)
             self.output.append(str(expr))
         else:
-            raise NotImplementedError('plain expressions are not implemented yet')
+            raise NotImplementedError('plain expressions are not supported')
 
     def visit_If(self, node):
+        # TODO: Implement nested ``if`` statements
+        # TODO: Implement ``else`` clause
         if isinstance(node.test, (ast.Num, ast.Str, ast.NameConstant, ast.List)):
             self.optimized_if(node)
         else:
@@ -187,6 +193,7 @@ class NodeVisitor(ast.NodeVisitor):
             return attr.assoc(slice_slot, type=slot_type)
 
     def load_list_subscript(self, value_slot, slice_slot):
+        # TODO: Optimize constant list subscription with constant index
         if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.metadata['capacity']:
             raise IndexError('list index out of range')
         pointer_math_slot = self.scope.allocate(ListPointer)
@@ -202,6 +209,7 @@ class NodeVisitor(ast.NodeVisitor):
         if isinstance(value, ast.Compare):
             expr = self.load_compare(value)
         elif isinstance(value, ast.BoolOp):
+            # TODO: AND must return last value, OR must return first
             expr = self.load_bool_op(value)
 
         bool_slot = self.scope.allocate(bool)
@@ -215,11 +223,13 @@ class NodeVisitor(ast.NodeVisitor):
         return bool_slot
 
     def load_compare(self, value):
+        # TODO: Try to evaluate comparisons literally, e.g. 'x = 3 < 5' -> p1z 1
         left = self.load_cached_expr(value.left)
         comparators = [self.load_cached_expr(comparator) for comparator in value.comparators]
         return Compare(left, value.ops, comparators)
 
     def load_bool_op(self, value):
+        # TODO: Try to evaluate bool operations literally, e.g. 'y = x and False' -> 'p1z 0'
         values = []
         for bool_op_value in value.values:
             if isinstance(bool_op_value, ast.Compare):
@@ -230,6 +240,8 @@ class NodeVisitor(ast.NodeVisitor):
         return BoolOp(value.op, values)
 
     def load_bin_op(self, value):
+        # TODO: Try to evaluate binary operations literally
+        # TODO: Initialize lists, e.g. 'x = [0] * 3'
         left = self.load_cached_expr(value.left)
         right = self.load_cached_expr(value.right)
         return BinOp(left, value.op, right)
@@ -262,6 +274,7 @@ class NodeVisitor(ast.NodeVisitor):
     def store_value(self, target, src_slot):
         if isinstance(target, ast.Name):
             if self.is_const(target):
+                # TODO: Constant must not be redefined
                 self.scope.define_const(target.id, src_slot)
             else:
                 return self.scope.assign(target.id, src_slot)
