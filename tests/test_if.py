@@ -1,3 +1,5 @@
+import pytest
+
 from pyegs.compiler import compile as compile_
 
 
@@ -61,3 +63,16 @@ def test_generic_if():
     assert compile_('x = 1\nif x + 2: y = 22') == 'p1z 1 # p1z+2 ! 0 ( p2z 22 )'
     # Test is UnaryOp
     assert compile_('x = -1\nif -x: y = 22') == 'p1z -1 # p1z*-1 ! 0 ( p2z 22 )'
+
+
+@pytest.mark.skip('Not implemented yet')
+def test_nested():
+    # Nesting if-statements is broken in Egiks as well
+    assert (compile_('x = 11\n'
+                     'if x > 0:\n'
+                     '    if x < 15:\n'
+                     '        y = 22') ==
+            'p1z 11 '
+            'p2z 0 # p1z > 0 ( p2z 1 ) # p2z ! 0 ( p3z 0 ) '
+            '# p2z ! 0 & p1z < 15 ( p3z 1 ) '
+            '# p2z ! 0 & p3z ! 0 ( p2z 22 )')
