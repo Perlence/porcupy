@@ -8,7 +8,7 @@ setup(
     version='0.1',
     author='Sviatoslav Abakumov',
     author_email='dust.harvesting@gmail.com',
-    description='Compile subset of Python to Egiks in Quake 2 scenarios',
+    description='Compile a subset of Python to Egiks in Quake II scenarios',
     # long_description=README,
     url='https://github.com/Perlence/pyegs',
     download_url='https://github.com/Perlence/pyegs/archive/master.zip',
