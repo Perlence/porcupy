@@ -2,9 +2,8 @@ import ast
 from numbers import Number
 
 import attr
-import funcy
 
-from . import runtime
+from .runtime import GameObjectRef, Yegik, Timer, Point, Bot, System
 
 
 def compile(source, filename='<unknown>'):
@@ -303,11 +302,11 @@ class Scope:
         self.populate_game_objects()
 
     def populate_game_objects(self):
-        self.names['yegiks'] = GameObjectList(runtime.Yegik)
-        self.names['points'] = GameObjectList(runtime.Point)
-        self.names['bots'] = GameObjectList(runtime.Bot)
-        self.names['timers'] = GameObjectList(runtime.Timer)
-        self.names['system'] = Slot(runtime.System.metadata['abbrev'], None, None, GameObjectRef.type(runtime.System))
+        self.names['yegiks'] = GameObjectList(Yegik)
+        self.names['points'] = GameObjectList(Point)
+        self.names['bots'] = GameObjectList(Bot)
+        self.names['timers'] = GameObjectList(Timer)
+        self.names['system'] = Slot(System.metadata['abbrev'], None, None, GameObjectRef.type(System))
 
     def define_const(self, name, value):
         self.names[name] = value
@@ -422,13 +421,6 @@ class Slot:
 
 class ListPointer(int):
     pass
-
-
-class GameObjectRef(int):
-    @staticmethod
-    @funcy.memoize
-    def type(game_obj_type):
-        return type('GameObjectTypedRef', (GameObjectRef,), {'type': game_obj_type})
 
 
 @attr.s
@@ -586,5 +578,8 @@ class Call:
     keywords = attr.ib()
 
     def __str__(self):
-        positional_args = ' '.join(map(str, self.args))
-        return '{} {}'.format(self.func, positional_args)
+        result = [str(self.func)]
+        if self.args:
+            positional_args = ' '.join(map(str, self.args))
+            result.append(positional_args)
+        return ' '.join(result)

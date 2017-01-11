@@ -19,7 +19,7 @@ if timers[1].value <= 1:
     PLAYERS[0].spawn(PLAYER_SPAWNS[0])
     PLAYERS[1].spawn(PLAYER_SPAWNS[1])
     PLAYER_BOT.ai = False
-    PLAYER_BOT.goto(WAYPOINT)
+    PLAYER_BOT.goto = WAYPOINT
 
     BALL.spawn(BALL_SPAWNS[0])
     BALL_BOT.ai = 0
@@ -79,4 +79,4 @@ if player_num_scores > -1:
 # Bot intelligence
 WAYPOINT.pos_y = 425
 WAYPOINT.pos_x = BALL.pos_x
-PLAYER_BOT.goto(WAYPOINT)
+PLAYER_BOT.goto = WAYPOINT

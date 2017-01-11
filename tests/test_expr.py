@@ -6,20 +6,21 @@ from pyegs.compiler import compile as compile_
 def test_call():
     assert compile_('system.message("Hello World")') == 'ym Hello_World'
     assert compile_('system.message_at(10, 10, 1, "Hello World")') == 'yy 10 10 1 Hello_World'
-    assert compile_('bots[2].goto(points[1])') == 'a2g 1'
+    assert compile_('yegiks[2].spawn(1)') == 'e2b 1'
+    assert compile_('timers[2].start()') == 't2g'
     assert compile_('SPAWNS = [2, 3]; yegiks[2].spawn(SPAWNS[0])') == 'p1z 2 p2z 3 p3z 1+0 e2b p^3z'
 
     with pytest.raises(NotImplementedError):
-        assert compile_('bots[2].goto(point=points[1])')
+        assert compile_('yegiks[2].spawn(point=1)')
 
     with pytest.raises(TypeError) as exc_info:
-        compile_('bots[2].goto()')
+        compile_('yegiks[2].spawn()')
     assert "missing a required argument: 'point'" in str(exc_info.value)
 
-    assert compile_('GOTO = bots[2].goto; GOTO(points[1])') == 'a2g 1'
+    assert compile_('SPAWN = yegiks[2].spawn; SPAWN(1)') == 'e2b 1'
 
     with pytest.raises(TypeError) as exc_info:
-        compile_('goto = bots[2].goto; goto(points[1])')
+        compile_('spawn = yegiks[2].spawn; spawn(1)')
     assert "cannot allocate slot of type '<class 'pyegs.runtime.SignedFunctionType'>'" in str(exc_info.value)
 
     # assert compile_('x = 2; system.message(x)') == 'p1z 2 ym ^1'

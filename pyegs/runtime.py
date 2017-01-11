@@ -6,14 +6,18 @@ import funcy
 __all__ = ('timers', 'system', 'yegiks', 'bots', 'points')
 
 
+class GameObjectRef(int):
+    @staticmethod
+    @funcy.memoize
+    def type(game_obj_type):
+        return type('GameObjectTypedRef', (GameObjectRef,), {'type': game_obj_type})
+
+
 class FunctionType:
     @staticmethod
     @funcy.memoize
     def with_signature(fn):
         return type('SignedFunctionType', (FunctionType,), {'signature': signature(fn)})
-
-
-SignedFunctionType = FunctionType.with_signature(lambda: None)
 
 
 @attr.s
@@ -22,6 +26,16 @@ class Timer:
     enabled = attr.ib(default=0, metadata={'abbrev': 'r', 'type': bool})
 
     metadata = {'abbrev': 't'}
+
+    def start(self) -> None:
+        pass
+
+    start.metadata = {'abbrev': 'g', 'type': FunctionType.with_signature(start)}
+
+    def stop(self) -> None:
+        pass
+
+    stop.metadata = {'abbrev': 's', 'type': FunctionType.with_signature(stop)}
 
 
 timers = [Timer() for x in range(100)]
@@ -60,18 +74,25 @@ system = System()
 
 
 @attr.s
+class Point:
+    pos_x = attr.ib(default=0.0, metadata={'abbrev': 'x', 'type': float})
+    pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y', 'type': float})
+
+    metadata = {'abbrev': 'c'}
+
+
+points = [Point() for x in range(1, 100)]
+
+
+@attr.s
 class Bot:
     ai = attr.ib(default=False, metadata={'abbrev': 'i', 'type': bool})
     target = attr.ib(default=0, metadata={'abbrev': 't', 'type': int})
     level = attr.ib(default=0, metadata={'abbrev': 'l', 'type': int})
     point = attr.ib(default=0, metadata={'abbrev': 'p', 'type': int})
+    goto = attr.ib(default=0, metadata={'abbrev': 'g', 'type': GameObjectRef.type(Point)})
 
     metadata = {'abbrev': 'a'}
-
-    def goto(self, point):
-        pass
-
-    goto.metadata = {'abbrev': 'g', 'type': FunctionType.with_signature(goto)}
 
 
 bots = [Bot() for x in range(1, 10)]
@@ -100,14 +121,3 @@ class Yegik:
 
 
 yegiks = [Yegik() for x in range(1, 10)]
-
-
-@attr.s
-class Point:
-    pos_x = attr.ib(default=0.0, metadata={'abbrev': 'x', 'type': float})
-    pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y', 'type': float})
-
-    metadata = {'abbrev': 'c'}
-
-
-points = [Point() for x in range(1, 100)]
