@@ -49,22 +49,22 @@ class System:
 
     metadata = {'abbrev': 'y'}
 
-    def message(self, s):
+    def message(self, s: str) -> None:
         pass
 
     message.metadata = {'abbrev': 'm', 'type': FunctionType.with_signature(message)}
 
-    def message_at(self, x, y, dur, s):
+    def message_at(self, x: float, y: float, dur: float, s: str) -> None:
         pass
 
     message_at.metadata = {'abbrev': 'y', 'type': FunctionType.with_signature(message_at)}
 
-    def set_color(self, r, g, b):
+    def set_color(self, r: int, g: int, b: int) -> None:
         self.color = r + (g << 8) + (b << 16)
 
     set_color.metadata = {'type': FunctionType.with_signature(set_color)}
 
-    def load_map(self, name):
+    def load_map(self, name: str) -> None:
         pass
 
     load_map.metadata = {'abbrev': 'l', 'type': FunctionType.with_signature(load_map)}
@@ -114,7 +114,7 @@ class Yegik:
 
     metadata = {'abbrev': 'e'}
 
-    def spawn(self, point):
+    def spawn(self, point: int) -> None:
         pass
 
     spawn.metadata = {'abbrev': 'b', 'type': FunctionType.with_signature(spawn)}

@@ -189,5 +189,8 @@ def test_aug_assign():
 @pytest.mark.skip('Not implemented yet')
 def test_static_type():
     with pytest.raises(TypeError) as exc_info:
-        assert compile_('x = 1; x = "s"')
-    assert "cannot assign string 's' to numeric variable" in str(exc_info.value)
+        compile_('x = 1; x = "s"')
+    assert "cannot assign object of type 'str' to variable of type 'Number'" in str(exc_info.value)
+
+    with pytest.raises(TypeError) as exc_info:
+        assert compile_('bots[2].goto = 4')
