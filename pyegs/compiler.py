@@ -47,6 +47,7 @@ class NodeVisitor(ast.NodeVisitor):
             if isinstance(target, (ast.Tuple, ast.List)):
                 raise NotImplementedError('iterable unpacking is not implemented yet')
             src_slot = self.load_cached_expr(node.value)
+            self.scope.free_deferred()
             dest_slot = self.store_value(target, src_slot)
             if dest_slot is None:
                 continue
@@ -86,12 +87,11 @@ class NodeVisitor(ast.NodeVisitor):
             self.visit(body_node)
 
     def generic_if(self, node):
-        test_expr = self.load_expr(node.test)
+        test_expr = self.load_cached_expr(node.test)
         self.output.append('#')
-        if isinstance(test_expr, BinOp):
-            self.output += [str(test_expr), '!', '0']
-        else:
-            self.output.append(str(test_expr))
+        if not isinstance(test_expr, Compare):
+            test_expr = Compare(test_expr, [ast.NotEq()], [Const(False, bool)])
+        self.output.append(str(test_expr))
         self.output.append('(')
         for body_node in node.body:
             self.visit(body_node)
@@ -120,10 +120,8 @@ class NodeVisitor(ast.NodeVisitor):
             return self.load_subscript(value)
         elif isinstance(value, ast.Index):
             return self.load_cached_expr(value.value)
-        elif isinstance(value, ast.Compare):
-            return self.load_compare(value)
-        elif isinstance(value, ast.BoolOp):
-            return self.load_bool_op(value)
+        elif isinstance(value, (ast.Compare, ast.BoolOp)):
+            return self.load_extended_bool_op(value)
         elif isinstance(value, ast.BinOp):
             return self.load_bin_op(value)
         elif isinstance(value, ast.UnaryOp):
@@ -197,8 +195,24 @@ class NodeVisitor(ast.NodeVisitor):
         slot = attr.assoc(pointer_math_slot, type=value_slot.metadata['item_type'], ref=True)
         if issubclass(value_slot.metadata['item_type'], GameObjectRef):
             self.output_assign(pointer_math_slot, slot)
-        self.scope.free(pointer_math_slot)
+        self.scope.free_later(pointer_math_slot)
         return slot
+
+    def load_extended_bool_op(self, value):
+        if isinstance(value, ast.Compare):
+            expr = self.load_compare(value)
+        elif isinstance(value, ast.BoolOp):
+            expr = self.load_bool_op(value)
+
+        bool_slot = self.scope.allocate(bool)
+        self.output_assign(bool_slot, Const(False, bool))
+        self.output.append('#')
+        self.output.append(str(expr))
+        self.output.append('(')
+        self.output_assign(bool_slot, Const(True, bool))
+        self.output.append(')')
+        self.scope.free_later(bool_slot)
+        return bool_slot
 
     def load_compare(self, value):
         left = self.load_cached_expr(value.left)
@@ -206,7 +220,13 @@ class NodeVisitor(ast.NodeVisitor):
         return Compare(left, value.ops, comparators)
 
     def load_bool_op(self, value):
-        values = [self.load_cached_expr(bool_op_value) for bool_op_value in value.values]
+        values = []
+        for bool_op_value in value.values:
+            if isinstance(bool_op_value, ast.Compare):
+                values.append(self.load_compare(bool_op_value))
+            else:
+                slot = self.load_cached_expr(bool_op_value)
+                values.append(Compare(slot, [ast.NotEq()], [Const(False, bool)]))
         return BoolOp(value.op, values)
 
     def load_bin_op(self, value):
@@ -264,6 +284,7 @@ class Scope:
     names = attr.ib(default=attr.Factory(dict))
     numeric_slots = attr.ib(default=attr.Factory(lambda: Slots(1)))
     string_slots = attr.ib(default=attr.Factory(lambda: Slots()))
+    to_free = attr.ib(default=attr.Factory(list))
 
     def __attrs_post_init__(self):
         self.populate_game_objects()
@@ -301,6 +322,14 @@ class Scope:
 
     def allocate_many(self, type, length):
         return [self.allocate(type) for _ in range(length)]
+
+    def free_later(self, slot):
+        self.to_free.append(slot)
+
+    def free_deferred(self):
+        for slot in self.to_free:
+            self.free(slot)
+        self.to_free.clear()
 
     def free(self, slot):
         if issubclass(slot.type, Number):
@@ -398,6 +427,12 @@ class GameObjectList:
 class BoolOp:
     op = attr.ib()
     values = attr.ib()
+
+    type = attr.ib(init=False)
+    metadata = attr.ib(default=attr.Factory(dict))
+
+    def __attrs_post_init__(self):
+        self.type = bool
 
     def __str__(self):
         result = []
