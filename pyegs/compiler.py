@@ -192,7 +192,7 @@ class NodeVisitor(ast.NodeVisitor):
         if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.metadata['capacity']:
             raise IndexError('list index out of range')
         pointer_math_slot = self.scope.allocate(ListPointer)
-        addition = BinOp(value_slot, ast.Add(), slice_slot, strict=False)
+        addition = BinOp(value_slot, ast.Add(), slice_slot)
         self.output_assign(pointer_math_slot, addition)
         slot = attr.assoc(pointer_math_slot, type=value_slot.metadata['item_type'], ref=True)
         if issubclass(value_slot.metadata['item_type'], GameObjectRef):
@@ -424,15 +424,15 @@ class BinOp:
     op = attr.ib()
     right = attr.ib()
 
-    strict = attr.ib(default=True)
     type = attr.ib(init=False)
     metadata = attr.ib(default=attr.Factory(dict))
 
     def __attrs_post_init__(self):
-        if not self.strict:
-            return
-        self.type = type_of_objects([self.left, self.right])
-        if self.type is None:
+        if issubclass(self.left.type, self.right.type):
+            self.type = self.right.type
+        elif issubclass(self.right.type, self.left.type):
+            self.type = self.left.type
+        else:
             raise TypeError("operands '{}' and '{}' are not of the same type".format(self.left, self.right))
 
     def __str__(self):

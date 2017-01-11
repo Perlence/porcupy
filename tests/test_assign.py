@@ -177,6 +177,8 @@ def test_aug_assign():
     assert compile_('x = 5; x *= 4') == 'p1z 5 p1z p1z*4'
     assert compile_('x = 5; x /= 4') == 'p1z 5 p1z p1z/4'
 
+    assert compile_('yegiks[2].speed_y *= 0.88') == 'e2v e2v*0,88'
+
 
 @pytest.mark.skip('Not implemented yet')
 def test_static_type():
