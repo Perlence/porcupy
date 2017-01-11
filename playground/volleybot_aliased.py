@@ -1,5 +1,3 @@
-from pyegs.runtime import timers, system, yegiks, bots, points
-
 PLAYERS = [yegiks[1], yegiks[2]]
 BALL = yegiks[2]
 

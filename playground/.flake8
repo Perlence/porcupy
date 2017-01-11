@@ -1,0 +1,2 @@
+[flake8]
+builtins = timers,system,yegiks,bots,points
