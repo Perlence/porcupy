@@ -11,6 +11,7 @@ def compile(source, filename='<unknown>'):
 
     converter = NodeConverter()
     converted_top = converter.visit(top)
+    converter.scope.allocate_temporary()
     return str(converted_top)
 
 
@@ -53,11 +54,9 @@ class NodeConverter:
                 # TODO: Implement iterable unpacking
                 raise NotImplementedError('iterable unpacking is not implemented yet')
             src_slot = self.load_cached_expr(node.value, body)
-            self.scope.free_deferred()
             dest_slot = self.store_value(target, src_slot, body)
             if dest_slot is None:
                 continue
-            # self.output_assign(dest_slot, src_slot)
             body.append(Assign(dest_slot, src_slot))
 
     def visit_AugAssign(self, node, body):
@@ -149,7 +148,6 @@ class NodeConverter:
         item_slots = self.scope.allocate_many(item_type, capacity)
         for dest_slot, item in zip(item_slots, value.elts):
             src_slot = self.load_cached_expr(item, body)
-            # self.output_assign(dest_slot, src_slot)
             body.append(Assign(dest_slot, src_slot))
         first_item = item_slots[0]
         metadata = {'capacity': capacity, 'item_type': item_type}
@@ -167,7 +165,10 @@ class NodeConverter:
         register = game_obj_type.metadata['abbrev']
         attrib = getattr(game_obj_type, attr_name)
         if slot.is_variable():
-            slot = attr.assoc(slot, register=register, ref=True)
+            ref = slot
+            if slot.ref is not None:
+                ref = slot.ref
+            slot = attr.assoc(slot, register=register, ref=ref)
 
         metadata_stub = {**attrib.metadata}
         attrib_type = metadata_stub.pop('type')
@@ -199,13 +200,12 @@ class NodeConverter:
         # TODO: Optimize constant list subscription with constant index
         if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.metadata['capacity']:
             raise IndexError('list index out of range')
-        pointer_math_slot = self.scope.allocate(ListPointer)
+        pointer_math_slot = self.scope.create_temporary(ListPointer)
         addition = BinOp(value_slot, ast.Add(), slice_slot)
         body.append(Assign(pointer_math_slot, addition))
-        slot = attr.assoc(pointer_math_slot, type=value_slot.metadata['item_type'], ref=True)
+        slot = attr.assoc(pointer_math_slot, type=value_slot.metadata['item_type'], ref=pointer_math_slot)
         if issubclass(value_slot.metadata['item_type'], GameObjectRef):
             body.append(Assign(pointer_math_slot, slot))
-        self.scope.free_later(pointer_math_slot)
         return slot
 
     def load_extended_bool_op(self, value, body):
@@ -215,11 +215,9 @@ class NodeConverter:
             # TODO: AND must return last value, OR must return first
             expr = self.load_bool_op(value, body)
 
-        bool_slot = self.scope.allocate(bool)
-        # self.output_assign(bool_slot, Const(False, bool))
+        bool_slot = self.scope.create_temporary(bool)
         body.append(Assign(bool_slot, Const(False, bool)))
         body.append(If(expr, [Assign(bool_slot, Const(True, bool))]))
-        self.scope.free_later(bool_slot)
         return bool_slot
 
     def load_compare(self, value, body):
@@ -301,9 +299,9 @@ class NodeConverter:
 @attr.s
 class Scope:
     names = attr.ib(default=attr.Factory(dict))
-    numeric_slots = attr.ib(default=attr.Factory(lambda: Slots(1)))
+    numeric_slots = attr.ib(default=attr.Factory(lambda: Slots(start=1)))
     string_slots = attr.ib(default=attr.Factory(lambda: Slots()))
-    to_free = attr.ib(default=attr.Factory(list))
+    temporary_slots = attr.ib(default=attr.Factory(list))
 
     def __attrs_post_init__(self):
         self.populate_game_objects()
@@ -342,19 +340,17 @@ class Scope:
     def allocate_many(self, type, length):
         return [self.allocate(type) for _ in range(length)]
 
-    def free_later(self, slot):
-        self.to_free.append(slot)
+    def create_temporary(self, type):
+        if not issubclass(type, (Number, str)):
+            raise TypeError("cannot create volatile slot of type '{}'".format(type))
+        slot = Slot('p', None, 'z', type)
+        self.temporary_slots.append(slot)
+        return slot
 
-    def free_deferred(self):
-        for slot in self.to_free:
-            self.free(slot)
-        self.to_free.clear()
-
-    def free(self, slot):
-        if issubclass(slot.type, Number):
-            self.numeric_slots.free(slot.number)
-        elif issubclass(slot.type, str):
-            self.string_slots.free(slot.number)
+    def allocate_temporary(self):
+        for slot in self.temporary_slots:
+            new_slot = self.allocate(slot.type)
+            slot.number = new_slot.number
 
     def get(self, name):
         slot = self.names.get(name)
@@ -381,6 +377,9 @@ class Slots:
 
     def free(self, addr):
         self.slots[addr-self.start] = None
+
+    def count_reserved(self):
+        return len(slot for slot in self.slots if slot is RESERVED)
 
 
 RESERVED = object()
@@ -437,17 +436,22 @@ class Slot:
     attrib = attr.ib()
     type = attr.ib()
     metadata = attr.ib(default=attr.Factory(dict))
-    ref = attr.ib(default=False)
+    ref = attr.ib(default=None)
 
     def is_variable(self):
         return self.register in ('p', 's')
 
     def __str__(self):
         if self.attrib is not None:
+            number = self.number
+            if self.ref is not None:
+                number = self.ref.number
+            if number is None:
+                number = ''
             return '{register}{ref}{number}{attrib}'.format(
                 register=self.register,
-                ref='^' if self.ref else '',
-                number=self.number if self.number is not None else '',
+                ref='^' if self.ref is not None else '',
+                number=number,
                 attrib=self.attrib)
         else:
             return str(self.number)
@@ -530,25 +534,6 @@ class BinOp:
             return '}'
         else:
             raise NotImplementedError("operation '{}' is not implemented yet".format(op))
-
-
-# @attr.s
-# class UnaryOp:
-#     op = attr.ib()
-#     operand = attr.ib()
-
-#     def __str__(self):
-#         return '{}{}'.format(self.translate_unaryop(self.op), self.operand)
-
-#     def translate_unaryop(self, op):
-#         if isinstance(op, ast.UAdd):
-#             return ''
-#         elif isinstance(op, ast.USub):
-#             return '-'
-#         # elif isinstance(op, ast.Invert):
-#         # elif isinstance(op, ast.Not):
-#         else:
-#             raise NotImplementedError("operation '{}' is not implemented yet".format(op))
 
 
 @attr.s

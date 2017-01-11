@@ -61,8 +61,8 @@ def test_compare():
     # assert compile_('x = 3 < 5 < 6') == 'p1z 1'
     # assert compile_('x = 3 < 5 > 6') == 'p1z 0'
 
-    assert compile_('x = 3; y = x < 5') == 'p1z 3 p2z 0 # p1z < 5 ( p2z 1 ) p2z p2z'
-    assert compile_('x = 3; y = x < 5 < 6') == 'p1z 3 p2z 0 # p1z < 5 & 5 < 6 ( p2z 1 ) p2z p2z'
+    assert compile_('x = 3; y = x < 5') == 'p1z 3 p3z 0 # p1z < 5 ( p3z 1 ) p2z p3z'
+    assert compile_('x = 3; y = x < 5 < 6') == 'p1z 3 p3z 0 # p1z < 5 & 5 < 6 ( p3z 1 ) p2z p3z'
 
 
 def test_bool_op():
@@ -71,10 +71,10 @@ def test_bool_op():
 
     # assert compile_('x = True; y = True; z = x and y') == 'p1z 1 p2z 1 p3z 0 # p1z ! 0 & p2z ! 0 ( p3z p2z ) p3z p3z'
     # assert compile_('x = True; y = False; z = x or y') == 'p1z 1 p2z 0 p3z 0 # p1z ! 0 | p2z ! 0 ( p3z p1z ) p3z p3z'
-    assert compile_('x = True; y = True; z = x and y') == 'p1z 1 p2z 1 p3z 0 # p1z ! 0 & p2z ! 0 ( p3z 1 ) p3z p3z'
-    assert compile_('x = True; y = False; z = x or y') == 'p1z 1 p2z 0 p3z 0 # p1z ! 0 | p2z ! 0 ( p3z 1 ) p3z p3z'
+    assert compile_('x = True; y = True; z = x and y') == 'p1z 1 p2z 1 p4z 0 # p1z ! 0 & p2z ! 0 ( p4z 1 ) p3z p4z'
+    assert compile_('x = True; y = False; z = x or y') == 'p1z 1 p2z 0 p4z 0 # p1z ! 0 | p2z ! 0 ( p4z 1 ) p3z p4z'
 
-    assert compile_('x = 3; y = x < 5 and x < 6') == 'p1z 3 p2z 0 # p1z < 5 & p1z < 6 ( p2z 1 ) p2z p2z'
+    assert compile_('x = 3; y = x < 5 and x < 6') == 'p1z 3 p3z 0 # p1z < 5 & p1z < 6 ( p3z 1 ) p2z p3z'
 
 
 def test_unary_op():
@@ -126,8 +126,8 @@ def test_lists():
                  '0,0,0,0,0,0,0,0,0,0,0,0]')
     assert 'ran out of variable slots' in str(exc_info.value)
 
-    assert compile_('x = [1, 2]; y = x[0]') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p4z p^4z'
-    assert compile_('x = [1, 2]; y = 0; z = x[y]') == 'p1z 1 p2z 2 p3z 1 p4z 0 p5z p3z+p4z p5z p^5z'
+    assert compile_('x = [1, 2]; y = x[0]') == 'p1z 1 p2z 2 p3z 1 p5z p3z+0 p4z p^5z'
+    assert compile_('x = [1, 2]; y = 0; z = x[y]') == 'p1z 1 p2z 2 p3z 1 p4z 0 p6z p3z+p4z p5z p^6z'
 
     assert compile_('x = [1, 2]; x[0] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5'
 
@@ -140,13 +140,13 @@ def test_lists():
     # Constant list pointer
     assert compile_('X = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33'
 
-    assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p4z 1+0 p4z p^4z'
+    assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p5z 1+0 p4z p^5z'
 
     # assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p4z 11'
 
     # assert compile_('x = [11, 22, 33]; x = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33 p4z 1 p1z 11 p2z 22 p3z 33'
 
-    assert compile_('x = [1, 2]; x[0] = x[1] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5 p4z p3z+1 p^4z 5'
+    assert compile_('x = [1, 2]; x[0] = x[1] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5 p5z p3z+1 p^5z 5'
 
 
 def test_multiple_assign():
