@@ -1,5 +1,3 @@
-import pytest
-
 from pyegs.compiler import compile as compile_
 
 
@@ -65,7 +63,6 @@ def test_generic_if():
     assert compile_('x = -1\nif -x: y = 22') == 'p1z -1 # p1z*-1 ! 0 ( p2z 22 )'
 
 
-@pytest.mark.skip('Not implemented yet')
 def test_nested():
     # Nesting if-statements is broken in Egiks as well
     assert (compile_('x = 11\n'
@@ -80,15 +77,50 @@ def test_nested():
 
     assert (compile_('x = 11\n'
                      'if x > 0:\n'
+                     '    y = 22\n'
+                     '    if x < 15:\n'
+                     '        z = 33') ==
+            'p1z 11 '
+            'p4z 0 # p1z > 0 ( p4z 1 ) '
+            '# p4z ! 0 ( p2z 22 p5z 0 ) '
+            '# p4z ! 0 & p1z < 15 ( p5z 1 ) '
+            '# p4z ! 0 & p5z ! 0 ( p3z 33 )')
+
+    assert (compile_('x = 11\n'
+                     'if x > 0:\n'
                      '    if x < 15:\n'
                      '        y = 22\n'
                      '    if x < 16:\n'
                      '        y = 33') ==
             'p1z 11 '
             'p3z 0 # p1z > 0 ( p3z 1 ) '
-            '# p3z ! 0 ( p4z 0 ) '
+            '# p3z ! 0 ( p4z 0 p5z 0 ) '
             '# p3z ! 0 & p1z < 15 ( p4z 1 ) '
             '# p3z ! 0 & p4z ! 0 ( p2z 22 ) '
-            '# p3z ! 0 ( p5z 0 ) '
             '# p3z ! 0 & p1z < 16 ( p5z 1 ) '
             '# p3z ! 0 & p5z ! 0 ( p2z 33 )')
+
+    assert (compile_('x = 11\n'
+                     'if x > 0:\n'
+                     '    if x < 15:\n'
+                     '        y = 22\n'
+                     '        if x < 16:\n'
+                     '            y = 33') ==
+            'p1z 11 '
+            'p3z 0 # p1z > 0 ( p3z 1 ) '
+            '# p3z ! 0 ( p4z 0 ) '
+            '# p3z ! 0 & p1z < 15 ( p4z 1 ) '
+            '# p3z ! 0 & p4z ! 0 ( p2z 22 p5z 0 ) '
+            '# p3z ! 0 & p4z ! 0 & p1z < 16 ( p5z 1 ) '
+            '# p3z ! 0 & p4z ! 0 & p5z ! 0 ( p2z 33 )')
+
+    # # Gotcha, two different bool operations in one test expression
+    # assert (compile_('x = 11\n'
+    #                  'if x > 0:\n'
+    #                  '    if x < 15 or x < 16:\n'
+    #                  '        y = 22') ==
+    #         'p1z 11 '
+    #         'p3z 0 # p1z > 0 ( p3z 1 ) '
+    #         '# p3z ! 0 ( p4z 1 ) '
+    #         '# p3z ! 0 & p1z >= 15 & p1z >= 16 ( p4z 0 ) '
+    #         '# p3z ! 0 & p4z ! 0 ( p2z 22 )')
