@@ -22,7 +22,8 @@ class NodeConverter(ast.NodeVisitor):
     scope = attr.ib(default=attr.Factory(lambda: Scope()))
     bodies = attr.ib(default=attr.Factory(list))
     tests = attr.ib(default=attr.Factory(list))
-    loaded_values = attr.ib(default=attr.Factory(dict))
+    last_label = attr.ib(default=0)
+    loop_labels = attr.ib(default=attr.Factory(list))
 
     def visit(self, node):
         try:
@@ -52,11 +53,13 @@ class NodeConverter(ast.NodeVisitor):
     def visit_Assign(self, node):
         # TODO: Reassign lists to list pointers without allocating more memory:
         # 'x = [11, 22]; x = [11, 22]' -> 'p1z 11 p2z 22 p4z 1 p1z 11 p2z 22'
+        src_slot = None
         for target in node.targets:
             if isinstance(target, (ast.Tuple, ast.List)):
                 # TODO: Implement iterable unpacking
                 raise NotImplementedError('iterable unpacking is not implemented yet')
-            src_slot = self.load_cached_expr(node.value)
+            if src_slot is None:
+                src_slot = self.load_expr(node.value)
             dest_slot = self.store_value(target, src_slot)
             if dest_slot is None:
                 continue
@@ -64,7 +67,7 @@ class NodeConverter(ast.NodeVisitor):
 
     def visit_AugAssign(self, node):
         # TODO: Raise NameError if target is not defined
-        src_slot = self.load_cached_expr(node.value)
+        src_slot = self.load_expr(node.value)
         dest_slot = self.store_value(node.target, src_slot)
         if dest_slot is None:
             return
@@ -73,14 +76,17 @@ class NodeConverter(ast.NodeVisitor):
 
     def visit_Expr(self, node):
         if isinstance(node.value, ast.Call):
-            expr = self.load_cached_expr(node.value)
+            expr = self.load_expr(node.value)
             self.append_to_body(expr)
         else:
             raise NotImplementedError('plain expressions are not supported')
 
     def visit_For(self, node):
         # For(expr target, expr iter, stmt* body, stmt* orelse)
-        iter_slot = self.load_cached_expr(node.iter)
+        iter_slot = self.load_expr(node.iter)
+        self.last_label += 1
+        label = Label(self.last_label)
+        self.loop_labels.append(label)
         if issubclass(iter_slot.type, ListPointer):
             pointer_math_slot = self.scope.get_temporary(ListPointer)
             for i in range(iter_slot.type.capacity):
@@ -89,9 +95,14 @@ class NodeConverter(ast.NodeVisitor):
                 self.append_to_body(Assign(dest_slot, src_slot))
                 for stmt in node.body:
                     self.visit(stmt)
+            self.append_to_body(label)
+            self.loop_labels.pop()
             self.scope.recycle_temporary(pointer_math_slot)
         else:
             raise NotImplementedError("iterating over '{}' is not implemented yet".format(iter_slot.type))
+
+    def visit_Break(self, node):
+        self.append_to_body(Slot('g', self.loop_labels[-1].number, 'z', None))
 
     def visit_If(self, node):
         if isinstance(node.test, (ast.Num, ast.Str, ast.NameConstant, ast.List)):
@@ -115,7 +126,7 @@ class NodeConverter(ast.NodeVisitor):
             self.visit(stmt)
 
     def generic_if(self, node):
-        test = self.load_cached_expr(node.test)
+        test = self.load_expr(node.test)
         if not isinstance(test, Compare):
             test = Compare(test, ast.NotEq(), Const(False, bool))
 
@@ -148,12 +159,6 @@ class NodeConverter(ast.NodeVisitor):
 
         self.tests.remove(test)
 
-    def load_cached_expr(self, value):
-        slot = self.loaded_values.get(value)
-        if slot is None:
-            slot = self.loaded_values[value] = self.load_expr(value)
-        return slot
-
     def load_expr(self, value):
         if isinstance(value, ast.Num):
             return Const(value.n, Number)
@@ -170,7 +175,7 @@ class NodeConverter(ast.NodeVisitor):
         elif isinstance(value, ast.Subscript):
             return self.load_subscript(value)
         elif isinstance(value, ast.Index):
-            return self.load_cached_expr(value.value)
+            return self.load_expr(value.value)
         elif isinstance(value, (ast.Compare, ast.BoolOp)):
             return self.load_extended_bool_op(value)
         elif isinstance(value, ast.BinOp):
@@ -183,21 +188,20 @@ class NodeConverter(ast.NodeVisitor):
             raise NotImplementedError("expression '{}' is not implemented yet".format(value))
 
     def load_list(self, value):
-        loaded_items = [self.load_cached_expr(item) for item in value.elts]
+        loaded_items = [self.load_expr(item) for item in value.elts]
         item_type = type_of_objects(loaded_items)
         if item_type is None:
             raise TypeError('list items must be of the same type')
 
         capacity = len(value.elts)
         item_slots = self.scope.allocate_many(item_type, capacity)
-        for dest_slot, item in zip(item_slots, value.elts):
-            src_slot = self.load_cached_expr(item)
-            self.append_to_body(Assign(dest_slot, src_slot))
+        for dest_slot, item in zip(item_slots, loaded_items):
+            self.append_to_body(Assign(dest_slot, item))
         first_item = item_slots[0]
         return Const(first_item.number, ListPointer.of_type(capacity, item_type))
 
     def load_attribute(self, value):
-        value_slot = self.load_cached_expr(value.value)
+        value_slot = self.load_expr(value.value)
         if issubclass(value_slot.type, GameObjectRef):
             return self.load_game_obj_attr(value_slot, value.attr)
         else:
@@ -222,8 +226,8 @@ class NodeConverter(ast.NodeVisitor):
                           metadata=metadata)
 
     def load_subscript(self, value):
-        value_slot = self.load_cached_expr(value.value)
-        slice_slot = self.load_cached_expr(value.slice)
+        value_slot = self.load_expr(value.value)
+        slice_slot = self.load_expr(value.slice)
         if isinstance(value_slot, GameObjectList):
             return self.load_game_obj_list_subscript(value_slot, slice_slot)
         elif issubclass(value_slot.type, ListPointer):
@@ -273,8 +277,8 @@ class NodeConverter(ast.NodeVisitor):
 
     def load_compare(self, value):
         # TODO: Try to evaluate comparisons literally, e.g. 'x = 3 < 5' -> p1z 1
-        left = self.load_cached_expr(value.left)
-        comparators = [self.load_cached_expr(comparator) for comparator in value.comparators]
+        left = self.load_expr(value.left)
+        comparators = [self.load_expr(comparator) for comparator in value.comparators]
 
         values = []
         for op, comparator in zip(value.ops, comparators):
@@ -292,7 +296,7 @@ class NodeConverter(ast.NodeVisitor):
             if isinstance(bool_op_value, ast.Compare):
                 compare = self.load_compare(bool_op_value)
             else:
-                slot = self.load_cached_expr(bool_op_value)
+                slot = self.load_expr(bool_op_value)
                 compare = Compare(slot, ast.NotEq(), Const(False, bool))
             values.append(compare)
         return BoolOp(value.op, values)
@@ -320,12 +324,12 @@ class NodeConverter(ast.NodeVisitor):
     def load_bin_op(self, value):
         # TODO: Try to evaluate binary operations literally
         # TODO: Initialize lists, e.g. 'x = [0] * 3'
-        left = self.load_cached_expr(value.left)
-        right = self.load_cached_expr(value.right)
+        left = self.load_expr(value.left)
+        right = self.load_expr(value.right)
         return BinOp(left, value.op, right)
 
     def load_unary_op(self, value):
-        operand = self.load_cached_expr(value.operand)
+        operand = self.load_expr(value.operand)
         if isinstance(value.op, ast.UAdd):
             return operand
         elif isinstance(value.op, ast.USub):
@@ -342,8 +346,8 @@ class NodeConverter(ast.NodeVisitor):
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(value.op))
 
     def load_call(self, value):
-        func = self.load_cached_expr(value.func)
-        args = [self.load_cached_expr(arg) for arg in value.args]
+        func = self.load_expr(value.func)
+        args = [self.load_expr(arg) for arg in value.args]
         if value.keywords:
             raise NotImplementedError('function keywords are not implemented yet')
         func.type.signature.bind(None, *args)  # pass None as 'self' argument
@@ -674,3 +678,11 @@ class Call:
             positional_args = ' '.join(map(str, self.args))
             result.append(positional_args)
         return ' '.join(result)
+
+
+@attr.s
+class Label:
+    number = attr.ib()
+
+    def __str__(self):
+        return ':{}'.format(self.number)
