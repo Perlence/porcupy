@@ -16,17 +16,15 @@ def compile(source, filename='<unknown>'):
 
 
 @attr.s
-class NodeConverter:
+class NodeConverter(ast.NodeVisitor):
     scope = attr.ib(default=attr.Factory(lambda: Scope()))
     bodies = attr.ib(default=attr.Factory(list))
     tests = attr.ib(default=attr.Factory(list))
     loaded_values = attr.ib(default=attr.Factory(dict))
 
     def visit(self, node):
-        method = 'visit_' + node.__class__.__name__
-        visitor = getattr(self, method, self.generic_visit)
         try:
-            return visitor(node)
+            return super().visit(node)
         except Exception as e:
             try:
                 lineno = node.lineno
