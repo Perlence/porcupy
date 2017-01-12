@@ -79,53 +79,59 @@ class NodeConverter:
             raise NotImplementedError('plain expressions are not supported')
 
     def visit_If(self, node):
-        # TODO: Implement nested ``if`` statements
-        # TODO: Implement ``else`` clause
         if isinstance(node.test, (ast.Num, ast.Str, ast.NameConstant, ast.List)):
-            self.optimized_if(node)
+            self.optimized_if(node.test, node.body)
+            if node.orelse:
+                self.optimized_if(node.test, node.orelse, negate_test=True)
         else:
             self.generic_if(node)
 
-    def optimized_if(self, node):
-        if isinstance(node.test, ast.Num) and not node.test.n:
+    def optimized_if(self, test, body, negate_test=False):
+        truthy = negate_test
+        if isinstance(test, ast.Num) and bool(test.n) is truthy:
             return
-        elif isinstance(node.test, ast.Str) and not node.test.s:
+        elif isinstance(test, ast.Str) and bool(test.s) is truthy:
             return
-        elif isinstance(node.test, ast.NameConstant) and not node.test.value:
+        elif isinstance(test, ast.NameConstant) and bool(test.value) is truthy:
             return
-        elif isinstance(node.test, ast.List) and not node.test.elts:
+        elif isinstance(test, ast.List) and bool(test.elts) is truthy:
             return
-        for stmt in node.body:
+        for stmt in body:
             self.visit(stmt)
 
     def generic_if(self, node):
-        test_expr = self.load_cached_expr(node.test)
-        if not isinstance(test_expr, Compare):
-            test_expr = Compare(test_expr, ast.NotEq(), Const(False, bool))
+        test = self.load_cached_expr(node.test)
+        if not isinstance(test, Compare):
+            test = Compare(test, ast.NotEq(), Const(False, bool))
 
-        all_tests = test_expr
-        self.tests.append(test_expr)
+        for stmt in self.prepare_if_stmt(test, node.body):
+            self.visit(stmt)
+        if node.orelse:
+            for stmt in self.prepare_if_stmt(self.negate_bool(test), node.orelse):
+                self.visit(stmt)
+
+    def prepare_if_stmt(self, test, body):
+        all_tests = test
+        self.tests.append(test)
         if len(self.tests) > 1:
             all_tests = BoolOp(ast.And(), self.tests[:])
 
-        inner_body = None
+        previous_body = None
         if len(self.bodies) > 1:
-            inner_body = self.bodies.pop()
+            previous_body = self.bodies.pop()
 
         if_body = []
         self.append_to_body(If(all_tests, if_body))
         self.bodies.append(if_body)
 
-        for stmt in node.body:
-            self.visit(stmt)
+        yield from body
 
-        self.tests.remove(test_expr)
+        self.bodies.pop()
 
-        if if_body in self.bodies:
-            self.bodies.remove(if_body)
+        if previous_body is not None:
+            self.bodies.append(previous_body)
 
-        if inner_body is not None:
-            self.bodies.append(inner_body)
+        self.tests.remove(test)
 
     def load_cached_expr(self, value):
         slot = self.loaded_values.get(value)
@@ -241,20 +247,13 @@ class NodeConverter:
             if isinstance(expr.op, ast.Or):
                 initial = Const(True, bool)
                 expr.op = ast.And()
-                expr.values = [self.bool_not(value) for value in expr.values]
+                expr.values = [self.negate_bool(value) for value in expr.values]
 
         bool_slot = self.scope.create_temporary(bool)
         self.append_to_body(Assign(bool_slot, initial))
-
-        if self.tests:
-            expr = BoolOp(ast.And(), self.tests + [expr])
-
-        inner_body = None
-        if len(self.bodies) > 1:
-            inner_body = self.bodies.pop()
-        self.append_to_body(If(expr, [Assign(bool_slot, self.bool_not(initial))]))
-        if inner_body is not None:
-            self.bodies.append(inner_body)
+        body = [Assign(bool_slot, self.negate_bool(initial))]
+        for stmt in self.prepare_if_stmt(expr, body):
+            self.append_to_body(stmt)
         return bool_slot
 
     def load_compare(self, value):
@@ -283,7 +282,7 @@ class NodeConverter:
             values.append(compare)
         return BoolOp(value.op, values)
 
-    def bool_not(self, expr):
+    def negate_bool(self, expr):
         if isinstance(expr, Const):
             return attr.assoc(expr, value=(not expr.value))
         elif isinstance(expr, Compare):

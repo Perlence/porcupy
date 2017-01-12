@@ -15,6 +15,15 @@ def test_optimized_if():
     assert compile_('if []: x = 11') == ''
     assert compile_('if [1, 2, 3]: x = 11') == 'p1z 11'
 
+    assert compile_('if True:\n'
+                    '    x = 11\n'
+                    'else:\n'
+                    '    x = 12') == 'p1z 11'
+    assert compile_('if False:\n'
+                    '    x = 11\n'
+                    'else:\n'
+                    '    x = 12') == 'p1z 12'
+
     # assert compile_('x = 11\nif 5 + 7 and True: y = 22') == 'p1z 11 p2z 22'
 
 
@@ -124,3 +133,27 @@ def test_nested():
             '# p3z ! 0 ( p4z 1 ) '
             '# p3z ! 0 & p1z >= 15 & p1z >= 16 ( p4z 0 ) '
             '# p3z ! 0 & p4z ! 0 ( p2z 22 )')
+
+
+def test_else():
+    assert (compile_('x = 11\n'
+                     'if x > 0:\n'
+                     '    y = 22\n'
+                     'else:\n'
+                     '    y = 23') ==
+            'p1z 11 '
+            'p3z 0 # p1z > 0 ( p3z 1 ) '
+            '# p3z ! 0 ( p2z 22 ) '
+            '# p3z = 0 ( p2z 23 )')
+
+    assert (compile_('x = 11\n'
+                     'if x > 0:\n'
+                     '    y = 22\n'
+                     'elif x > 5:\n'
+                     '    y = 23') ==
+            'p1z 11 '
+            'p3z 0 # p1z > 0 ( p3z 1 ) '
+            '# p3z ! 0 ( p2z 22 ) '
+            '# p3z = 0 ( p4z 0 ) '
+            '# p3z = 0 & p1z > 5 ( p4z 1 ) '
+            '# p3z = 0 & p4z ! 0 ( p2z 23 )')
