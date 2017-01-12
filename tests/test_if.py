@@ -52,7 +52,7 @@ def test_generic_if():
                      'if x < 12 and x < 13 or x < 14: y = 22') ==
             'p1z 11 '
             'p3z 0 # p1z < 12 & p1z < 13 ( p3z 1 ) '
-            'p4z 0 # p3z ! 0 | p1z < 14 ( p4z 1 ) # p4z ! 0 ( p2z 22 )')
+            'p4z 1 # p3z = 0 & p1z >= 14 ( p4z 0 ) # p4z ! 0 ( p2z 22 )')
 
     # assert compile_('x = 11\nif x < 5 + 7: y = 22') == 'p1z 11 # p1z < 12 ( p2z 22 )'
     assert compile_('x = 11; y = 22\nif x < y + 7: z = 33') == 'p1z 11 p2z 22 p4z 0 # p1z < p2z+7 ( p4z 1 ) # p4z ! 0 ( p3z 33 )'
@@ -114,13 +114,13 @@ def test_nested():
             '# p3z ! 0 & p4z ! 0 & p1z < 16 ( p5z 1 ) '
             '# p3z ! 0 & p4z ! 0 & p5z ! 0 ( p2z 33 )')
 
-    # # Gotcha, two different bool operations in one test expression
-    # assert (compile_('x = 11\n'
-    #                  'if x > 0:\n'
-    #                  '    if x < 15 or x < 16:\n'
-    #                  '        y = 22') ==
-    #         'p1z 11 '
-    #         'p3z 0 # p1z > 0 ( p3z 1 ) '
-    #         '# p3z ! 0 ( p4z 1 ) '
-    #         '# p3z ! 0 & p1z >= 15 & p1z >= 16 ( p4z 0 ) '
-    #         '# p3z ! 0 & p4z ! 0 ( p2z 22 )')
+    # Gotcha, two different bool operations in one test expression
+    assert (compile_('x = 11\n'
+                     'if x > 0:\n'
+                     '    if x < 15 or x < 16:\n'
+                     '        y = 22') ==
+            'p1z 11 '
+            'p3z 0 # p1z > 0 ( p3z 1 ) '
+            '# p3z ! 0 ( p4z 1 ) '
+            '# p3z ! 0 & p1z >= 15 & p1z >= 16 ( p4z 0 ) '
+            '# p3z ! 0 & p4z ! 0 ( p2z 22 )')

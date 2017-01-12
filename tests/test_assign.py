@@ -72,9 +72,23 @@ def test_bool_op():
     # assert compile_('x = True; y = True; z = x and y') == 'p1z 1 p2z 1 p3z 0 # p1z ! 0 & p2z ! 0 ( p3z p2z ) p3z p3z'
     # assert compile_('x = True; y = False; z = x or y') == 'p1z 1 p2z 0 p3z 0 # p1z ! 0 | p2z ! 0 ( p3z p1z ) p3z p3z'
     assert compile_('x = True; y = True; z = x and y') == 'p1z 1 p2z 1 p4z 0 # p1z ! 0 & p2z ! 0 ( p4z 1 ) p3z p4z'
-    assert compile_('x = True; y = False; z = x or y') == 'p1z 1 p2z 0 p4z 0 # p1z ! 0 | p2z ! 0 ( p4z 1 ) p3z p4z'
+    assert compile_('x = True; y = False; z = x or y') == 'p1z 1 p2z 0 p4z 1 # p1z = 0 & p2z = 0 ( p4z 0 ) p3z p4z'
 
     assert compile_('x = 3; y = x < 5 and x < 6') == 'p1z 3 p3z 0 # p1z < 5 & p1z < 6 ( p3z 1 ) p2z p3z'
+
+    assert (compile_('x = 11; y = x < 12 and (x < 13 or x < 14)') ==
+            'p1z 11 '
+            'p3z 1 # p1z >= 13 & p1z >= 14 ( p3z 0 ) '
+            'p4z 0 # p1z < 12 & p3z ! 0 ( p4z 1 ) p2z p4z')
+    assert (compile_('x = 11; y = x < 12 and (x < 13 or x < 14 or x < 15)') ==
+            'p1z 11 '
+            'p3z 1 # p1z >= 13 & p1z >= 14 & p1z >= 15 ( p3z 0 ) '
+            'p4z 0 # p1z < 12 & p3z ! 0 ( p4z 1 ) p2z p4z')
+    assert (compile_('x = 11; y = x < 12 and (x < 13 or (x < 14 or x < 15))') ==
+            'p1z 11 '
+            'p3z 1 # p1z >= 14 & p1z >= 15 ( p3z 0 ) '
+            'p4z 1 # p1z >= 13 & p3z = 0 ( p4z 0 ) '
+            'p5z 0 # p1z < 12 & p4z ! 0 ( p5z 1 ) p2z p5z')
 
 
 def test_unary_op():

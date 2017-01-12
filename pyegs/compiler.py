@@ -232,14 +232,19 @@ class NodeConverter:
         return slot
 
     def load_extended_bool_op(self, value):
+        initial = Const(False, bool)
         if isinstance(value, ast.Compare):
             expr = self.load_compare(value)
         elif isinstance(value, ast.BoolOp):
             # TODO: AND must return last value, OR must return first
             expr = self.load_bool_op(value)
+            if isinstance(expr.op, ast.Or):
+                initial = Const(True, bool)
+                expr.op = ast.And()
+                expr.values = [self.bool_not(value) for value in expr.values]
 
         bool_slot = self.scope.create_temporary(bool)
-        self.append_to_body(Assign(bool_slot, Const(False, bool)))
+        self.append_to_body(Assign(bool_slot, initial))
 
         if self.tests:
             expr = BoolOp(ast.And(), self.tests + [expr])
@@ -247,7 +252,7 @@ class NodeConverter:
         inner_body = None
         if len(self.bodies) > 1:
             inner_body = self.bodies.pop()
-        self.append_to_body(If(expr, [Assign(bool_slot, Const(True, bool))]))
+        self.append_to_body(If(expr, [Assign(bool_slot, self.bool_not(initial))]))
         if inner_body is not None:
             self.bodies.append(inner_body)
         return bool_slot
@@ -267,7 +272,6 @@ class NodeConverter:
             return BoolOp(ast.And(), values)
 
     def load_bool_op(self, value):
-        # TODO: Convert OR operations to AND operations
         # TODO: Try to evaluate bool operations literally, e.g. 'y = x and False' -> 'p1z 0'
         values = []
         for bool_op_value in value.values:
@@ -278,6 +282,26 @@ class NodeConverter:
                 compare = Compare(slot, ast.NotEq(), Const(False, bool))
             values.append(compare)
         return BoolOp(value.op, values)
+
+    def bool_not(self, expr):
+        if isinstance(expr, Const):
+            return attr.assoc(expr, value=(not expr.value))
+        elif isinstance(expr, Compare):
+            op = expr.op
+            if isinstance(op, ast.Eq):
+                return attr.assoc(expr, op=ast.NotEq())
+            elif isinstance(op, ast.NotEq):
+                return attr.assoc(expr, op=ast.Eq())
+            elif isinstance(op, ast.Lt):
+                return attr.assoc(expr, op=ast.GtE())
+            elif isinstance(op, ast.LtE):
+                return attr.assoc(expr, op=ast.Gt())
+            elif isinstance(op, ast.Gt):
+                return attr.assoc(expr, op=ast.LtE())
+            elif isinstance(op, ast.GtE):
+                return attr.assoc(expr, op=ast.Lt())
+        else:
+            raise NotImplementedError("cannot invert expression '{}'".format(expr))
 
     def load_bin_op(self, value):
         # TODO: Try to evaluate binary operations literally
