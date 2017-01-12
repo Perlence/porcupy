@@ -7,17 +7,17 @@ __all__ = ('timers', 'system', 'yegiks', 'bots', 'points')
 
 
 class GameObjectRef(int):
-    @staticmethod
+    @classmethod
     @funcy.memoize
-    def type(game_obj_type):
-        return type('GameObjectTypedRef', (GameObjectRef,), {'type': game_obj_type})
+    def of_type(cls, game_obj_type):
+        return type('GameObjectTypedRef', (cls,), {'type': game_obj_type})
 
 
 class FunctionType:
-    @staticmethod
+    @classmethod
     @funcy.memoize
-    def with_signature(fn):
-        return type('SignedFunctionType', (FunctionType,), {'signature': signature(fn)})
+    def with_signature(cls, fn):
+        return type('SignedFunctionType', (cls,), {'signature': signature(fn)})
 
 
 @attr.s
@@ -90,7 +90,7 @@ class Bot:
     target = attr.ib(default=0, metadata={'abbrev': 't', 'type': int})
     level = attr.ib(default=0, metadata={'abbrev': 'l', 'type': int})
     point = attr.ib(default=0, metadata={'abbrev': 'p', 'type': int})
-    goto = attr.ib(default=0, metadata={'abbrev': 'g', 'type': GameObjectRef.type(Point)})
+    goto = attr.ib(default=0, metadata={'abbrev': 'g', 'type': GameObjectRef.of_type(Point)})
 
     metadata = {'abbrev': 'a'}
 

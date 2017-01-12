@@ -1,7 +1,9 @@
 import ast
+from collections import defaultdict
 from numbers import Number
 
 import attr
+import funcy
 
 from .runtime import GameObjectRef, Yegik, Timer, Point, Bot, System
 
@@ -75,6 +77,21 @@ class NodeConverter(ast.NodeVisitor):
             self.append_to_body(expr)
         else:
             raise NotImplementedError('plain expressions are not supported')
+
+    def visit_For(self, node):
+        # For(expr target, expr iter, stmt* body, stmt* orelse)
+        iter_slot = self.load_cached_expr(node.iter)
+        if issubclass(iter_slot.type, ListPointer):
+            pointer_math_slot = self.scope.get_temporary(ListPointer)
+            for i in range(iter_slot.type.capacity):
+                src_slot = self.load_list_subscript(iter_slot, Const(i, int), pointer_math_slot)
+                dest_slot = self.store_value(node.target, src_slot)
+                self.append_to_body(Assign(dest_slot, src_slot))
+                for stmt in node.body:
+                    self.visit(stmt)
+            self.scope.recycle_temporary(pointer_math_slot)
+        else:
+            raise NotImplementedError("iterating over '{}' is not implemented yet".format(iter_slot.type))
 
     def visit_If(self, node):
         if isinstance(node.test, (ast.Num, ast.Str, ast.NameConstant, ast.List)):
@@ -177,8 +194,7 @@ class NodeConverter(ast.NodeVisitor):
             src_slot = self.load_cached_expr(item)
             self.append_to_body(Assign(dest_slot, src_slot))
         first_item = item_slots[0]
-        metadata = {'capacity': capacity, 'item_type': item_type}
-        return Const(first_item.number, ListPointer, metadata=metadata)
+        return Const(first_item.number, ListPointer.of_type(capacity, item_type))
 
     def load_attribute(self, value):
         value_slot = self.load_cached_expr(value.value)
@@ -217,21 +233,22 @@ class NodeConverter(ast.NodeVisitor):
 
     def load_game_obj_list_subscript(self, value_slot, slice_slot):
         register = value_slot.type.metadata['abbrev']
-        slot_type = GameObjectRef.type(value_slot.type)
+        slot_type = GameObjectRef.of_type(value_slot.type)
         if isinstance(slice_slot, Const):
             return Slot(register, slice_slot.value, None, slot_type)
         else:
             return attr.assoc(slice_slot, type=slot_type)
 
-    def load_list_subscript(self, value_slot, slice_slot):
+    def load_list_subscript(self, value_slot, slice_slot, pointer_math_slot=None):
         # TODO: Optimize constant list subscription with constant index
-        if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.metadata['capacity']:
+        if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.type.capacity:
             raise IndexError('list index out of range')
-        pointer_math_slot = self.scope.create_temporary(ListPointer)
+        if pointer_math_slot is None:
+            pointer_math_slot = self.scope.get_temporary(ListPointer)
         addition = BinOp(value_slot, ast.Add(), slice_slot)
         self.append_to_body(Assign(pointer_math_slot, addition))
-        slot = attr.assoc(pointer_math_slot, type=value_slot.metadata['item_type'], ref=pointer_math_slot)
-        if issubclass(value_slot.metadata['item_type'], GameObjectRef):
+        slot = attr.assoc(pointer_math_slot, type=value_slot.type.item_type, ref=pointer_math_slot)
+        if issubclass(value_slot.type.item_type, GameObjectRef):
             self.append_to_body(Assign(pointer_math_slot, slot))
         return slot
 
@@ -247,7 +264,7 @@ class NodeConverter(ast.NodeVisitor):
                 expr.op = ast.And()
                 expr.values = [self.negate_bool(value) for value in expr.values]
 
-        bool_slot = self.scope.create_temporary(bool)
+        bool_slot = self.scope.get_temporary(bool)
         self.append_to_body(Assign(bool_slot, initial))
         body = [Assign(bool_slot, self.negate_bool(initial))]
         for stmt in self.prepare_if_stmt(expr, body):
@@ -360,6 +377,7 @@ class Scope:
     numeric_slots = attr.ib(default=attr.Factory(lambda: Slots(start=1)))
     string_slots = attr.ib(default=attr.Factory(lambda: Slots()))
     temporary_slots = attr.ib(default=attr.Factory(list))
+    recycled_temporary_slots = attr.ib(default=attr.Factory(lambda: defaultdict(list)))
 
     def __attrs_post_init__(self):
         self.populate_game_objects()
@@ -369,7 +387,7 @@ class Scope:
         self.names['points'] = GameObjectList(Point)
         self.names['bots'] = GameObjectList(Bot)
         self.names['timers'] = GameObjectList(Timer)
-        self.names['system'] = Slot(System.metadata['abbrev'], None, None, GameObjectRef.type(System))
+        self.names['system'] = Slot(System.metadata['abbrev'], None, None, GameObjectRef.of_type(System))
 
     def define_const(self, name, value):
         self.names[name] = value
@@ -398,12 +416,17 @@ class Scope:
     def allocate_many(self, type, length):
         return [self.allocate(type) for _ in range(length)]
 
-    def create_temporary(self, type):
+    def get_temporary(self, type):
         if not issubclass(type, (Number, str)):
             raise TypeError("cannot create volatile slot of type '{}'".format(type))
+        if self.recycled_temporary_slots[type]:
+            return self.recycled_temporary_slots[type].pop()
         slot = Slot('p', None, 'z', type)
         self.temporary_slots.append(slot)
         return slot
+
+    def recycle_temporary(self, slot):
+        self.recycled_temporary_slots[slot.type].append(slot)
 
     def allocate_temporary(self):
         for slot in self.temporary_slots:
@@ -516,7 +539,10 @@ class Slot:
 
 
 class ListPointer(int):
-    pass
+    @classmethod
+    @funcy.memoize
+    def of_type(cls, capacity, item_type):
+        return type('TypedListPointer', (cls,), {'item_type': item_type, 'capacity': capacity})
 
 
 @attr.s
