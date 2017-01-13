@@ -62,6 +62,8 @@ class NodeConverter(ast.NodeVisitor):
             if isinstance(target, (ast.Tuple, ast.List)):
                 # TODO: Implement iterable unpacking
                 raise NotImplementedError('iterable unpacking is not implemented yet')
+            if self.is_black_hole(target):
+                continue
             if src_slot is None:
                 src_slot = self.load_expr(node.value)
             dest_slot = self.store_value(target, src_slot)
@@ -94,27 +96,34 @@ class NodeConverter(ast.NodeVisitor):
         label = Label(self.last_label)
         self.loop_labels.append(label)
 
+        is_black_hole = self.is_black_hole(node.target)
         iter_slot = self.load_expr(node.iter)
         if issubclass(iter_slot.type, Iterable):
             iterable = iter_slot.value
+
         elif issubclass(iter_slot.type, ListPointer):
-            iterable = self.list_pointer_iter(iter_slot)
+            iterable = self.list_pointer_iter(iter_slot, subscript=(not is_black_hole))
         else:
             raise NotImplementedError("iterating over '{}' is not implemented yet".format(iter_slot.type))
 
         for src_slot in iterable:
-            dest_slot = self.store_value(node.target, src_slot)
-            self.append_to_body(Assign(dest_slot, src_slot))
+            if not is_black_hole:
+                dest_slot = self.store_value(node.target, src_slot)
+                self.append_to_body(Assign(dest_slot, src_slot))
             for stmt in node.body:
                 self.visit(stmt)
+
         self.append_to_body(label)
         self.loop_labels.pop()
 
-    def list_pointer_iter(self, list_pointer):
+    def list_pointer_iter(self, list_pointer, subscript=True):
+        if not subscript:
+            yield from range(list_pointer.type.capacity)
+            return
+
         pointer_math_slot = self.scope.get_temporary(ListPointer)
         for i in range(list_pointer.type.capacity):
-            slot = self.load_list_subscript(list_pointer, Const(i, int), pointer_math_slot)
-            yield slot
+            yield self.load_list_subscript(list_pointer, Const(i, int), pointer_math_slot)
         self.scope.recycle_temporary(pointer_math_slot)
 
     def visit_Break(self, node):
@@ -425,6 +434,9 @@ class NodeConverter(ast.NodeVisitor):
 
     def is_const(self, target):
         return target.id is not None and target.id.isupper()
+
+    def is_black_hole(self, target):
+        return isinstance(target, ast.Name) and target.id == '_'
 
     def append_to_body(self, stmt):
         body = self.bodies[-1]

@@ -33,6 +33,15 @@ def test_iterate_lists():
             'p11z p7z+2 p8z p^11z p12z p8z+0 p9z p^12z p10z p9z :4 '
             ':1')
 
+    assert (compile_('items = [11, 22, 33]\n'
+                     'for _ in items:\n'
+                     '    system.message("hey")') ==
+            'p1z 11 p2z 22 p3z 33 p4z 1 '
+            'ym hey '
+            'ym hey '
+            'ym hey '
+            ':1')
+
 
 def test_break():
     assert (compile_('items = [11, 22, 33]\n'
