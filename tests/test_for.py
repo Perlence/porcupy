@@ -71,12 +71,18 @@ def test_continue():
 
 def test_range():
     assert (compile_('for x in range(5): y = x') ==
-            'p1z 0 p2z p1z '
-            'p1z 1 p2z p1z '
-            'p1z 2 p2z p1z '
-            'p1z 3 p2z p1z '
-            'p1z 4 p2z p1z '
+            'p1z 0 p2z 5 p3z 1 '
+            'p4z 0 p5z p4z '
+            'p4z 1 p5z p4z '
+            'p4z 2 p5z p4z '
+            'p4z 3 p5z p4z '
+            'p4z 4 p5z p4z '
             ':1')
+
+    with pytest.raises(TypeError) as exc_info:
+        compile_('x = 5\n'
+                 'for _ in range(x): system.message("hey")')
+    assert 'only constant range' in str(exc_info.value)
 
 
 @pytest.mark.skip('Not implemented yet')

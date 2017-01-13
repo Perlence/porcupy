@@ -1,5 +1,5 @@
 import ast
-from collections import defaultdict, Iterable
+from collections import defaultdict
 from numbers import Number
 
 import attr
@@ -98,9 +98,9 @@ class NodeConverter(ast.NodeVisitor):
 
         is_black_hole = self.is_black_hole(node.target)
         iter_slot = self.load_expr(node.iter)
-        if issubclass(iter_slot.type, Iterable):
-            iterable = iter_slot.value
 
+        if issubclass(iter_slot.type, Range):
+            iterable = self.range_iter(iter_slot)
         elif issubclass(iter_slot.type, ListPointer):
             iterable = self.list_pointer_iter(iter_slot, subscript=(not is_black_hole))
         else:
@@ -115,6 +115,14 @@ class NodeConverter(ast.NodeVisitor):
 
         self.append_to_body(label)
         self.loop_labels.pop()
+
+    def range_iter(self, slot):
+        range_props = start, stop, step = slot.metadata['start'], slot.metadata['stop'], slot.metadata['step']
+        if not all(isinstance(range_prop, Const) for range_prop in range_props):
+            raise TypeError('only constant range can be iterated')
+
+        for i in range(start.value, stop.value, step.value):
+            yield Const(i, int)
 
     def list_pointer_iter(self, list_pointer, subscript=True):
         if not subscript:
@@ -412,11 +420,25 @@ class NodeConverter(ast.NodeVisitor):
             raise NotImplementedError("calling function '{}' is not implemented yet".format(func))
 
     def load_range(self, args):
-        r = Range(*args)
-        if isinstance(self.current_node, ast.For):
-            return Const(r, type=Range)
-        else:
-            return self.load_list(ast.List(elts=list(r)))
+        start_value, step_value = Const(0, int), Const(1, int)
+        if len(args) == 1:
+            stop_value = args[0]
+        elif len(args) == 2:
+            start_value, stop_value = args
+        elif len(args) == 3:
+            start_value, stop_value, step_value = args
+
+        start_slot, stop_slot, step_slot = self.scope.allocate_many(int, 3)
+        self.append_to_body(Assign(start_slot, start_value))
+        self.append_to_body(Assign(stop_slot, stop_value))
+        self.append_to_body(Assign(step_slot, step_value))
+
+        metadata = {
+            'start': start_value,
+            'stop': stop_value,
+            'step': step_value,
+        }
+        return Const(start_slot.number, Range, metadata=metadata)
 
     def store_value(self, target, src_slot):
         if isinstance(target, ast.Name):
