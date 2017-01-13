@@ -1,12 +1,12 @@
 import ast
-from collections import defaultdict
+from collections import defaultdict, Iterable
 from numbers import Number
 
 import attr
 
 from .ast import AST, Module, Assign, If, Const, Slot, BoolOp, BinOp, Compare, Call, Label
 from .runtime import Yegik, Timer, Point, Bot, System
-from .types import GameObjectRef, GameObjectMethod, GameObjectList, ListPointer
+from .types import GameObjectRef, GameObjectMethod, GameObjectList, ListPointer, BuiltinFunction, Range
 
 
 def compile(source, filename='<unknown>'):
@@ -25,21 +25,24 @@ class NodeConverter(ast.NodeVisitor):
     tests = attr.ib(default=attr.Factory(list))
     last_label = attr.ib(default=0)
     loop_labels = attr.ib(default=attr.Factory(list))
+    current_node = attr.ib(default=None)
 
     def visit(self, node):
         try:
+            self.current_node = node
             return super().visit(node)
         except Exception as e:
-            try:
-                lineno = node.lineno
-                col_offset = node.col_offset
-            except AttributeError:
-                raise e
-            old_msg = e.args[0]
-            line_col = 'line {}, column {}'.format(lineno, col_offset)
-            msg = old_msg + '; ' + line_col if old_msg else line_col
-            e.args = (msg,) + e.args[1:]
-            raise e
+            if not hasattr(node, 'lineno') or not hasattr(node, 'col_offset'):
+                raise
+            self.annotate_node_position(e, node.lineno, node.col_offset)
+            raise
+
+    def annotate_node_position(self, exc, lineno, col_offset):
+        old_msg = exc.args[0]
+        line_col = 'line {}, column {}'.format(lineno, col_offset)
+        msg = old_msg + '; ' + line_col if old_msg else line_col
+        exc.args = (msg,) + exc.args[1:]
+        return exc
 
     def generic_visit(self, node):
         raise NotImplementedError("node '{}' is not implemented yet".format(node))
@@ -86,23 +89,33 @@ class NodeConverter(ast.NodeVisitor):
         # For(expr target, expr iter, stmt* body, stmt* orelse)
         if self.is_body_empty(node.body):
             return
-        iter_slot = self.load_expr(node.iter)
+
         self.last_label += 1
         label = Label(self.last_label)
         self.loop_labels.append(label)
-        if issubclass(iter_slot.type, ListPointer):
-            pointer_math_slot = self.scope.get_temporary(ListPointer)
-            for i in range(iter_slot.type.capacity):
-                src_slot = self.load_list_subscript(iter_slot, Const(i, int), pointer_math_slot)
-                dest_slot = self.store_value(node.target, src_slot)
-                self.append_to_body(Assign(dest_slot, src_slot))
-                for stmt in node.body:
-                    self.visit(stmt)
-            self.append_to_body(label)
-            self.loop_labels.pop()
-            self.scope.recycle_temporary(pointer_math_slot)
+
+        iter_slot = self.load_expr(node.iter)
+        if issubclass(iter_slot.type, Iterable):
+            iterable = iter_slot.value
+        elif issubclass(iter_slot.type, ListPointer):
+            iterable = self.list_pointer_iter(iter_slot)
         else:
             raise NotImplementedError("iterating over '{}' is not implemented yet".format(iter_slot.type))
+
+        for src_slot in iterable:
+            dest_slot = self.store_value(node.target, src_slot)
+            self.append_to_body(Assign(dest_slot, src_slot))
+            for stmt in node.body:
+                self.visit(stmt)
+        self.append_to_body(label)
+        self.loop_labels.pop()
+
+    def list_pointer_iter(self, list_pointer):
+        pointer_math_slot = self.scope.get_temporary(ListPointer)
+        for i in range(list_pointer.type.capacity):
+            slot = self.load_list_subscript(list_pointer, Const(i, int), pointer_math_slot)
+            yield slot
+        self.scope.recycle_temporary(pointer_math_slot)
 
     def visit_Break(self, node):
         label_number = self.loop_labels[-1].number
@@ -375,10 +388,26 @@ class NodeConverter(ast.NodeVisitor):
     def load_call(self, value):
         func = self.load_expr(value.func)
         args = [self.load_expr(arg) for arg in value.args]
-        if value.keywords:
-            raise NotImplementedError('function keywords are not implemented yet')
-        func.type.signature.bind(None, *args)  # pass None as 'self' argument
-        return Call(func, args)
+        if isinstance(func, Slot):
+            func_type = func.type
+            if issubclass(func_type, GameObjectMethod):
+                if value.keywords:
+                    raise NotImplementedError('function keywords are not implemented yet')
+                func_type.signature.bind(None, *args)
+                return Call(func, args)
+        elif isinstance(func, BuiltinFunction):
+            # kwargs = {kw.arg: self.load_expr(kw.value) for kw in value.keywords}
+            if func.func is Range:
+                return self.load_range(args)
+        else:
+            raise NotImplementedError("calling function '{}' is not implemented yet".format(func))
+
+    def load_range(self, args):
+        r = Range(*args)
+        if isinstance(self.current_node, ast.For):
+            return Const(r, type=Range)
+        else:
+            return self.load_list(ast.List(elts=list(r)))
 
     def store_value(self, target, src_slot):
         if isinstance(target, ast.Name):
@@ -411,7 +440,11 @@ class Scope:
     recycled_temporary_slots = attr.ib(default=attr.Factory(lambda: defaultdict(list)))
 
     def __attrs_post_init__(self):
+        self.populate_builtins()
         self.populate_game_objects()
+
+    def populate_builtins(self):
+        self.names['range'] = BuiltinFunction(Range)
 
     def populate_game_objects(self):
         self.names['yegiks'] = GameObjectList(Yegik)

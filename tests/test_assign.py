@@ -163,6 +163,17 @@ def test_lists():
     assert compile_('x = [1, 2]; x[0] = x[1] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5 p5z p3z+1 p^5z 5'
 
 
+def test_range():
+    assert compile_('X = range(5)') == 'p1z 0 p2z 1 p3z 2 p4z 3 p5z 4'
+
+    assert compile_('x = range(5)') == 'p1z 0 p2z 1 p3z 2 p4z 3 p5z 4 p6z 1'
+    assert compile_('x = range(11, 44, 11)') == 'p1z 11 p2z 22 p3z 33 p4z 1'
+
+    with pytest.raises(TypeError) as exc_info:
+        assert compile_('x = 5; y = range(x)')
+    assert 'range arguments must be constant' in str(exc_info.value)
+
+
 def test_multiple_assign():
     assert compile_('x = y = 5') == 'p1z 5 p2z 5'
     assert compile_('x = y = [1, 2]') == 'p1z 1 p2z 2 p3z 1 p4z 1'
