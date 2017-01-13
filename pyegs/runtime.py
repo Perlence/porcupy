@@ -1,23 +1,8 @@
-from inspect import signature
-
 import attr
-import funcy
+
+from .types import GameObjectRef, GameObjectMethod
 
 __all__ = ('timers', 'system', 'yegiks', 'bots', 'points')
-
-
-class GameObjectRef(int):
-    @classmethod
-    @funcy.memoize
-    def of_type(cls, game_obj_type):
-        return type('GameObjectTypedRef', (cls,), {'type': game_obj_type})
-
-
-class FunctionType:
-    @classmethod
-    @funcy.memoize
-    def with_signature(cls, fn):
-        return type('SignedFunctionType', (cls,), {'signature': signature(fn)})
 
 
 @attr.s
@@ -30,12 +15,12 @@ class Timer:
     def start(self) -> None:
         pass
 
-    start.metadata = {'abbrev': 'g', 'type': FunctionType.with_signature(start)}
+    start.metadata = {'abbrev': 'g', 'type': GameObjectMethod.with_signature(start)}
 
     def stop(self) -> None:
         pass
 
-    stop.metadata = {'abbrev': 's', 'type': FunctionType.with_signature(stop)}
+    stop.metadata = {'abbrev': 's', 'type': GameObjectMethod.with_signature(stop)}
 
 
 timers = [Timer() for x in range(100)]
@@ -52,22 +37,22 @@ class System:
     def message(self, s: str) -> None:
         pass
 
-    message.metadata = {'abbrev': 'm', 'type': FunctionType.with_signature(message)}
+    message.metadata = {'abbrev': 'm', 'type': GameObjectMethod.with_signature(message)}
 
     def message_at(self, x: float, y: float, dur: float, s: str) -> None:
         pass
 
-    message_at.metadata = {'abbrev': 'y', 'type': FunctionType.with_signature(message_at)}
+    message_at.metadata = {'abbrev': 'y', 'type': GameObjectMethod.with_signature(message_at)}
 
     def set_color(self, r: int, g: int, b: int) -> None:
         self.color = r + (g << 8) + (b << 16)
 
-    set_color.metadata = {'type': FunctionType.with_signature(set_color)}
+    set_color.metadata = {'type': GameObjectMethod.with_signature(set_color)}
 
     def load_map(self, name: str) -> None:
         pass
 
-    load_map.metadata = {'abbrev': 'l', 'type': FunctionType.with_signature(load_map)}
+    load_map.metadata = {'abbrev': 'l', 'type': GameObjectMethod.with_signature(load_map)}
 
 
 system = System()
@@ -117,7 +102,7 @@ class Yegik:
     def spawn(self, point: int) -> None:
         pass
 
-    spawn.metadata = {'abbrev': 'b', 'type': FunctionType.with_signature(spawn)}
+    spawn.metadata = {'abbrev': 'b', 'type': GameObjectMethod.with_signature(spawn)}
 
 
 yegiks = [Yegik() for x in range(1, 10)]

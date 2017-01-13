@@ -21,7 +21,7 @@ def test_call():
 
     with pytest.raises(TypeError) as exc_info:
         compile_('spawn = yegiks[2].spawn; spawn(1)')
-    assert "cannot allocate slot of type '<class 'pyegs.runtime.SignedFunctionType'>'" in str(exc_info.value)
+    assert "cannot allocate slot of type '<class 'pyegs.types.SignedFunctionType'>'" in str(exc_info.value)
 
     # assert compile_('x = 2; system.message(x)') == 'p1z 2 ym ^1'
     # assert compile_('s = "Hello World"; system.message(s)') == 's0z Hello_World ym $0'

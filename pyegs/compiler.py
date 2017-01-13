@@ -3,9 +3,9 @@ from collections import defaultdict
 from numbers import Number
 
 import attr
-import funcy
 
-from .runtime import GameObjectRef, Yegik, Timer, Point, Bot, System
+from .runtime import Yegik, Timer, Point, Bot, System
+from .types import GameObjectRef, GameObjectMethod, GameObjectList, ListPointer
 
 
 def compile(source, filename='<unknown>'):
@@ -555,18 +555,6 @@ class Slot:
                 attrib=self.attrib)
         else:
             return str(self.number)
-
-
-class ListPointer(int):
-    @classmethod
-    @funcy.memoize
-    def of_type(cls, capacity, item_type):
-        return type('TypedListPointer', (cls,), {'item_type': item_type, 'capacity': capacity})
-
-
-@attr.s
-class GameObjectList:
-    type = attr.ib()
 
 
 @attr.s
