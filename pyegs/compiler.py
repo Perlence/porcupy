@@ -83,6 +83,8 @@ class NodeConverter(ast.NodeVisitor):
 
     def visit_For(self, node):
         # For(expr target, expr iter, stmt* body, stmt* orelse)
+        if self.is_body_empty(node.body):
+            return
         iter_slot = self.load_expr(node.iter)
         self.last_label += 1
         label = Label(self.last_label)
@@ -102,9 +104,15 @@ class NodeConverter(ast.NodeVisitor):
             raise NotImplementedError("iterating over '{}' is not implemented yet".format(iter_slot.type))
 
     def visit_Break(self, node):
-        self.append_to_body(Slot('g', self.loop_labels[-1].number, 'z', None))
+        label_number = self.loop_labels[-1].number
+        self.append_to_body(Slot('g', label_number, 'z', None))
+
+    def visit_Pass(self, node):
+        pass
 
     def visit_If(self, node):
+        if self.is_body_empty(node.body) and self.is_body_empty(node.orelse):
+            return
         if isinstance(node.test, (ast.Num, ast.Str, ast.NameConstant, ast.List)):
             self.optimized_if(node.test, node.body)
             if node.orelse:
@@ -114,6 +122,8 @@ class NodeConverter(ast.NodeVisitor):
 
     def optimized_if(self, test, body, negate_test=False):
         truthy = negate_test
+        if self.is_body_empty(body):
+            return
         if isinstance(test, ast.Num) and bool(test.n) is truthy:
             return
         elif isinstance(test, ast.Str) and bool(test.s) is truthy:
@@ -137,6 +147,8 @@ class NodeConverter(ast.NodeVisitor):
                 self.visit(stmt)
 
     def prepare_if_stmt(self, test, body):
+        if self.is_body_empty(body):
+            return
         all_tests = test
         self.tests.append(test)
         if len(self.tests) > 1:
@@ -158,6 +170,9 @@ class NodeConverter(ast.NodeVisitor):
             self.bodies.append(previous_body)
 
         self.tests.remove(test)
+
+    def is_body_empty(self, body):
+        return all(isinstance(stmt, ast.Pass) for stmt in body)
 
     def load_expr(self, value):
         if isinstance(value, ast.Num):
