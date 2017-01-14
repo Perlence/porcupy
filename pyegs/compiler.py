@@ -4,9 +4,9 @@ from numbers import Number
 
 import attr
 
-from .ast import AST, Module, Assign, If, Const, Slot, BoolOp, BinOp, Compare, Call, Label
+from .ast import AST, Module, Assign, If, Const, Slot, BoolOp, BinOp, Compare, Label
 from .runtime import Yegik, Timer, Point, Bot, System
-from .types import GameObjectRef, GameObjectMethod, GameObjectList, ListPointer, BuiltinFunction, Range
+from .types import GameObjectRef, GameObjectList, ListPointer, Range
 
 
 def compile(source, filename='<unknown>'):
@@ -66,6 +66,7 @@ class NodeConverter(ast.NodeVisitor):
                 continue
             if src_slot is None:
                 src_slot = self.load_expr(node.value)
+                print(node.value, repr(src_slot))
             dest_slot = self.store_value(target, src_slot)
             if dest_slot is None:
                 continue
@@ -99,12 +100,10 @@ class NodeConverter(ast.NodeVisitor):
         is_black_hole = self.is_black_hole(node.target)
         iter_slot = self.load_expr(node.iter)
 
-        if issubclass(iter_slot.type, Range):
-            iterable = self.range_iter(iter_slot)
-        elif issubclass(iter_slot.type, ListPointer):
-            iterable = self.list_pointer_iter(iter_slot, subscript=(not is_black_hole))
-        else:
+        if not hasattr(iter_slot.type, 'iter'):
             raise NotImplementedError("iterating over '{}' is not implemented yet".format(iter_slot.type))
+
+        iterable = iter_slot.type.iter(self, iter_slot, subscript=(not is_black_hole))
 
         for src_slot in iterable:
             if not is_black_hole:
@@ -115,24 +114,6 @@ class NodeConverter(ast.NodeVisitor):
 
         self.append_to_body(label)
         self.loop_labels.pop()
-
-    def range_iter(self, slot):
-        range_props = start, stop, step = slot.metadata['start'], slot.metadata['stop'], slot.metadata['step']
-        if not all(isinstance(range_prop, Const) for range_prop in range_props):
-            raise TypeError('only constant range can be iterated')
-
-        for i in range(start.value, stop.value, step.value):
-            yield Const(i, int)
-
-    def list_pointer_iter(self, list_pointer, subscript=True):
-        if not subscript:
-            yield from range(list_pointer.type.capacity)
-            return
-
-        pointer_math_slot = self.scope.get_temporary(ListPointer)
-        for i in range(list_pointer.type.capacity):
-            yield self.load_list_subscript(list_pointer, Const(i, int), pointer_math_slot)
-        self.scope.recycle_temporary(pointer_math_slot)
 
     def visit_Break(self, node):
         label_number = self.loop_labels[-1].number
@@ -202,9 +183,6 @@ class NodeConverter(ast.NodeVisitor):
 
         self.tests.remove(test)
 
-    def is_body_empty(self, body):
-        return all(isinstance(stmt, ast.Pass) for stmt in body)
-
     def load_expr(self, value):
         if isinstance(value, AST):
             return value
@@ -259,59 +237,18 @@ class NodeConverter(ast.NodeVisitor):
 
     def load_attribute(self, value):
         value_slot = self.load_expr(value.value)
-        if issubclass(value_slot.type, GameObjectRef):
-            return self.load_game_obj_attr(value_slot, value.attr)
-        else:
-            raise NotImplementedError("getting attribute of object of type '{}' is not implemented yet".format(value.slot.type))
-
-    def load_game_obj_attr(self, slot, attr_name):
-        game_obj_type = slot.type.type
-        register = game_obj_type.metadata['abbrev']
-        attrib = getattr(game_obj_type, attr_name)
-        if slot.is_variable():
-            ref = slot
-            if slot.ref is not None:
-                ref = slot.ref
-            slot = attr.assoc(slot, register=register, ref=ref)
-
-        metadata_stub = {**attrib.metadata}
-        attrib_type = metadata_stub.pop('type')
-        attrib_abbrev = metadata_stub.pop('abbrev')
-        metadata = {**slot.metadata, **metadata_stub}
-
-        return attr.assoc(slot, type=attrib_type, attrib=attrib_abbrev,
-                          metadata=metadata)
+        if not hasattr(value_slot.type, 'getattr'):
+            raise NotImplementedError("getting attribute of object of type '{}' is not implemented yet".format(value_slot.type))
+        return value_slot.type.getattr(self, value_slot, value.attr)
 
     def load_subscript(self, value):
         value_slot = self.load_expr(value.value)
         slice_slot = self.load_expr(value.slice)
-        if isinstance(value_slot, GameObjectList):
-            return self.load_game_obj_list_subscript(value_slot, slice_slot)
-        elif issubclass(value_slot.type, ListPointer):
-            return self.load_list_subscript(value_slot, slice_slot)
-        else:
+
+        if not hasattr(value_slot.type, 'getitem'):
             raise NotImplementedError("getting item of collection of type '{}' is not implemented yet".format(value_slot.type))
 
-    def load_game_obj_list_subscript(self, value_slot, slice_slot):
-        register = value_slot.type.metadata['abbrev']
-        slot_type = GameObjectRef.of_type(value_slot.type)
-        if isinstance(slice_slot, Const):
-            return Slot(register, slice_slot.value, None, slot_type)
-        else:
-            return attr.assoc(slice_slot, type=slot_type)
-
-    def load_list_subscript(self, value_slot, slice_slot, pointer_math_slot=None):
-        # TODO: Optimize constant list subscription with constant index
-        if isinstance(slice_slot, Const) and slice_slot.value >= value_slot.type.capacity:
-            raise IndexError('list index out of range')
-        if pointer_math_slot is None:
-            pointer_math_slot = self.scope.get_temporary(ListPointer)
-        addition = BinOp(value_slot, ast.Add(), slice_slot)
-        self.append_to_body(Assign(pointer_math_slot, addition))
-        slot = attr.assoc(pointer_math_slot, type=value_slot.type.item_type, ref=pointer_math_slot)
-        if issubclass(value_slot.type.item_type, GameObjectRef):
-            self.append_to_body(Assign(pointer_math_slot, slot))
-        return slot
+        return value_slot.type.getitem(self, value_slot, slice_slot)
 
     def load_extended_bool_op(self, value):
         initial = Const(False, bool)
@@ -403,42 +340,13 @@ class NodeConverter(ast.NodeVisitor):
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(value.op))
 
     def load_call(self, value):
+        if value.keywords:
+            raise NotImplementedError('function keywords are not implemented yet')
         func = self.load_expr(value.func)
         args = [self.load_expr(arg) for arg in value.args]
-        if isinstance(func, Slot):
-            func_type = func.type
-            if issubclass(func_type, GameObjectMethod):
-                if value.keywords:
-                    raise NotImplementedError('function keywords are not implemented yet')
-                func_type.signature.bind(None, *args)
-                return Call(func, args)
-        elif isinstance(func, BuiltinFunction):
-            # kwargs = {kw.arg: self.load_expr(kw.value) for kw in value.keywords}
-            if func.func is Range:
-                return self.load_range(args)
-        else:
+        if not hasattr(func.type, 'call'):
             raise NotImplementedError("calling function '{}' is not implemented yet".format(func))
-
-    def load_range(self, args):
-        start_value, step_value = Const(0, int), Const(1, int)
-        if len(args) == 1:
-            stop_value = args[0]
-        elif len(args) == 2:
-            start_value, stop_value = args
-        elif len(args) == 3:
-            start_value, stop_value, step_value = args
-
-        start_slot, stop_slot, step_slot = self.scope.allocate_many(int, 3)
-        self.append_to_body(Assign(start_slot, start_value))
-        self.append_to_body(Assign(stop_slot, stop_value))
-        self.append_to_body(Assign(step_slot, step_value))
-
-        metadata = {
-            'start': start_value,
-            'stop': stop_value,
-            'step': step_value,
-        }
-        return Const(start_slot.number, Range, metadata=metadata)
+        return func.type.call(self, func, args)
 
     def store_value(self, target, src_slot):
         if isinstance(target, ast.Name):
@@ -454,15 +362,18 @@ class NodeConverter(ast.NodeVisitor):
         else:
             raise NotImplementedError("assigning values to '{}' is not implemented yet".format(target))
 
+    def append_to_body(self, stmt):
+        body = self.bodies[-1]
+        body.append(stmt)
+
+    def is_body_empty(self, body):
+        return all(isinstance(stmt, ast.Pass) for stmt in body)
+
     def is_const(self, target):
         return target.id is not None and target.id.isupper()
 
     def is_black_hole(self, target):
         return isinstance(target, ast.Name) and target.id == '_'
-
-    def append_to_body(self, stmt):
-        body = self.bodies[-1]
-        body.append(stmt)
 
 
 @attr.s
@@ -478,13 +389,13 @@ class Scope:
         self.populate_game_objects()
 
     def populate_builtins(self):
-        self.names['range'] = BuiltinFunction(Range)
+        self.names['range'] = Const(None, Range)
 
     def populate_game_objects(self):
-        self.names['yegiks'] = GameObjectList(Yegik)
-        self.names['points'] = GameObjectList(Point)
-        self.names['bots'] = GameObjectList(Bot)
-        self.names['timers'] = GameObjectList(Timer)
+        self.names['yegiks'] = Const(None, GameObjectList.of_type(Yegik, 1, 10))
+        self.names['points'] = Const(None, GameObjectList.of_type(Point, 1, 100))
+        self.names['bots'] = Const(None, GameObjectList.of_type(Bot, 1, 10))
+        self.names['timers'] = Const(None, GameObjectList.of_type(Timer, 0, 100))
         self.names['system'] = Slot(System.metadata['abbrev'], None, None, GameObjectRef.of_type(System))
 
     def define_const(self, name, value):
