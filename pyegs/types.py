@@ -1,10 +1,9 @@
-import ast
 from inspect import signature
 
 import attr
 import funcy
 
-from .ast import Const, Slot, BinOp, Assign, Call
+from .ast import Const, Slot, BinOp, Add, Assign, Call
 
 
 class ListPointer(int):
@@ -20,7 +19,7 @@ class ListPointer(int):
             raise IndexError('list index out of range')
         if pointer_math_slot is None:
             pointer_math_slot = converter.scope.get_temporary(ListPointer)
-        addition = BinOp(slot, ast.Add(), slice_slot)
+        addition = converter.load_bin_op(BinOp(slot, Add(), slice_slot))
         converter.append_to_body(Assign(pointer_math_slot, addition))
         slot = attr.assoc(pointer_math_slot, type=cls.item_type, ref=pointer_math_slot)
         if issubclass(cls.item_type, GameObjectRef):

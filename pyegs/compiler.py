@@ -4,7 +4,8 @@ from numbers import Number
 
 import attr
 
-from .ast import AST, Module, Assign, If, Const, Slot, BoolOp, BinOp, Compare, Label
+from .ast import (AST, Module, Assign, If, Const, Slot, BoolOp, BinOp,
+                  operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare, Label)
 from .runtime import Yegik, Timer, Point, Bot, System
 from .types import GameObjectRef, GameObjectList, ListPointer, Range
 
@@ -38,10 +39,10 @@ class NodeConverter(ast.NodeVisitor):
             raise
 
     def annotate_node_position(self, exc, lineno, col_offset):
-        old_msg = exc.args[0]
+        old_msg, *rest_args = exc.args
         line_col = 'line {}, column {}'.format(lineno, col_offset)
         msg = old_msg + '; ' + line_col if old_msg else line_col
-        exc.args = (msg,) + exc.args[1:]
+        exc.args = [msg] + rest_args
         return exc
 
     def generic_visit(self, node):
@@ -77,7 +78,7 @@ class NodeConverter(ast.NodeVisitor):
         dest_slot = self.store_value(node.target, src_slot)
         if dest_slot is None:
             return
-        bin_op = BinOp(dest_slot, node.op, src_slot)
+        bin_op = self.load_bin_op(BinOp(dest_slot, self.load_bin_operator(node.op), src_slot))
         self.append_to_body(Assign(dest_slot, bin_op))
 
     def visit_Expr(self, node):
@@ -318,8 +319,52 @@ class NodeConverter(ast.NodeVisitor):
         # TODO: Try to evaluate binary operations literally
         # TODO: Initialize lists, e.g. 'x = [0] * 3'
         left = self.load_expr(value.left)
+        op = self.load_bin_operator(value.op)
         right = self.load_expr(value.right)
-        return BinOp(left, value.op, right)
+
+        if isinstance(left, Const) and isinstance(right, Const):
+            value = op(left.value, right.value)
+            return Const(value, type(value))
+
+        if isinstance(left, Const) and isinstance(op, (Sub, Div, FloorDiv, Mod)):
+            left_slot = self.scope.get_temporary(left.type)
+            self.append_to_body(Assign(left_slot, left))
+            self.scope.recycle_temporary(left_slot)
+            return BinOp(left_slot, op, right)
+
+        if not isinstance(left, (Const, Slot)):
+            left_slot = self.scope.get_temporary(left.type)
+            self.append_to_body(Assign(left_slot, left))
+            self.scope.recycle_temporary(left_slot)
+            left = left_slot
+        if not isinstance(right, (Const, Slot)):
+            right_slot = self.scope.get_temporary(right.type)
+            self.append_to_body(Assign(right_slot, right))
+            self.scope.recycle_temporary(right_slot)
+            right = right_slot
+
+        return BinOp(left, op, right)
+
+    def load_bin_operator(self, value):
+        if isinstance(value, operator):
+            return value
+        if not isinstance(value, ast.operator):
+            raise SyntaxError("node '{}' is not a binary operator".format(value))
+
+        if isinstance(value, ast.Add):
+            return Add()
+        elif isinstance(value, ast.Sub):
+            return Sub()
+        elif isinstance(value, ast.Mult):
+            return Mult()
+        elif isinstance(value, ast.Div):
+            return Div()
+        elif isinstance(value, ast.FloorDiv):
+            return FloorDiv()
+        elif isinstance(value, ast.Mod):
+            return Mod()
+        else:
+            raise NotImplementedError("operation '{}' is not implemented yet".format(value))
 
     def load_unary_op(self, value):
         operand = self.load_expr(value.operand)
@@ -329,12 +374,12 @@ class NodeConverter(ast.NodeVisitor):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=-operand.value)
             else:
-                return BinOp(operand, ast.Mult(), Const(-1, Number))
+                return self.load_bin_op(BinOp(operand, Mult(), Const(-1, Number)))
         elif isinstance(value.op, ast.Invert):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=~operand.value)
             else:
-                return BinOp(BinOp(operand, ast.Mult(), Const(-1, Number)), ast.Sub(), Const(1, Number))
+                return self.load_bin_op(BinOp(self.load_bin_op(BinOp(operand, Mult(), Const(-1, Number)), Sub(), Const(1, Number))))
         else:
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(value.op))
 

@@ -1,5 +1,6 @@
 import ast
 from numbers import Number
+from operator import add, sub, mul, truediv, floordiv, mod
 
 import attr
 
@@ -130,26 +131,53 @@ class BinOp(AST):
             raise TypeError("operands '{}' and '{}' are not of the same type".format(self.left, self.right))
 
     def __str__(self):
-        return '{}{}{}'.format(self.left, self.translate_operator(self.op), self.right)
+        return '{}{}{}'.format(self.left, self.op, self.right)
 
-    def translate_operator(self, op):
-        if not isinstance(op, ast.operator):
-            raise SyntaxError("node '{}' is not a binary operator".format(op))
 
-        if isinstance(op, ast.Add):
-            return '+'
-        elif isinstance(op, ast.Sub):
-            return '-'
-        elif isinstance(op, ast.Mult):
-            return '*'
-        elif isinstance(op, ast.Div):
-            return '/'
-        elif isinstance(op, ast.FloorDiv):
-            return '{'
-        elif isinstance(op, ast.Mod):
-            return '}'
-        else:
-            raise NotImplementedError("operation '{}' is not implemented yet".format(op))
+class operator:
+    pass
+
+
+class Add(operator):
+    def __str__(self):
+        return '+'
+
+    __call__ = add
+
+
+class Sub(operator):
+    def __str__(self):
+        return '-'
+
+    __call__ = sub
+
+
+class Mult(operator):
+    def __str__(self):
+        return '*'
+
+    __call__ = mul
+
+
+class Div(operator):
+    def __str__(self):
+        return '/'
+
+    __call__ = truediv
+
+
+class FloorDiv(operator):
+    def __str__(self):
+        return '{'
+
+    __call__ = floordiv
+
+
+class Mod(operator):
+    def __str__(self):
+        return '}'
+
+    __call__ = mod
 
 
 @attr.s
