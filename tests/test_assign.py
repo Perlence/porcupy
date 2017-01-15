@@ -51,12 +51,13 @@ def test_binary_op():
     # assert compile_('x = 1; y = x+2+3') == 'p1z 1 p2z p1z+5'
     assert compile_('x = 1; y = x+2+3') == 'p1z 1 p3z p1z+2 p2z p3z+3'
     assert compile_('x = 1; y = x+2*3') == 'p1z 1 p2z p1z+6'
-    assert compile_('x = 2; y = 1+x*3') == 'p1z 2 p3z p1z*3 p2z 1+p3z'
+    assert compile_('x = 2; y = 1+x*3') == 'p1z 2 p3z p1z*3 p2z p3z+1'
 
-    # assert compile_('x = 1; y = 1-x') == 'p1z 1 p2z 1 p2z p2z-p1z'
-    # assert compile_('x = 5; y = 1/x') == 'p1z 5 p2z 1 p2z p2z/p1z'
     assert compile_('x = 1; y = 1-x') == 'p1z 1 p3z 1 p2z p3z-p1z'
     assert compile_('x = 5; y = 1/x') == 'p1z 5 p3z 1 p2z p3z/p1z'
+    assert compile_('x = 1; y = 1-x*5') == 'p1z 1 p3z 1 p4z p1z*5 p2z p3z-p4z'
+    assert compile_('x = 1; y = 1-x*5/2') == 'p1z 1 p3z 1 p4z p1z*2,5 p2z p3z/p4z'
+    assert compile_('x = 1; y = 1-5*x/2') == 'p1z 1 p3z 1 p4z p1z/2 p5z p4z*5 p2z p3z-p5z'
 
 
 def test_compare():
