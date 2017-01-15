@@ -14,6 +14,11 @@ setup(
     download_url='https://github.com/Perlence/pyegs/archive/master.zip',
     packages=find_packages('.'),
     zip_safe=False,
+    entry_points={
+        'console_scripts': [
+            'pyegs = pyegs.cli:main',
+        ],
+    },
     install_requires=[
         'attrs',
         'funcy',

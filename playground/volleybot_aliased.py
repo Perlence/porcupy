@@ -37,22 +37,26 @@ if ball_speed_x != 0 and BALL.speed_x == 0 and BALL.speed_y != 0:
     BALL.speed_x = ball_speed_x
 
 # Calculate punches
-for player_num, player in enumerate(PLAYERS):
-    if player_touches[player_num] >= 4:
-        continue
-    if (player.pos_y - 20 < BALL.pos_y < NET.pos_y and
-            player.pos_x - 20 < BALL.pos_x < player.pos_x + 20):
-        player_touches[player_num] += 1
-        player_touches[1-player_num] = 0
-        player_ball_distance_x = BALL.pos_x - player.pos_x
+# for player_num, player in enumerate(PLAYERS):
+player_num = 0
+for player in PLAYERS:
+    # if player_touches[player_num] >= 4:
+    #     continue
+    if player_touches[player_num] < 4:
+        if (player.pos_y - 20 < BALL.pos_y < NET.pos_y and
+                player.pos_x - 20 < BALL.pos_x < player.pos_x + 20):
+            player_touches[player_num] += 1
+            player_touches[1-player_num] = 0
+            player_ball_distance_x = BALL.pos_x - player.pos_x
 
-        if player_ball_distance_x > 0:
-            BALL.speed_x = 10
+            if player_ball_distance_x > 0:
+                BALL.speed_x = 10
 
-        if player_ball_distance_x < 0:
-            BALL.speed_x = -10
+            if player_ball_distance_x < 0:
+                BALL.speed_x = -10
 
-        BALL.speed_y = PUNCH_FORCE
+            BALL.speed_y = PUNCH_FORCE
+        player_num += 1
 
 # Check touches
 if player_touches[0] == 3 or player_touches[1] == 3:

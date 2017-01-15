@@ -66,7 +66,6 @@ class NodeConverter(ast.NodeVisitor):
                 continue
             if src_slot is None:
                 src_slot = self.load_expr(node.value)
-                print(node.value, repr(src_slot))
             dest_slot = self.store_value(target, src_slot)
             if dest_slot is None:
                 continue
