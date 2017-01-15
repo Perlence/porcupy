@@ -1,5 +1,5 @@
 PLAYERS = [yegiks[1], yegiks[2]]
-BALL = yegiks[2]
+BALL = yegiks[3]
 
 PLAYER_BOT = bots[2]
 BALL_BOT = bots[3]
