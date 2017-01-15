@@ -8,7 +8,7 @@ def test_call():
     assert compile_('system.message_at(10, 10, 1, "Hello World")') == 'yy 10 10 1 Hello_World'
     assert compile_('yegiks[2].spawn(1)') == 'e2b 1'
     assert compile_('timers[2].start()') == 't2g'
-    assert compile_('SPAWNS = [2, 3]; yegiks[2].spawn(SPAWNS[0])') == 'p1z 2 p2z 3 p3z 1 e2b p^3z'
+    assert compile_('SPAWNS = [2, 3]; yegiks[2].spawn(SPAWNS[0])') == 'p1z 2 p2z 3 e2b p1z'
 
     with pytest.raises(NotImplementedError):
         assert compile_('yegiks[2].spawn(point=1)')

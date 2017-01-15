@@ -143,8 +143,8 @@ def test_lists():
                  '0,0,0,0,0,0,0,0,0,0,0,0]')
     assert 'ran out of variable slots' in str(exc_info.value)
 
-    assert compile_('x = [1, 2]; y = x[0]') == 'p1z 1 p2z 2 p3z 1 p5z p3z+0 p4z p^5z'
-    assert compile_('x = [1, 2]; y = 0; z = x[y]') == 'p1z 1 p2z 2 p3z 1 p4z 0 p6z p3z+p4z p5z p^6z'
+    assert compile_('x = [1, 2]; y = x[0]') == 'p1z 1 p2z 2 p3z 1 p5z p3z+0 p6z p^5z p4z p6z'
+    assert compile_('x = [1, 2]; y = 0; z = x[y]') == 'p1z 1 p2z 2 p3z 1 p4z 0 p6z p3z+p4z p7z p^6z p5z p7z'
 
     assert compile_('x = [1, 2]; x[0] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5'
 
@@ -157,13 +157,13 @@ def test_lists():
     # Constant list pointer
     assert compile_('X = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33'
 
-    assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p5z 1 p4z p^5z'
+    # assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p5z 1 p6z p^5z p4z p6z'
 
-    # assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p4z 11'
+    assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p4z p1z'
 
     # assert compile_('x = [11, 22, 33]; x = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33 p4z 1 p1z 11 p2z 22 p3z 33'
 
-    assert compile_('x = [1, 2]; x[0] = x[1] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5 p5z p3z+1 p^5z 5'
+    assert compile_('x = [1, 2]; x[0] = x[1] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5 p4z p3z+1 p^4z 5'
 
 
 def test_range():
@@ -199,7 +199,7 @@ def test_game_objects():
     assert compile_('system.bots = 4') == 'yb 4'
     assert compile_('system.color = 256') == 'yc 256'
 
-    assert compile_('x = [yegiks[8], yegiks[9]]; x[0].frags = 55') == 'p1z 8 p2z 9 p3z 1 p4z p3z+0 p4z p^4z e^4f 55'
+    assert compile_('x = [yegiks[8], yegiks[9]]; x[0].frags = 55') == 'p1z 8 p2z 9 p3z 1 p4z p3z+0 p5z p^4z e^5f 55'
 
 
 def test_black_hole():

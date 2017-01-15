@@ -13,18 +13,42 @@ class ListPointer(int):
         return type('TypedListPointer', (cls,), {'item_type': item_type, 'capacity': capacity})
 
     @classmethod
-    def getitem(cls, converter, slot, slice_slot, pointer_math_slot=None):
+    def getitem(cls, converter, slot, slice_slot):
+        if isinstance(slice_slot, Const) and slice_slot.value >= cls.capacity:
+            raise IndexError('list index out of range')
+        if isinstance(slot, Const) and isinstance(slice_slot, Const):
+            return converter.scope.get_by_index(slot.value + slice_slot.value, cls.item_type)
+
+        pointer_math_slot = cls.item_index(converter, slot, slice_slot)
+        reference = attr.assoc(pointer_math_slot, ref=pointer_math_slot)
+        slot = converter.scope.get_temporary(cls.item_type)
+        converter.append_to_body(Assign(slot, reference))
+        converter.scope.recycle_temporary(slot)
+
+        return slot
+
+    @classmethod
+    def setitem(cls, converter, slot, slice_slot):
         # TODO: Optimize constant list subscription with constant index
         if isinstance(slice_slot, Const) and slice_slot.value >= cls.capacity:
             raise IndexError('list index out of range')
-        if pointer_math_slot is None:
-            pointer_math_slot = converter.scope.get_temporary(ListPointer)
+
+        pointer_math_slot = cls.item_index(converter, slot, slice_slot)
+        if issubclass(cls.item_type, GameObjectRef):
+            slot = converter.scope.get_temporary(cls.item_type)
+            converter.append_to_body(Assign(slot, slot))
+            converter.scope.recycle_temporary(slot)
+            return slot
+        else:
+            return attr.assoc(pointer_math_slot, ref=pointer_math_slot)
+
+    @classmethod
+    def item_index(cls, converter, slot, slice_slot):
+        pointer_math_slot = converter.scope.get_temporary(ListPointer)
         addition = converter.load_bin_op(BinOp(slot, Add(), slice_slot))
         converter.append_to_body(Assign(pointer_math_slot, addition))
-        slot = attr.assoc(pointer_math_slot, type=cls.item_type, ref=pointer_math_slot)
-        if issubclass(cls.item_type, GameObjectRef):
-            converter.append_to_body(Assign(pointer_math_slot, slot))
-        return slot
+        converter.scope.recycle_temporary(pointer_math_slot)
+        return pointer_math_slot
 
     @classmethod
     def iter(cls, converter, slot, subscript=True):
@@ -32,10 +56,8 @@ class ListPointer(int):
             yield from range(cls.capacity)
             return
 
-        pointer_math_slot = converter.scope.get_temporary(ListPointer)
         for i in range(cls.capacity):
-            yield cls.getitem(converter, slot, Const(i, int), pointer_math_slot)
-        converter.scope.recycle_temporary(pointer_math_slot)
+            yield cls.getitem(converter, slot, Const(i, int))
 
 
 class Range(int):
@@ -68,7 +90,7 @@ class Range(int):
             'stop': stop_value,
             'step': step_value,
         }
-        return Const(start_slot.number, Range, metadata=metadata)
+        return Const(start_slot.index, Range, metadata=metadata)
 
 
 class GameObjectList:

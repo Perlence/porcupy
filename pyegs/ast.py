@@ -58,7 +58,7 @@ class Const(AST):
 @attr.s
 class Slot(AST):
     register = attr.ib()
-    number = attr.ib()
+    index = attr.ib()
     attrib = attr.ib()
     type = attr.ib()
     metadata = attr.ib(default=attr.Factory(dict))
@@ -69,18 +69,18 @@ class Slot(AST):
 
     def __str__(self):
         if self.attrib is not None:
-            number = self.number
+            index = self.index
             if self.ref is not None:
-                number = self.ref.number
-            if number is None:
-                number = ''
-            return '{register}{ref}{number}{attrib}'.format(
+                index = self.ref.index
+            if index is None:
+                index = ''
+            return '{register}{ref}{index}{attrib}'.format(
                 register=self.register,
                 ref='^' if self.ref is not None else '',
-                number=number,
+                index=index,
                 attrib=self.attrib)
         else:
-            return str(self.number)
+            return str(self.index)
 
 
 @attr.s
@@ -228,7 +228,7 @@ class Call(AST):
 
 @attr.s
 class Label(AST):
-    number = attr.ib()
+    index = attr.ib()
 
     def __str__(self):
-        return ':{}'.format(self.number)
+        return ':{}'.format(self.index)

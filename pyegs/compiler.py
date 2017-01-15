@@ -116,8 +116,8 @@ class NodeConverter(ast.NodeVisitor):
         self.loop_labels.pop()
 
     def visit_Break(self, node):
-        label_number = self.loop_labels[-1].number
-        self.append_to_body(Slot('g', label_number, 'z', None))
+        label_index = self.loop_labels[-1].index
+        self.append_to_body(Slot('g', label_index, 'z', None))
 
     def visit_Pass(self, node):
         pass
@@ -224,7 +224,7 @@ class NodeConverter(ast.NodeVisitor):
         for dest_slot, item in zip(item_slots, loaded_items):
             self.append_to_body(Assign(dest_slot, item))
         first_item = item_slots[0]
-        return Const(first_item.number, ListPointer.of_type(capacity, item_type))
+        return Const(first_item.index, ListPointer.of_type(capacity, item_type))
 
     def type_of_objects(self, objects):
         type_set = set()
@@ -245,10 +245,16 @@ class NodeConverter(ast.NodeVisitor):
         value_slot = self.load_expr(value.value)
         slice_slot = self.load_expr(value.slice)
 
-        if not hasattr(value_slot.type, 'getitem'):
-            raise NotImplementedError("getting item of collection of type '{}' is not implemented yet".format(value_slot.type))
+        if isinstance(value.ctx, ast.Load):
+            if not hasattr(value_slot.type, 'getitem'):
+                raise NotImplementedError("getting item of collection of type '{}' is not implemented yet".format(value_slot.type))
 
-        return value_slot.type.getitem(self, value_slot, slice_slot)
+            return value_slot.type.getitem(self, value_slot, slice_slot)
+
+        elif isinstance(value.ctx, ast.Store):
+            if not hasattr(value_slot.type, 'setitem'):
+                raise NotImplementedError("setting item of collection of type '{}' is not implemented yet".format(value_slot.type))
+            return value_slot.type.setitem(self, value_slot, slice_slot)
 
     def load_extended_bool_op(self, value):
         initial = Const(False, bool)
@@ -456,13 +462,28 @@ class Scope:
         self.names[name] = slot
         return slot
 
+    def get_by_index(self, index, type):
+        if issubclass(type, Number):
+            slots = self.numeric_slots.slots
+            register = 'p'
+        elif issubclass(type, str):
+            slots = self.string_slots.slots
+            register = 's'
+        else:
+            raise TypeError("cannot get slot of type '{}'".format(type))
+
+        is_reserved = slots[index]
+        if not is_reserved:
+            raise IndexError("variable #{} is not reserved".format(index))
+        return Slot(register, index, 'z', type)
+
     def allocate(self, type):
         if issubclass(type, Number):
-            number = self.numeric_slots.allocate()
-            return Slot('p', number, 'z', Number)
+            index = self.numeric_slots.allocate()
+            return Slot('p', index, 'z', Number)
         elif issubclass(type, str):
-            number = self.string_slots.allocate()
-            return Slot('s', number, 'z', str)
+            index = self.string_slots.allocate()
+            return Slot('s', index, 'z', str)
         else:
             raise TypeError("cannot allocate slot of type '{}'".format(type))
 
@@ -484,7 +505,7 @@ class Scope:
     def allocate_temporary(self):
         for slot in self.temporary_slots:
             new_slot = self.allocate(slot.type)
-            slot.number = new_slot.number
+            slot.index = new_slot.index
 
     def get(self, name):
         slot = self.names.get(name)
