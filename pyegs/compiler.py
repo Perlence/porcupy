@@ -27,11 +27,15 @@ class NodeConverter(ast.NodeVisitor):
     last_label = attr.ib(default=0)
     loop_labels = attr.ib(default=attr.Factory(list))
     current_node = attr.ib(default=None)
+    slots_to_recycle_later = attr.ib(default=attr.Factory(lambda: defaultdict(list)))
 
     def visit(self, node):
         try:
             self.current_node = node
-            return super().visit(node)
+            result = super().visit(node)
+            for slot in self.slots_to_recycle_later[node]:
+                self.scope.recycle_temporary(slot)
+            return result
         except Exception as e:
             if not hasattr(node, 'lineno') or not hasattr(node, 'col_offset'):
                 raise
@@ -332,22 +336,29 @@ class NodeConverter(ast.NodeVisitor):
             value = op(left.value, right.value)
             return Const(value, type(value))
 
-        if isinstance(left, Const) and isinstance(op, (Sub, Div, FloorDiv, Mod)):
-            left_slot = self.scope.get_temporary(left.type)
-            self.append_to_body(Assign(left_slot, left))
-            self.scope.recycle_temporary(left_slot)
-            return BinOp(left_slot, op, right)
+        temp = []
+        if isinstance(left, Const):
+            if isinstance(op, (Sub, Div, FloorDiv, Mod)):
+                left_slot = self.scope.get_temporary(left.type)
+                self.append_to_body(Assign(left_slot, left))
+                temp.append(left_slot)
+                # return BinOp(left_slot, op, right)
+                left = left_slot
+            else:
+                left, right = right, left
 
         if not isinstance(left, (Const, Slot)):
             left_slot = self.scope.get_temporary(left.type)
             self.append_to_body(Assign(left_slot, left))
-            self.scope.recycle_temporary(left_slot)
+            temp.append(left_slot)
             left = left_slot
         if not isinstance(right, (Const, Slot)):
             right_slot = self.scope.get_temporary(right.type)
             self.append_to_body(Assign(right_slot, right))
-            self.scope.recycle_temporary(right_slot)
+            temp.append(right_slot)
             right = right_slot
+
+        self.recycle_later(*temp)
 
         return BinOp(left, op, right)
 
@@ -415,6 +426,9 @@ class NodeConverter(ast.NodeVisitor):
     def append_to_body(self, stmt):
         body = self.bodies[-1]
         body.append(stmt)
+
+    def recycle_later(self, *slots):
+        self.slots_to_recycle_later[self.current_node].extend(slots)
 
     def is_body_empty(self, body):
         return all(isinstance(stmt, ast.Pass) for stmt in body)

@@ -89,7 +89,7 @@ def test_range():
 def test_enumerate():
     assert (compile_('items = [11, 22, 33]\n'
                      'for i, item in enumerate(items):\n'
-                     '    x = i'
+                     '    x = i\n'
                      '    y = item') ==
             'p1z 11 p2z 22 p3z 33 p4z 1 '
             'p5z 0 p6z p4z+p5z p7z p5z p8z p6z '
