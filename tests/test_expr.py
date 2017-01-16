@@ -8,7 +8,7 @@ def test_call():
     assert compile_('system.message_at(10, 10, 1, "Hello World")') == 'yy 10 10 1 Hello_World'
     assert compile_('yegiks[2].spawn(1)') == 'e2b 1'
     assert compile_('timers[2].start()') == 't2g'
-    assert compile_('SPAWNS = [2, 3]; yegiks[2].spawn(SPAWNS[0])') == 'p1z 2 p2z 3 e2b p1z'
+    assert compile_('SPAWNS = [2, 3]; yegiks[2].spawn(SPAWNS[0])') == 'p1z 2 p2z 3 e2b ^1'
 
     with pytest.raises(NotImplementedError):
         assert compile_('yegiks[2].spawn(point=1)')
@@ -23,8 +23,9 @@ def test_call():
         compile_('spawn = yegiks[2].spawn; spawn(1)')
     assert "cannot allocate slot of type '<class 'pyegs.types.SignedFunctionType'>'" in str(exc_info.value)
 
-    # assert compile_('x = 2; system.message(x)') == 'p1z 2 ym ^1'
-    # assert compile_('s = "Hello World"; system.message(s)') == 's0z Hello_World ym $0'
+    assert compile_('x = 2; system.message(x)') == 'p1z 2 ym ^1'
+    assert compile_('s = "Hello World"; system.message(s)') == 's0z Hello_World ym $0'
+
     # assert compile_('subject = "World"; system.message("Hello {subject}")') == 's0z World ym Hello_$0'
     # assert compile_('n = 2; system.message("Egiks in Quake {n}")') == 'p1z 2 ym Egiks_in_Quake_^1'
 

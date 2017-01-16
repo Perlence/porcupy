@@ -4,8 +4,9 @@ from numbers import Number
 
 import attr
 
-from .ast import (AST, Module, Assign, If, Const, Slot, BoolOp, BinOp,
-                  operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare, Label)
+from .ast import (AST, Module, Assign, If, Const, Slot, ShortSlot, BoolOp,
+                  BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
+                  Label)
 from .runtime import Yegik, Timer, Point, Bot, System
 from .types import GameObjectRef, GameObjectList, ListPointer, Range
 
@@ -385,10 +386,19 @@ class NodeConverter(ast.NodeVisitor):
         if value.keywords:
             raise NotImplementedError('function keywords are not implemented yet')
         func = self.load_expr(value.func)
-        args = [self.load_expr(arg) for arg in value.args]
+        args = self.load_call_args(value.args)
         if not hasattr(func.type, 'call'):
             raise NotImplementedError("calling function '{}' is not implemented yet".format(func))
         return func.type.call(self, func, args)
+
+    def load_call_args(self, py_args):
+        args = []
+        for py_arg in py_args:
+            arg_slot = self.load_expr(py_arg)
+            if isinstance(arg_slot, Slot):
+                arg_slot = ShortSlot(arg_slot)
+            args.append(arg_slot)
+        return args
 
     def store_value(self, target, src_slot):
         if isinstance(target, ast.Name):

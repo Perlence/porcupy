@@ -12,7 +12,7 @@ BALL_SPAWNS = [2, 3]
 
 PUNCH_FORCE = -15
 
-if timers[1].value <= 1:
+if timers[1].value == 1:
     player_touches = [0, 0]
 
     system.bots = 2

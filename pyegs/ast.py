@@ -84,6 +84,18 @@ class Slot(AST):
 
 
 @attr.s
+class ShortSlot(AST):
+    slot = attr.ib()
+
+    def __str__(self):
+        slot = self.slot
+        if slot.register not in ('p', 's'):
+            raise ValueError("unable output slot '{}' in short form".format(slot))
+        prefix = '^' if slot.register == 'p' else '$'
+        return '{}{}'.format(prefix, slot.index)
+
+
+@attr.s
 class BoolOp(AST):
     op = attr.ib()
     values = attr.ib()
