@@ -49,9 +49,9 @@ def test_break():
                      '    if item > 20:\n'
                      '        break') ==
             'p1z 11 p2z 22 p3z 33 p4z 1 '
-            'p6z p4z+0 p7z p^6z p5z p7z p8z 0 # p5z > 20 ( p8z 1 ) # p8z ! 0 ( g1z ) '
-            'p6z p4z+1 p7z p^6z p5z p7z p9z 0 # p5z > 20 ( p9z 1 ) # p9z ! 0 ( g1z ) '
-            'p6z p4z+2 p7z p^6z p5z p7z p10z 0 # p5z > 20 ( p10z 1 ) # p10z ! 0 ( g1z ) '
+            'p6z p4z+0 p7z p^6z p5z p7z p8z 0 # p5z > 20 ( p8z 1 ) # p8z = 0 ( g2z ) g1z :2 '
+            'p6z p4z+1 p7z p^6z p5z p7z p8z 0 # p5z > 20 ( p8z 1 ) # p8z = 0 ( g3z ) g1z :3 '
+            'p6z p4z+2 p7z p^6z p5z p7z p8z 0 # p5z > 20 ( p8z 1 ) # p8z = 0 ( g4z ) g1z :4 '
             ':1')
 
 

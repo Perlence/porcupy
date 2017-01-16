@@ -22,8 +22,7 @@ def compile(source, filename='<unknown>'):
 @attr.s
 class NodeConverter(ast.NodeVisitor):
     scope = attr.ib(default=attr.Factory(lambda: Scope()))
-    bodies = attr.ib(default=attr.Factory(list))
-    tests = attr.ib(default=attr.Factory(list))
+    body = attr.ib(default=attr.Factory(list))
     last_label = attr.ib(default=0)
     loop_labels = attr.ib(default=attr.Factory(list))
     current_node = attr.ib(default=None)
@@ -53,11 +52,9 @@ class NodeConverter(ast.NodeVisitor):
         raise NotImplementedError("node '{}' is not implemented yet".format(node))
 
     def visit_Module(self, node):
-        body = []
-        self.bodies.append(body)
         for stmt in node.body:
             self.visit(stmt)
-        return Module(body)
+        return Module(self.body)
 
     def visit_Assign(self, node):
         # TODO: Reassign lists to list pointers without allocating more memory:
@@ -155,37 +152,23 @@ class NodeConverter(ast.NodeVisitor):
         test = self.load_expr(node.test)
         if not isinstance(test, Compare):
             test = Compare(test, ast.NotEq(), Const(False, bool))
+        not_test = self.negate_bool(test)
+        self.convert_if_body(not_test, node.body)
+        if not self.is_body_empty(node.orelse):
+            self.convert_if_body(test, node.orelse)
 
-        for stmt in self.prepare_if_stmt(test, node.body):
+    def convert_if_body(self, test, body):
+        label = self.new_label()
+        self.append_to_body(If(test, [Slot('g', label.index, 'z', None)]))
+        for stmt in body:
             self.visit(stmt)
-        if node.orelse:
-            for stmt in self.prepare_if_stmt(self.negate_bool(test), node.orelse):
-                self.visit(stmt)
+        self.append_to_body(label)
 
-    def prepare_if_stmt(self, test, body):
-        if self.is_body_empty(body):
-            return
-        all_tests = test
-        self.tests.append(test)
-        if len(self.tests) > 1:
-            all_tests = BoolOp(ast.And(), self.tests[:])
-
-        previous_body = None
-        if len(self.bodies) > 1:
-            previous_body = self.bodies.pop()
-
-        if_body = []
-        self.append_to_body(If(all_tests, if_body))
-        self.bodies.append(if_body)
-
-        yield from body
-
-        self.bodies.pop()
-
-        if previous_body is not None:
-            self.bodies.append(previous_body)
-
-        self.tests.remove(test)
+    def new_label(self):
+        self.last_label += 1
+        if self.last_label > 99:
+            raise ValueError('ran out of jump labels')
+        return Label(self.last_label)
 
     def load_expr(self, value):
         if isinstance(value, AST):
@@ -274,9 +257,9 @@ class NodeConverter(ast.NodeVisitor):
 
         bool_slot = self.scope.get_temporary(bool)
         self.append_to_body(Assign(bool_slot, initial))
-        body = [Assign(bool_slot, self.negate_bool(initial))]
-        for stmt in self.prepare_if_stmt(expr, body):
-            self.append_to_body(stmt)
+        assign = Assign(bool_slot, self.negate_bool(initial))
+        self.append_to_body(If(expr, [assign]))
+        self.recycle_later(bool_slot)
         return bool_slot
 
     def load_compare(self, value):
@@ -326,7 +309,6 @@ class NodeConverter(ast.NodeVisitor):
             raise NotImplementedError("cannot invert expression '{}'".format(expr))
 
     def load_bin_op(self, value):
-        # TODO: Try to evaluate binary operations literally
         # TODO: Initialize lists, e.g. 'x = [0] * 3'
         left = self.load_expr(value.left)
         op = self.load_bin_operator(value.op)
@@ -342,7 +324,6 @@ class NodeConverter(ast.NodeVisitor):
                 left_slot = self.scope.get_temporary(left.type)
                 self.append_to_body(Assign(left_slot, left))
                 temp.append(left_slot)
-                # return BinOp(left_slot, op, right)
                 left = left_slot
             else:
                 left, right = right, left
@@ -424,8 +405,7 @@ class NodeConverter(ast.NodeVisitor):
             raise NotImplementedError("assigning values to '{}' is not implemented yet".format(target))
 
     def append_to_body(self, stmt):
-        body = self.bodies[-1]
-        body.append(stmt)
+        self.body.append(stmt)
 
     def recycle_later(self, *slots):
         self.slots_to_recycle_later[self.current_node].extend(slots)
