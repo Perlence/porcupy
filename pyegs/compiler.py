@@ -102,8 +102,8 @@ class NodeConverter(ast.NodeVisitor):
         if self.is_body_empty(node.body):
             return
 
-        label = self.new_label()
-        self.loop_labels.append(label)
+        label_end = self.new_label()
+        self.loop_labels.append((None, label_end))
 
         is_black_hole = self.is_black_hole(node.target)
         iter_slot = self.load_expr(node.iter)
@@ -120,12 +120,18 @@ class NodeConverter(ast.NodeVisitor):
             for stmt in node.body:
                 self.visit(stmt)
 
-        self.append_to_body(label)
+        self.append_to_body(label_end)
         self.loop_labels.pop()
 
+    def visit_Continue(self, node):
+        label_start, _ = self.loop_labels[-1]
+        goto_start = Slot('g', label_start.index, 'z', None)
+        self.append_to_body(goto_start)
+
     def visit_Break(self, node):
-        label_index = self.loop_labels[-1].index
-        self.append_to_body(Slot('g', label_index, 'z', None))
+        _, label_end = self.loop_labels[-1]
+        goto_end = Slot('g', label_end.index, 'z', None)
+        self.append_to_body(goto_end)
 
     def visit_Pass(self, node):
         pass
@@ -133,9 +139,8 @@ class NodeConverter(ast.NodeVisitor):
     def visit_While(self, node):
         # While(expr test, stmt* body, stmt* orelse)
         label_start = self.new_label()
-        goto_start = Slot('g', label_start.index, 'z', None)
         self.append_to_body(label_start)
-        self.generic_if(node, goto_start)
+        self.generic_if(node, label_start)
         self.loop_labels.pop()
 
     def visit_If(self, node):
@@ -164,8 +169,8 @@ class NodeConverter(ast.NodeVisitor):
         for stmt in body:
             self.visit(stmt)
 
-    def generic_if(self, node, goto_start=None):
-        is_loop = goto_start is not None
+    def generic_if(self, node, label_start=None):
+        is_loop = label_start is not None
 
         test = self.load_expr(node.test)
         if not isinstance(test, Compare):
@@ -175,7 +180,7 @@ class NodeConverter(ast.NodeVisitor):
         label_end = self.new_label()
         goto_end = Slot('g', label_end.index, 'z', None)
         if is_loop:
-            self.loop_labels.append(label_end)
+            self.loop_labels.append((label_start, label_end))
 
         label_else = None
         if not self.is_body_empty(node.orelse):
@@ -189,6 +194,7 @@ class NodeConverter(ast.NodeVisitor):
             self.visit(stmt)
 
         if is_loop:
+            goto_start = Slot('g', label_start.index, 'z', None)
             self.append_to_body(goto_start)
 
         if label_else is not None:
