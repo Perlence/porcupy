@@ -176,7 +176,9 @@ def test_range():
     # with pytest.raises(TypeError) as exc_info:
     #     assert compile_('x = 5; y = range(x)')
     # assert 'range arguments must be constant' in str(exc_info.value)
-    assert compile_('x = 5; y = range(x)') == 'p1z 5 p2z 0 p3z ^1 p4z 1 p5z 2'
+    assert compile_('x = 5; y = range(x)') == 'p1z 5 p2z 0 p3z p1z p4z 1 p5z 2'
+
+    assert compile_('x = range(11, 44, 11); y = x[0]; y = x[2]') == 'p1z 11 p2z 44 p3z 11 p4z 1 p5z 11 p5z 33'
 
 
 def test_multiple_assign():

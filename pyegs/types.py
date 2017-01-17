@@ -3,7 +3,7 @@ from inspect import signature
 import attr
 import funcy
 
-from .ast import Const, Slot, BinOp, Add, Assign, Call
+from .ast import Const, Slot, BinOp, Add, Sub, Mult, FloorDiv, Assign, Call, ShortSlot
 
 
 class ListPointer(int):
@@ -51,27 +51,28 @@ class ListPointer(int):
         return pointer_math_slot
 
     @classmethod
-    def iter(cls, converter, slot, subscript=True):
-        if not subscript:
-            yield from range(cls.capacity)
-            return
-
-        for i in range(cls.capacity):
-            yield cls.getitem(converter, slot, Const(i, int))
+    def len(cls, converter, slot):
+        return Const(cls.capacity, int)
 
 
 class Range(int):
     @classmethod
-    def iter(cls, converter, slot, subscript=True):
-        range_props = start, stop, step = slot.metadata['start'], slot.metadata['stop'], slot.metadata['step']
-        if not all(isinstance(range_prop, Const) for range_prop in range_props):
-            raise TypeError('only constant range can be iterated')
+    def len(cls, converter, slot):
+        start = slot.metadata['start']
+        stop = slot.metadata['stop']
+        step = slot.metadata['step']
+        return converter.load_bin_op(BinOp(BinOp(stop, Sub(), start), FloorDiv(), step))
 
-        for i in range(start.value, stop.value, step.value):
-            yield Const(i, int)
+    @classmethod
+    def getitem(cls, converter, slot, slice_slot):
+        start = slot.metadata['start']
+        step = slot.metadata['step']
+        print(repr(start), repr(step))
+        return converter.load_bin_op(BinOp(start, Add(), BinOp(step, Mult(), slice_slot)))
 
     @classmethod
     def call(cls, converter, func, args):
+        # TODO: Range must be immutable
         start_value, step_value = Const(0, int), Const(1, int)
         if len(args) == 1:
             stop_value = args[0]

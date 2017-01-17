@@ -4,9 +4,8 @@ from numbers import Number
 
 import attr
 
-from .ast import (AST, Module, Assign, If, Const, Slot, ShortSlot, BoolOp,
-                  BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
-                  Label)
+from .ast import (AST, Module, Assign, If, Const, Slot, BoolOp, BinOp,
+                  operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare, Label)
 from .runtime import Yegik, Timer, Point, Bot, System
 from .types import GameObjectRef, GameObjectList, ListPointer, Range
 
@@ -84,7 +83,9 @@ class NodeConverter(ast.NodeVisitor):
         self.append_to_body(Assign(dest_slot, bin_op))
 
     def store_value(self, target, src_slot):
-        if isinstance(target, ast.Name):
+        if isinstance(target, AST):
+            return target
+        elif isinstance(target, ast.Name):
             if self.is_const(target):
                 # TODO: Constant must not be redefined
                 self.scope.define_const(target.id, src_slot)
@@ -99,47 +100,33 @@ class NodeConverter(ast.NodeVisitor):
 
     def visit_For(self, node):
         # For(expr target, expr iter, stmt* body, stmt* orelse)
-        if self.is_body_empty(node.body):
+        if self.is_body_empty(node.body) and self.is_body_empty(node.orelse):
             return
 
-        label_end = self.new_label()
-        self.loop_labels.append((None, label_end))
+        index = self.scope.get_temporary(int)
+        self.append_to_body(Assign(index, Const(-1, int)))
 
-        is_black_hole = self.is_black_hole(node.target)
         iter_slot = self.load_expr(node.iter)
+        iter_len = iter_slot.type.len(self, iter_slot)
 
-        if not hasattr(iter_slot.type, 'iter'):
-            raise NotImplementedError("iterating over '{}' is not implemented yet".format(iter_slot.type))
+        test = Compare(index, ast.Lt(), iter_len)
 
-        iterable = iter_slot.type.iter(self, iter_slot, subscript=(not is_black_hole))
+        subscript = ast.Subscript(value=iter_slot, slice=index, ctx=ast.Load())
+        assign = ast.Assign(targets=[node.target], value=subscript)
+        body = [assign] + node.body
 
-        for src_slot in iterable:
-            if not is_black_hole:
-                dest_slot = self.store_value(node.target, src_slot)
-                self.append_to_body(Assign(dest_slot, src_slot))
-            for stmt in node.body:
-                self.visit(stmt)
+        increment_index = ast.AugAssign(target=index, op=ast.Add(), value=Const(1, int))
 
-        self.append_to_body(label_end)
-        self.loop_labels.pop()
+        self.visit_While(ast.While(test, body, node.orelse), before_test=increment_index)
 
-    def visit_Continue(self, node):
-        label_start, _ = self.loop_labels[-1]
-        goto_start = Slot('g', label_start.index, 'z', None)
-        self.append_to_body(goto_start)
+        self.scope.recycle_temporary(index)
 
-    def visit_Break(self, node):
-        _, label_end = self.loop_labels[-1]
-        goto_end = Slot('g', label_end.index, 'z', None)
-        self.append_to_body(goto_end)
-
-    def visit_Pass(self, node):
-        pass
-
-    def visit_While(self, node):
+    def visit_While(self, node, before_test=None):
         # While(expr test, stmt* body, stmt* orelse)
         label_start = self.new_label()
         self.append_to_body(label_start)
+        if before_test is not None:
+            self.visit(before_test)
         self.generic_if(node, label_start)
         self.loop_labels.pop()
 
@@ -212,6 +199,19 @@ class NodeConverter(ast.NodeVisitor):
         if self.last_label > 99:
             raise ValueError('ran out of jump labels')
         return Label(self.last_label)
+
+    def visit_Continue(self, node):
+        label_start, _ = self.loop_labels[-1]
+        goto_start = Slot('g', label_start.index, 'z', None)
+        self.append_to_body(goto_start)
+
+    def visit_Break(self, node):
+        _, label_end = self.loop_labels[-1]
+        goto_end = Slot('g', label_end.index, 'z', None)
+        self.append_to_body(goto_end)
+
+    def visit_Pass(self, node):
+        pass
 
     def visit_Expr(self, node):
         if isinstance(node.value, ast.Call):
@@ -363,6 +363,11 @@ class NodeConverter(ast.NodeVisitor):
         left = self.load_expr(value.left)
         op = self.load_bin_operator(value.op)
         right = self.load_expr(value.right)
+
+        if isinstance(left, BinOp):
+            left = self.load_bin_op(left)
+        if isinstance(right, BinOp):
+            right = self.load_bin_op(right)
 
         if isinstance(left, Const) and isinstance(right, Const):
             value = op(left.value, right.value)
