@@ -16,6 +16,7 @@ def compile(source, filename='<unknown>'):
     converter = NodeConverter()
     converted_top = converter.visit(top)
     converter.scope.allocate_temporary()
+    # TODO: Ensure that lines don't exceed 256 characters
     return str(converted_top)
 
 
@@ -87,7 +88,8 @@ class NodeConverter(ast.NodeVisitor):
             return target
         elif isinstance(target, ast.Name):
             if self.is_const(target):
-                # TODO: Constant must not be redefined
+                if target.id in self.scope.names:
+                    raise ValueError('cannot redefine a constant')
                 self.scope.define_const(target.id, src_slot)
             else:
                 return self.scope.assign(target.id, src_slot)

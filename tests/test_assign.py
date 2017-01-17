@@ -15,9 +15,9 @@ def test_consts():
 
     assert compile_('X = 4; Y = X; z = Y') == 'p1z 4'
 
-    # with pytest.raises(TypeError) as exc_info:
-    #     compile_('X = 4; X = 5')
-    # assert str(exc_info.value) == 'cannot redefine a constant'
+    with pytest.raises(ValueError) as exc_info:
+        compile_('X = 4; X = 5')
+    assert 'cannot redefine a constant' in str(exc_info.value)
 
 
 def test_numbers():
@@ -155,18 +155,25 @@ def test_lists():
 
     # assert compile_('x = [0] * 3') == 'p1z 0 p2z 0 p3z 0 p4z 1'
 
-    # Constant list pointer
-    assert compile_('X = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33'
-
-    # assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p5z 1 p6z p^5z p4z p6z'
-
-    assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p4z p1z'
-
     # assert compile_('x = [11, 22, 33]; x = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33 p4z 1 p1z 11 p2z 22 p3z 33'
 
     assert compile_('x = [1, 2]; x[0] = x[1] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5 p5z p3z+1 p^5z 5'
 
     assert compile_('x = [11, 22]; y = x[0] + x[1]') == 'p1z 11 p2z 22 p3z 1 p5z p3z+0 p6z p^5z p5z p3z+1 p7z p^5z p4z p6z+p7z'
+
+
+def test_const_list():
+    assert compile_('X = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33'
+
+    assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p4z p1z'
+
+    with pytest.raises(ValueError) as exc_info:
+        assert compile_('X = [11, 22, 33]; X[0] = 44')
+    assert 'cannot modify items' in str(exc_info)
+
+    with pytest.raises(ValueError) as exc_info:
+        assert compile_('X = [11, 22, 33]; X[0] += 44')
+    assert 'cannot modify items' in str(exc_info)
 
 
 def test_range():

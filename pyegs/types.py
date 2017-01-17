@@ -30,7 +30,8 @@ class ListPointer(int):
 
     @classmethod
     def setitem(cls, converter, slot, slice_slot):
-        # TODO: Optimize constant list subscription with constant index
+        if isinstance(slot, Const):
+            raise ValueError('cannot modify items of constant list pointer')
         if isinstance(slice_slot, Const) and slice_slot.value >= cls.capacity:
             raise IndexError('list index out of range')
 
@@ -97,6 +98,8 @@ class Range(int):
 
 
 class GameObjectList:
+    # TODO: Implement GameObjectList iteration
+
     @classmethod
     @funcy.memoize
     def of_type(cls, game_obj_type, *args):
