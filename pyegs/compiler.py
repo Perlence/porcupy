@@ -16,8 +16,23 @@ def compile(source, filename='<unknown>'):
     converter = NodeConverter()
     converted_top = converter.visit(top)
     converter.scope.allocate_temporary()
-    # TODO: Ensure that lines don't exceed 256 characters
-    return str(converted_top)
+    compiled = str(converted_top)
+    return codewrap(compiled)
+
+
+def codewrap(text, width=255):
+    stmts = text.split('  ')
+    lines = []
+    line = []
+    for stmt in stmts:
+        length = len(' '.join(line + [stmt]))
+        if length > width:
+            lines.append(' '.join(line))
+            line = [stmt]
+        else:
+            line.append(stmt)
+    lines.append(' '.join(line))
+    return '\n'.join(lines)
 
 
 @attr.s
@@ -529,7 +544,7 @@ class Scope:
 
     def get_temporary(self, type):
         if not issubclass(type, (Number, str)):
-            raise TypeError("cannot create volatile slot of type '{}'".format(type))
+            raise TypeError("cannot create temporary slot of type '{}'".format(type))
         if self.recycled_temporary_slots[type]:
             return self.recycled_temporary_slots[type].pop()
         slot = Slot('p', None, 'z', type)

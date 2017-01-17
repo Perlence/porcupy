@@ -16,7 +16,7 @@ class Module(AST):
     body = attr.ib()
 
     def __str__(self):
-        return ' '.join(map(str, self.body))
+        return '  '.join(map(str, self.body))
 
 
 @attr.s
@@ -34,7 +34,7 @@ class If(AST):
     body = attr.ib()
 
     def __str__(self):
-        body = ' '.join(map(str, self.body))
+        body = '  '.join(map(str, self.body))
         return '# {} ( {} )'.format(self.test, body)
 
 
