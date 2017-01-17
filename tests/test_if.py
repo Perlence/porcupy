@@ -163,8 +163,8 @@ def test_else():
                      '    y = 23') ==
             'p1z 11 '
             'p3z 0 # p1z > 0 ( p3z 1 ) '
-            '# p3z = 0 ( g1z ) p2z 22 :1 '
-            '# p3z ! 0 ( g2z ) p2z 23 :2')
+            '# p3z = 0 ( g2z ) p2z 22 g1z :2 '
+            'p2z 23 :1')
 
     assert (compile_('x = 11\n'
                      'if x > 0:\n'
@@ -173,7 +173,6 @@ def test_else():
                      '    y = 23') ==
             'p1z 11 '
             'p3z 0 # p1z > 0 ( p3z 1 ) '
-            '# p3z = 0 ( g1z ) p2z 22 :1 '
-            '# p3z ! 0 ( g2z ) p4z 0 '
-            '# p1z > 5 ( p4z 1 ) '
-            '# p4z = 0 ( g3z ) p2z 23 :3 :2')
+            '# p3z = 0 ( g2z ) p2z 22 g1z :2 '
+            'p4z 0 # p1z > 5 ( p4z 1 ) '
+            '# p4z = 0 ( g3z ) p2z 23 :3 :1')

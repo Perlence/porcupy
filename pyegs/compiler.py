@@ -83,20 +83,26 @@ class NodeConverter(ast.NodeVisitor):
         bin_op = self.load_bin_op(BinOp(dest_slot, self.load_bin_operator(node.op), src_slot))
         self.append_to_body(Assign(dest_slot, bin_op))
 
-    def visit_Expr(self, node):
-        if isinstance(node.value, ast.Call):
-            expr = self.load_expr(node.value)
-            self.append_to_body(expr)
+    def store_value(self, target, src_slot):
+        if isinstance(target, ast.Name):
+            if self.is_const(target):
+                # TODO: Constant must not be redefined
+                self.scope.define_const(target.id, src_slot)
+            else:
+                return self.scope.assign(target.id, src_slot)
+        elif isinstance(target, ast.Attribute):
+            return self.load_attribute(target)
+        elif isinstance(target, ast.Subscript):
+            return self.load_subscript(target)
         else:
-            raise NotImplementedError('plain expressions are not supported')
+            raise NotImplementedError("assigning values to '{}' is not implemented yet".format(target))
 
     def visit_For(self, node):
         # For(expr target, expr iter, stmt* body, stmt* orelse)
         if self.is_body_empty(node.body):
             return
 
-        self.last_label += 1
-        label = Label(self.last_label)
+        label = self.new_label()
         self.loop_labels.append(label)
 
         is_black_hole = self.is_black_hole(node.target)
@@ -124,7 +130,16 @@ class NodeConverter(ast.NodeVisitor):
     def visit_Pass(self, node):
         pass
 
+    def visit_While(self, node):
+        # While(expr test, stmt* body, stmt* orelse)
+        label_start = self.new_label()
+        goto_start = Slot('g', label_start.index, 'z', None)
+        self.append_to_body(label_start)
+        self.generic_if(node, goto_start)
+        self.loop_labels.pop()
+
     def visit_If(self, node):
+        # If(expr test, stmt* body, stmt* orelse)
         if self.is_body_empty(node.body) and self.is_body_empty(node.orelse):
             return
         if isinstance(node.test, (ast.Num, ast.Str, ast.NameConstant, ast.List)):
@@ -149,27 +164,55 @@ class NodeConverter(ast.NodeVisitor):
         for stmt in body:
             self.visit(stmt)
 
-    def generic_if(self, node):
+    def generic_if(self, node, goto_start=None):
+        is_loop = goto_start is not None
+
         test = self.load_expr(node.test)
         if not isinstance(test, Compare):
             test = Compare(test, ast.NotEq(), Const(False, bool))
         not_test = self.negate_bool(test)
-        self.convert_if_body(not_test, node.body)
-        if not self.is_body_empty(node.orelse):
-            self.convert_if_body(test, node.orelse)
 
-    def convert_if_body(self, test, body):
-        label = self.new_label()
-        self.append_to_body(If(test, [Slot('g', label.index, 'z', None)]))
-        for stmt in body:
+        label_end = self.new_label()
+        goto_end = Slot('g', label_end.index, 'z', None)
+        if is_loop:
+            self.loop_labels.append(label_end)
+
+        label_else = None
+        if not self.is_body_empty(node.orelse):
+            label_else = self.new_label()
+            goto_else = Slot('g', label_else.index, 'z', None)
+            self.append_to_body(If(not_test, [goto_else]))
+        else:
+            self.append_to_body(If(not_test, [goto_end]))
+
+        for stmt in node.body:
             self.visit(stmt)
-        self.append_to_body(label)
+
+        if is_loop:
+            self.append_to_body(goto_start)
+
+        if label_else is not None:
+            if not is_loop:
+                self.append_to_body(goto_end)
+            self.append_to_body(label_else)
+
+            for stmt in node.orelse:
+                self.visit(stmt)
+
+        self.append_to_body(label_end)
 
     def new_label(self):
         self.last_label += 1
         if self.last_label > 99:
             raise ValueError('ran out of jump labels')
         return Label(self.last_label)
+
+    def visit_Expr(self, node):
+        if isinstance(node.value, ast.Call):
+            expr = self.load_expr(node.value)
+            self.append_to_body(expr)
+        else:
+            raise NotImplementedError('plain expressions are not supported')
 
     def load_expr(self, value):
         if isinstance(value, AST):
@@ -399,20 +442,6 @@ class NodeConverter(ast.NodeVisitor):
                 arg_slot = ShortSlot(arg_slot)
             args.append(arg_slot)
         return args
-
-    def store_value(self, target, src_slot):
-        if isinstance(target, ast.Name):
-            if self.is_const(target):
-                # TODO: Constant must not be redefined
-                self.scope.define_const(target.id, src_slot)
-            else:
-                return self.scope.assign(target.id, src_slot)
-        elif isinstance(target, ast.Attribute):
-            return self.load_attribute(target)
-        elif isinstance(target, ast.Subscript):
-            return self.load_subscript(target)
-        else:
-            raise NotImplementedError("assigning values to '{}' is not implemented yet".format(target))
 
     def append_to_body(self, stmt):
         self.body.append(stmt)
