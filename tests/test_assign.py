@@ -164,7 +164,9 @@ def test_lists():
 
     # assert compile_('x = [11, 22, 33]; x = [11, 22, 33]') == 'p1z 11 p2z 22 p3z 33 p4z 1 p1z 11 p2z 22 p3z 33'
 
-    assert compile_('x = [1, 2]; x[0] = x[1] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5 p4z p3z+1 p^4z 5'
+    assert compile_('x = [1, 2]; x[0] = x[1] = 5') == 'p1z 1 p2z 2 p3z 1 p4z p3z+0 p^4z 5 p5z p3z+1 p^5z 5'
+
+    assert compile_('x = [11, 22]; y = x[0] + x[1]') == 'p1z 11 p2z 22 p3z 1 p5z p3z+0 p6z p^5z p5z p3z+1 p7z p^5z p4z p6z+p7z'
 
 
 def test_range():
@@ -216,6 +218,8 @@ def test_aug_assign():
     assert compile_('x = 5; x /= 4') == 'p1z 5 p1z p1z/4'
 
     assert compile_('yegiks[2].speed_y *= 0.88') == 'e2v e2v*0,88'
+    assert compile_('x = 2; yegiks[x].speed_y *= 0.88') == 'p1z 2 e^1v e^1v*0,88'
+    assert compile_('YEGS = [yegiks[5], yegiks[6]]; x = 1; YEGS[x].speed_y *= 0.88') == 'p1z 5 p2z 6 p3z 1 p4z p3z+1 p5z p^4z e^5v e^5v*0,88'
 
     # with pytest.raises(NameError) as exc_info:
     #     compile_('x += 4')

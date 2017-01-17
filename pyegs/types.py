@@ -23,7 +23,8 @@ class ListPointer(int):
         reference = attr.assoc(pointer_math_slot, ref=pointer_math_slot)
         slot = converter.scope.get_temporary(cls.item_type)
         converter.append_to_body(Assign(slot, reference))
-        converter.scope.recycle_temporary(slot)
+        converter.scope.recycle_temporary(pointer_math_slot)
+        converter.recycle_later(slot)
 
         return slot
 
@@ -33,13 +34,14 @@ class ListPointer(int):
         if isinstance(slice_slot, Const) and slice_slot.value >= cls.capacity:
             raise IndexError('list index out of range')
 
-        pointer_math_slot = cls.item_index(converter, slot, slice_slot)
         if issubclass(cls.item_type, GameObjectRef):
             slot = converter.scope.get_temporary(cls.item_type)
             converter.append_to_body(Assign(slot, slot))
-            converter.scope.recycle_temporary(slot)
+            converter.recycle_later(slot)
             return slot
         else:
+            pointer_math_slot = cls.item_index(converter, slot, slice_slot)
+            converter.recycle_later(pointer_math_slot)
             return attr.assoc(pointer_math_slot, ref=pointer_math_slot)
 
     @classmethod
@@ -47,7 +49,6 @@ class ListPointer(int):
         pointer_math_slot = converter.scope.get_temporary(ListPointer)
         addition = converter.load_bin_op(BinOp(slot, Add(), slice_slot))
         converter.append_to_body(Assign(pointer_math_slot, addition))
-        converter.scope.recycle_temporary(pointer_math_slot)
         return pointer_math_slot
 
     @classmethod
