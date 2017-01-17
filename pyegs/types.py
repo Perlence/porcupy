@@ -152,4 +152,14 @@ class GameObjectMethod:
     @classmethod
     def call(cls, converter, func, args):
         cls.signature.bind(None, *args)
+        args = cls._shorten_args(args)
         return Call(func, args)
+
+    @classmethod
+    def _shorten_args(cls, args):
+        short_args = []
+        for arg in args:
+            if isinstance(arg, Slot):
+                arg = ShortSlot(arg)
+            short_args.append(arg)
+        return short_args
