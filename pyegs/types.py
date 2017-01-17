@@ -65,6 +65,7 @@ class Range(int):
 
     @classmethod
     def getitem(cls, converter, slot, slice_slot):
+        # TODO: Raise error if index is greater than range length
         start = slot.metadata['start']
         step = slot.metadata['step']
         print(repr(start), repr(step))
@@ -95,8 +96,6 @@ class Range(int):
 
 
 class GameObjectList:
-    # TODO: Implement 'iter' classmethod
-
     @classmethod
     @funcy.memoize
     def of_type(cls, game_obj_type, *args):
@@ -107,6 +106,10 @@ class GameObjectList:
             start, stop = args
 
         return type('GameObjectTypedList', (cls,), {'type': game_obj_type, 'start': start, 'stop': stop})
+
+    @classmethod
+    def len(cls, converter, slot):
+        return Const(cls.stop - cls.start, int)
 
     @classmethod
     def getitem(cls, converter, value_slot, slice_slot):

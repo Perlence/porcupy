@@ -54,6 +54,14 @@ def test_iterate_lists():
             ':2')
 
 
+@pytest.mark.skip('Not implemented yet')
+def test_iterate_game_objs():
+    assert (compile_('for bot in bots:\n'
+                     '    bot.goto = 0') ==
+            'p2z -1 '
+            ':1 p2z p2z+1 # p2z >= 9 ( g2z ) p1z p2z+1 a^1g 0 g1z :2')
+
+
 def test_break():
     assert (compile_('items = [11, 22, 33]\n'
                      'for item in items:\n'

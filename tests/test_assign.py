@@ -189,7 +189,7 @@ def test_multiple_assign():
 def test_game_objects():
     assert compile_('x = yegiks[1].frags') == 'p1z e1f'
     assert compile_('x = 1; y = yegiks[x].frags') == 'p1z 1 p2z e^1f'
-    assert compile_('x = 1; y = yegiks[x]') == 'p1z 1 p2z p1z'
+    assert compile_('x = 5; y = yegiks[x]') == 'p1z 5 p2z p1z'
 
     assert compile_('yegiks[1].frags = 99') == 'e1f 99'
     assert compile_('x = yegiks[1]; x.frags = 99') == 'p1z 1 e^1f 99'
