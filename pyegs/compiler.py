@@ -4,8 +4,9 @@ from numbers import Number
 
 import attr
 
-from .ast import (AST, Module, Assign, If, Const, Slot, BoolOp, BinOp,
-                  operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare, Label)
+from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
+                  BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
+                  Label)
 from .runtime import Yegik, Timer, Point, Bot, System
 from .types import GameObjectRef, GameObjectList, ListPointer, Range
 
@@ -400,12 +401,12 @@ class NodeConverter(ast.NodeVisitor):
             else:
                 left, right = right, left
 
-        if not isinstance(left, (Const, Slot)):
+        if not isinstance(left, (Const, Slot, AssociatedSlot)):
             left_slot = self.scope.get_temporary(left.type)
             self.append_to_body(Assign(left_slot, left))
             temp.append(left_slot)
             left = left_slot
-        if not isinstance(right, (Const, Slot)):
+        if not isinstance(right, (Const, Slot, AssociatedSlot)):
             right_slot = self.scope.get_temporary(right.type)
             self.append_to_body(Assign(right_slot, right))
             temp.append(right_slot)
@@ -449,7 +450,7 @@ class NodeConverter(ast.NodeVisitor):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=~operand.value)
             else:
-                return self.load_bin_op(BinOp(self.load_bin_op(BinOp(operand, Mult(), Const(-1, Number)), Sub(), Const(1, Number))))
+                return self.load_bin_op(BinOp(BinOp(operand, Mult(), Const(-1, Number)), Sub(), Const(1, Number)))
         else:
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(value.op))
 

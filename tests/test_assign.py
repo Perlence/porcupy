@@ -193,22 +193,22 @@ def test_multiple_assign():
 
 
 def test_game_objects():
-    assert compile_('x = yegiks[1].frags') == 'p1z e1f'
-    assert compile_('x = 1; y = yegiks[x].frags') == 'p1z 1 p2z e^1f'
-    assert compile_('x = 5; y = yegiks[x]') == 'p1z 5 p2z p1z'
+    assert compile_('x = yegiks[0].frags') == 'p1z e1f'
+    assert compile_('x = 1; y = yegiks[x].frags') == 'p1z 1 p3z p1z+1 p2z e^3f'
+    assert compile_('x = 5; y = yegiks[x]') == 'p1z 5 p3z p1z+1 p2z p3z'
 
-    assert compile_('yegiks[1].frags = 99') == 'e1f 99'
-    assert compile_('x = yegiks[1]; x.frags = 99') == 'p1z 1 e^1f 99'
+    assert compile_('yegiks[0].frags = 99') == 'e1f 99'
+    assert compile_('x = yegiks[0]; x.frags = 99') == 'p1z 1 e^1f 99'
 
-    assert compile_('x = yegiks[1]') == 'p1z 1'
-    assert compile_('x = [yegiks[1], yegiks[2]]') == 'p1z 1 p2z 2 p3z 1'
+    assert compile_('x = yegiks[0]') == 'p1z 1'
+    assert compile_('x = [yegiks[0], yegiks[1]]') == 'p1z 1 p2z 2 p3z 1'
 
     assert compile_('x = timers[2]; x.value = 0') == 'p1z 2 t^1i 0'
 
     assert compile_('system.bots = 4') == 'yb 4'
     assert compile_('system.color = 256') == 'yc 256'
 
-    assert compile_('x = [yegiks[8], yegiks[9]]; x[0].frags = 55') == 'p1z 8 p2z 9 p3z 1 p4z p3z+0 p5z p^4z e^5f 55'
+    assert compile_('x = [yegiks[7], yegiks[8]]; x[0].frags = 55') == 'p1z 8 p2z 9 p3z 1 p4z p3z+0 p5z p^4z e^5f 55'
 
 
 def test_black_hole():
@@ -221,9 +221,9 @@ def test_aug_assign():
     assert compile_('x = 5; x *= 4') == 'p1z 5 p1z p1z*4'
     assert compile_('x = 5; x /= 4') == 'p1z 5 p1z p1z/4'
 
-    assert compile_('yegiks[2].speed_y *= 0.88') == 'e2v e2v*0,88'
-    assert compile_('x = 2; yegiks[x].speed_y *= 0.88') == 'p1z 2 e^1v e^1v*0,88'
-    assert compile_('YEGS = [yegiks[5], yegiks[6]]; x = 1; YEGS[x].speed_y *= 0.88') == 'p1z 5 p2z 6 p3z 1 p4z p3z+1 p5z p^4z e^5v e^5v*0,88'
+    assert compile_('yegiks[0].speed_y *= 0.88') == 'e1v e1v*0,88'
+    assert compile_('x = 2; yegiks[x].speed_y *= 0.88') == 'p1z 2 p2z p1z+1 e^2v e^2v*0,88'
+    assert compile_('YEGS = [yegiks[4], yegiks[5]]; x = 1; YEGS[x].speed_y *= 0.88') == 'p1z 5 p2z 6 p3z 1 p4z p3z+1 p5z p^4z e^5v e^5v*0,88'
 
     # with pytest.raises(NameError) as exc_info:
     #     compile_('x += 4')

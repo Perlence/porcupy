@@ -1,11 +1,11 @@
-PLAYERS = [yegiks[1], yegiks[2]]
-BALL = yegiks[3]
+PLAYERS = [yegiks[0], yegiks[1]]
+BALL = yegiks[2]
 
-PLAYER_BOT = bots[2]
-BALL_BOT = bots[3]
+PLAYER_BOT = bots[1]
+BALL_BOT = bots[2]
 
-NET = points[1]
-WAYPOINT = points[2]
+NET = points[0]
+WAYPOINT = points[1]
 
 PLAYER_SPAWNS = [1, 4]
 BALL_SPAWNS = [2, 3]

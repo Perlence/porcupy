@@ -1,9 +1,8 @@
 from inspect import signature
 
-import attr
 import funcy
 
-from .ast import Const, Slot, BinOp, Add, Sub, Mult, FloorDiv, Assign, Call, ShortSlot
+from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Mult, FloorDiv, Assign, Call
 
 
 class ListPointer(int):
@@ -20,7 +19,7 @@ class ListPointer(int):
             return converter.scope.get_by_index(slot.value + slice_slot.value, cls.item_type)
 
         pointer_math_slot = cls.item_index(converter, slot, slice_slot)
-        reference = attr.assoc(pointer_math_slot, ref=pointer_math_slot)
+        reference = AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
         slot = converter.scope.get_temporary(cls.item_type)
         converter.append_to_body(Assign(slot, reference))
         converter.scope.recycle_temporary(pointer_math_slot)
@@ -43,7 +42,7 @@ class ListPointer(int):
         else:
             pointer_math_slot = cls.item_index(converter, slot, slice_slot)
             converter.recycle_later(pointer_math_slot)
-            return attr.assoc(pointer_math_slot, ref=pointer_math_slot)
+            return AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
 
     @classmethod
     def item_index(cls, converter, slot, slice_slot):
@@ -113,9 +112,13 @@ class GameObjectList:
         register = cls.type.metadata['abbrev']
         slot_type = GameObjectRef.of_type(cls.type)
         if isinstance(slice_slot, Const):
-            return Slot(register, slice_slot.value, None, slot_type)
+            return Slot(register, slice_slot.value + cls.start, None, slot_type)
         else:
-            return attr.assoc(slice_slot, type=slot_type)
+            temp = converter.scope.get_temporary(int)
+            offset = converter.load_bin_op(BinOp(slice_slot, Add(), Const(cls.start, int)))
+            converter.append_to_body(Assign(temp, offset))
+            converter.recycle_later(temp)
+            return AssociatedSlot(temp, type=slot_type)
 
 
 class GameObjectRef(int):
@@ -133,15 +136,15 @@ class GameObjectRef(int):
             ref = slot
             if slot.ref is not None:
                 ref = slot.ref
-            slot = attr.assoc(slot, register=register, ref=ref)
+            slot = AssociatedSlot(slot, register=register, ref=ref)
 
         metadata_stub = {**attrib.metadata}
         attrib_type = metadata_stub.pop('type')
         attrib_abbrev = metadata_stub.pop('abbrev')
         metadata = {**slot.metadata, **metadata_stub}
 
-        return attr.assoc(slot, type=attrib_type, attrib=attrib_abbrev,
-                          metadata=metadata)
+        return AssociatedSlot(slot, type=attrib_type, attrib=attrib_abbrev,
+                              metadata=metadata)
 
 
 class GameObjectMethod:
@@ -161,6 +164,6 @@ class GameObjectMethod:
         short_args = []
         for arg in args:
             if isinstance(arg, Slot):
-                arg = ShortSlot(arg)
+                arg = AssociatedSlot(arg, short_form=True)
             short_args.append(arg)
         return short_args

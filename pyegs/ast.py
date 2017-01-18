@@ -63,12 +63,18 @@ class Slot(AST):
     type = attr.ib()
     metadata = attr.ib(default=attr.Factory(dict))
     ref = attr.ib(default=None)
+    short_form = attr.ib(default=False)
 
     def is_variable(self):
         return self.register in ('p', 's')
 
     def __str__(self):
-        if self.attrib is not None:
+        if self.short_form:
+            if self.register not in ('p', 's'):
+                raise ValueError("unable output slot '{}' in short form".format(self))
+            prefix = '^' if self.register == 'p' else '$'
+            return '{}{}'.format(prefix, self.index)
+        elif self.attrib is not None:
             index = self.index
             if self.ref is not None:
                 index = self.ref.index
@@ -83,16 +89,36 @@ class Slot(AST):
             return str(self.index)
 
 
-@attr.s
-class ShortSlot(AST):
-    slot = attr.ib()
+@attr.s(init=False)
+class AssociatedSlot(AST):
+    _original = attr.ib()
+    _changes = attr.ib()
+
+    def __init__(self, inst, **changes):
+        if isinstance(inst, AssociatedSlot):
+            super().__setattr__('_original', super(AssociatedSlot, inst).__getattribute__('_original'))
+            super().__setattr__('_changes', {**super(AssociatedSlot, inst).__getattribute__('_changes'), **changes})
+        else:
+            super().__setattr__('_original', inst)
+            super().__setattr__('_changes', changes)
+
+    def __getattr__(self, name):
+        try:
+            return super().__getattribute__('_changes')[name]
+        except KeyError:
+            return super().__getattribute__('_original').__getattribute__(name)
+
+    def __setattr__(self, name, value):
+        if name in attr.asdict(super().__getattribute__('_original')):
+            super().__getattribute__('_changes')[name] = value
+        else:
+            super().__setattr__(name, value)
 
     def __str__(self):
-        slot = self.slot
-        if slot.register not in ('p', 's'):
-            raise ValueError("unable output slot '{}' in short form".format(slot))
-        prefix = '^' if slot.register == 'p' else '$'
-        return '{}{}'.format(prefix, slot.index)
+        return str(super().__getattribute__('apply_changes')())
+
+    def apply_changes(self):
+        return attr.assoc(super().__getattribute__('_original'), **super().__getattribute__('_changes'))
 
 
 @attr.s
