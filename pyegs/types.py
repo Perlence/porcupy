@@ -36,13 +36,15 @@ class ListPointer(NumberType):
     item_type = attr.ib()
 
     def getitem(self, converter, slot, slice_slot):
-        if isinstance(slice_slot, Const) and slice_slot.value >= self.capacity:
-            raise IndexError('list index out of range')
+        capacity_slot = self.cap(converter, slot)
+        if isinstance(slice_slot, Const) and isinstance(capacity_slot, Const):
+            if slice_slot.value >= capacity_slot.value:
+                raise IndexError('list index out of range')
         # TODO: Check list bounds in run-time
         if isinstance(slot, Const) and isinstance(slice_slot, Const):
             return converter.scope.get_by_index(slot.value + slice_slot.value, self.item_type)
 
-        pointer_math_slot = self.item_index(converter, slot, slice_slot)
+        pointer_math_slot = item_addr(converter, slot, slice_slot)
         reference = AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
         slot = converter.scope.get_temporary(self.item_type)
         converter.append_to_body(Assign(slot, reference))
@@ -63,15 +65,9 @@ class ListPointer(NumberType):
             converter.recycle_later(slot)
             return slot
         else:
-            pointer_math_slot = self.item_index(converter, slot, slice_slot)
+            pointer_math_slot = item_addr(converter, slot, slice_slot)
             converter.recycle_later(pointer_math_slot)
             return AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
-
-    def item_index(self, converter, slot, slice_slot):
-        pointer_math_slot = converter.scope.get_temporary(IntType())
-        addition = converter.load_bin_op(BinOp(slot, Add(), slice_slot))
-        converter.append_to_body(Assign(pointer_math_slot, addition))
-        return pointer_math_slot
 
     def len(self, converter, slot):
         return Const(self.capacity)
@@ -80,12 +76,22 @@ class ListPointer(NumberType):
         return Const(self.capacity)
 
 
+def item_addr(converter, slot, index_slot):
+    pointer_math_slot = converter.scope.get_temporary(IntType())
+    addition = converter.load_bin_op(BinOp(slot, Add(), index_slot))
+    converter.append_to_body(Assign(pointer_math_slot, addition))
+    return pointer_math_slot
+
+
 @attr.s
 class Slice(IntType):
     # TODO: Implement 'getitem' method
     # TODO: Implement 'append' method
 
     item_type = attr.ib()
+
+    def getitem(self, converter, slot, slice_slot):
+        return ListPointer.getitem(self, converter, slot, slice_slot)
 
     def len(self, converter, slot):
         return slot.metadata['length']

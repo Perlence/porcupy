@@ -362,6 +362,7 @@ class NodeConverter(ast.NodeVisitor):
                     bounds[i].value = src_capacity.value + bound.value
             else:
                 tmp[i] = self.scope.get_temporary(IntType())
+                self.append_to_body(Assign(tmp[i], bound))
                 self.append_to_body(If(
                     Compare(bound, ast.Gt(), src_capacity),
                     body=[
@@ -393,11 +394,18 @@ class NodeConverter(ast.NodeVisitor):
             if slot is not None:
                 self.scope.recycle_temporary(slot)
 
-        metadata = {
+        # TODO: Store 'pointer_value' in a temporary slot
+
+        # pointer_tmp = self.scope.get_temporary(Slice(value_slot.type.item_type))
+        # self.append_to_body(Assign(pointer_tmp, pointer_value))
+        # self.recycle_later(pointer_tmp)
+
+        pointer_value.type = Slice(value_slot.type.item_type)
+        pointer_value.metadata = {
             'length': len_value,
             'capacity': cap_value,
         }
-        return attr.assoc(pointer_value, type=Slice(value_slot.type.item_type), metadata=metadata)
+        return pointer_value
 
     def load_extended_bool_op(self, value):
         initial = Const(False)
