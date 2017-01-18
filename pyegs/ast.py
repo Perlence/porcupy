@@ -41,18 +41,34 @@ class If(AST):
 @attr.s
 class Const(AST):
     value = attr.ib()
-    type = attr.ib()
+    type = attr.ib(default=None)
     metadata = attr.ib(default=attr.Factory(dict))
 
+    def __attrs_post_init__(self):
+        from .types import NumberType, StringType
+
+        if self.type is not None:
+            return
+
+        if isinstance(self.value, Number):
+            self.type = NumberType()
+        elif isinstance(self.value, str):
+            self.type = StringType()
+        else:
+            raise TypeError("unable to use consts of type '{}'".format(type(self.value)))
+
     def __str__(self):
-        if issubclass(self.type, bool):
-            return str(int(self.value))
-        elif issubclass(self.type, Number):
-            return str(self.value)
-        elif issubclass(self.type, str):
+        from .types import NumberType, StringType
+
+        if isinstance(self.type, NumberType):
+            if isinstance(self.value, bool):
+                return str(int(self.value))
+            else:
+                return str(self.value)
+        elif isinstance(self.type, StringType):
             return self.value.replace(' ', '_')
         else:
-            raise TypeError("cannot format '{}' const".format(self.type))
+            raise TypeError("cannot format '{}' const".format(self.type.type))
 
 
 @attr.s
@@ -161,15 +177,17 @@ class BinOp(AST):
     metadata = attr.ib(default=attr.Factory(dict))
 
     def __attrs_post_init__(self):
+        from .types import NumberType, FloatType, IntType
+
         left_type = self.left.type
         right_type = self.right.type
-        if not issubclass(left_type, Number) or not issubclass(right_type, Number):
+        if not isinstance(left_type, NumberType) or not isinstance(right_type, NumberType):
             raise TypeError("binary operands '{}' and '{}' must be numbers".format(self.left, self.right))
 
-        if issubclass(left_type, float) or issubclass(right_type, float) or isinstance(self.op, Div):
-            self.type = float
+        if isinstance(left_type, FloatType) or isinstance(right_type, FloatType) or isinstance(self.op, Div):
+            self.type = FloatType()
         else:
-            self.type = int
+            self.type = IntType()
 
     def __str__(self):
         return '{}{}{}'.format(self.left, self.op, self.right)

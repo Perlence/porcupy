@@ -50,7 +50,7 @@ def test_generic_if():
     assert (compile_('x = [11, 22, 33]\n'
                      'if x[0] > 0: y = 44') ==
             'p1z 11 p2z 22 p3z 33 p4z 1 '
-            'p6z p4z+0 p7z p^6z p8z 0 # p7z > 0 ( p8z 1 ) # p8z = 0 ( g1z ) p5z 44 :1')
+            'p6z p4z+0 p7z p^6z p6z 0 # p7z > 0 ( p6z 1 ) # p6z = 0 ( g1z ) p5z 44 :1')
 
     # Test is BoolOp
     assert (compile_('x = 11\n'

@@ -202,6 +202,8 @@ def test_game_objects():
 
     assert compile_('x = yegiks[0]') == 'p1z 1'
     assert compile_('x = [yegiks[0], yegiks[1]]') == 'p1z 1 p2z 2 p3z 1'
+    assert (compile_('x = [yegiks[0], yegiks[1]]; y = 1; y = y+3/y; z = x[0].frags') ==
+            'p1z 1 p2z 2 p3z 1 p4z 1 p6z 3 p7z p6z/p4z p4z p4z+p7z p7z p3z+0 p6z p^7z p5z e^6f')
 
     assert compile_('x = timers[2]; x.value = 0') == 'p1z 2 t^1i 0'
 
@@ -223,7 +225,7 @@ def test_aug_assign():
 
     assert compile_('yegiks[0].speed_y *= 0.88') == 'p1z 22 p2z p1z/25 e1v e1v*p2z'
     assert compile_('x = 2; yegiks[x].speed_y *= 0.88') == 'p1z 2 p2z 22 p3z p1z+1 p4z p2z/25 e^3v e^3v*p4z'
-    assert compile_('YEGS = [yegiks[4], yegiks[5]]; x = 1; YEGS[x].speed_y *= 0.88') == 'p1z 5 p2z 6 p3z 1 p4z 22 p5z p3z+1 p6z p^5z p7z p4z/25 e^6v e^6v*p7z'
+    assert compile_('YEGS = [yegiks[4], yegiks[5]]; x = 1; YEGS[x].speed_y *= 0.88') == 'p1z 5 p2z 6 p3z 1 p4z 22 p5z p3z+1 p6z p^5z p5z p4z/25 e^6v e^6v*p5z'
 
     # with pytest.raises(NameError) as exc_info:
     #     compile_('x += 4')

@@ -1,105 +1,115 @@
 from inspect import signature
 
-import funcy
+import attr
 
 from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Mult, FloorDiv, Assign, Call
 
 
-class ListPointer(int):
-    @classmethod
-    @funcy.memoize
-    def of_type(cls, capacity, item_type):
-        return type('TypedListPointer', (cls,), {'item_type': item_type, 'capacity': capacity})
+@attr.s
+class NumberType:
+    pass
 
-    @classmethod
-    def getitem(cls, converter, slot, slice_slot):
-        if isinstance(slice_slot, Const) and slice_slot.value >= cls.capacity:
+
+@attr.s
+class FloatType(NumberType):
+    pass
+
+
+@attr.s
+class IntType(NumberType):
+    pass
+
+
+@attr.s
+class BoolType(IntType):
+    pass
+
+
+@attr.s
+class StringType:
+    pass
+
+
+@attr.s
+class ListPointer(NumberType):
+    capacity = attr.ib()
+    item_type = attr.ib()
+
+    def getitem(self, converter, slot, slice_slot):
+        if isinstance(slice_slot, Const) and slice_slot.value >= self.capacity:
             raise IndexError('list index out of range')
         # TODO: Check list bounds in run-time
         if isinstance(slot, Const) and isinstance(slice_slot, Const):
-            return converter.scope.get_by_index(slot.value + slice_slot.value, cls.item_type)
+            return converter.scope.get_by_index(slot.value + slice_slot.value, self.item_type)
 
-        pointer_math_slot = cls.item_index(converter, slot, slice_slot)
+        pointer_math_slot = self.item_index(converter, slot, slice_slot)
         reference = AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
-        slot = converter.scope.get_temporary(cls.item_type)
+        slot = converter.scope.get_temporary(self.item_type)
         converter.append_to_body(Assign(slot, reference))
         converter.scope.recycle_temporary(pointer_math_slot)
         converter.recycle_later(slot)
 
         return slot
 
-    @classmethod
-    def setitem(cls, converter, slot, slice_slot):
+    def setitem(self, converter, slot, slice_slot):
         if isinstance(slot, Const):
             raise ValueError('cannot modify items of constant list pointer')
-        if isinstance(slice_slot, Const) and slice_slot.value >= cls.capacity:
+        if isinstance(slice_slot, Const) and slice_slot.value >= self.capacity:
             raise IndexError('list index out of range')
 
-        if issubclass(cls.item_type, GameObjectRef):
-            slot = converter.scope.get_temporary(cls.item_type)
+        if isinstance(self.item_type, GameObjectRef):
+            slot = converter.scope.get_temporary(self.item_type)
             converter.append_to_body(Assign(slot, slot))
             converter.recycle_later(slot)
             return slot
         else:
-            pointer_math_slot = cls.item_index(converter, slot, slice_slot)
+            pointer_math_slot = self.item_index(converter, slot, slice_slot)
             converter.recycle_later(pointer_math_slot)
             return AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
 
-    @classmethod
-    def item_index(cls, converter, slot, slice_slot):
-        pointer_math_slot = converter.scope.get_temporary(ListPointer)
+    def item_index(self, converter, slot, slice_slot):
+        pointer_math_slot = converter.scope.get_temporary(IntType())
         addition = converter.load_bin_op(BinOp(slot, Add(), slice_slot))
         converter.append_to_body(Assign(pointer_math_slot, addition))
         return pointer_math_slot
 
-    @classmethod
-    def len(cls, converter, slot):
-        return Const(cls.capacity, int)
+    def len(self, converter, slot):
+        return Const(self.capacity)
 
-    @classmethod
-    def cap(cls, converter, slot):
-        return Const(cls.capacity, int)
+    def cap(self, converter, slot):
+        return Const(self.capacity)
 
 
-class Slice(int):
+@attr.s
+class Slice(IntType):
     # TODO: Implement 'getitem' method
     # TODO: Implement 'append' method
 
-    @classmethod
-    def new(cls, lower, upper):
-        metadata = {
-            'lower': lower,
-            'upper': upper,
-        }
-        return Const(None, cls, metadata=metadata)
+    item_type = attr.ib()
 
-    @classmethod
-    def len(cls, converter, slot):
+    def len(self, converter, slot):
         return slot.metadata['length']
 
-    @classmethod
-    def cap(cls, converter, slot):
+    def cap(self, converter, slot):
         return slot.metadata['capacity']
 
 
+@attr.s
 class Range:
-    @classmethod
-    def len(cls, converter, slot):
+    def len(self, converter, slot):
         start = slot.metadata['start']
         stop = slot.metadata['stop']
         step = slot.metadata['step']
         return converter.load_bin_op(BinOp(BinOp(stop, Sub(), start), FloorDiv(), step))
 
-    @classmethod
-    def getitem(cls, converter, slot, slice_slot):
+    def getitem(self, converter, slot, slice_slot):
         # TODO: Raise error if index is greater than range length
         start = slot.metadata['start']
         step = slot.metadata['step']
         return converter.load_bin_op(BinOp(start, Add(), BinOp(step, Mult(), slice_slot)))
 
-    @classmethod
-    def call(cls, converter, func, *args):
-        start_value, step_value = Const(0, int), Const(1, int)
+    def call(self, converter, func, *args):
+        start_value, step_value = Const(0), Const(1)
         if len(args) == 1:
             stop_value = args[0]
         elif len(args) == 2:
@@ -112,50 +122,47 @@ class Range:
             'stop': stop_value,
             'step': step_value,
         }
-        return Const(None, cls, metadata=metadata)
+        return Const(None, self, metadata=metadata)
 
 
+@attr.s(init=False)
 class GameObjectList:
     # TODO: Implement GameObjectList iteration
+    type = attr.ib()
+    start = attr.ib()
+    stop = attr.ib()
 
-    @classmethod
-    @funcy.memoize
-    def of_type(cls, game_obj_type, *args):
-        start = 0
+    def __init__(self, game_obj_type, *args):
+        self.type = game_obj_type
+
+        self.start = 0
         if len(args) == 1:
-            stop = args[0]
+            self.stop = args[0]
         elif len(args) == 2:
-            start, stop = args
+            self.start, self.stop = args
 
-        return type('GameObjectTypedList', (cls,), {'type': game_obj_type, 'start': start, 'stop': stop})
+    def len(self, converter, slot):
+        return Const(self.stop - self.start)
 
-    @classmethod
-    def len(cls, converter, slot):
-        return Const(cls.stop - cls.start, int)
-
-    @classmethod
-    def getitem(cls, converter, value_slot, slice_slot):
-        register = cls.type.metadata['abbrev']
-        slot_type = GameObjectRef.of_type(cls.type)
+    def getitem(self, converter, value_slot, slice_slot):
+        register = self.type.metadata['abbrev']
+        slot_type = GameObjectRef(self.type)
         if isinstance(slice_slot, Const):
-            return Slot(register, slice_slot.value + cls.start, None, slot_type)
+            return Slot(register, slice_slot.value + self.start, None, slot_type)
         else:
-            temp = converter.scope.get_temporary(int)
-            offset = converter.load_bin_op(BinOp(slice_slot, Add(), Const(cls.start, int)))
+            temp = converter.scope.get_temporary(IntType())
+            offset = converter.load_bin_op(BinOp(slice_slot, Add(), Const(self.start)))
             converter.append_to_body(Assign(temp, offset))
             converter.recycle_later(temp)
             return AssociatedSlot(temp, type=slot_type)
 
 
-class GameObjectRef(int):
-    @classmethod
-    @funcy.memoize
-    def of_type(cls, game_obj_type):
-        return type('GameObjectTypedRef', (cls,), {'type': game_obj_type})
+@attr.s
+class GameObjectRef(NumberType):
+    type = attr.ib()
 
-    @classmethod
-    def getattr(cls, converter, slot, attr_name):
-        game_obj_type = cls.type
+    def getattr(self, converter, slot, attr_name):
+        game_obj_type = self.type
         register = game_obj_type.metadata['abbrev']
         attrib = getattr(game_obj_type, attr_name)
         if slot.is_variable():
@@ -173,20 +180,19 @@ class GameObjectRef(int):
                               metadata=metadata)
 
 
+@attr.s(init=False)
 class GameObjectMethod:
-    @classmethod
-    @funcy.memoize
-    def with_signature(cls, fn):
-        return type('SignedFunctionType', (cls,), {'signature': signature(fn)})
+    signature = attr.ib()
 
-    @classmethod
-    def call(cls, converter, func, *args):
-        cls.signature.bind(None, *args)
-        args = cls._shorten_args(args)
+    def __init__(self, fn):
+        self.signature = signature(fn)
+
+    def call(self, converter, func, *args):
+        self.signature.bind(None, *args)
+        args = self._shorten_args(args)
         return Call(func, args)
 
-    @classmethod
-    def _shorten_args(cls, args):
+    def _shorten_args(self, args):
         short_args = []
         for arg in args:
             if isinstance(arg, Slot):
@@ -195,13 +201,13 @@ class GameObjectMethod:
         return short_args
 
 
+@attr.s
 class Length:
-    @classmethod
-    def call(cls, converter, func, container):
+    def call(self, converter, func, container):
         return container.type.len(converter, container)
 
 
+@attr.s
 class Capacity:
-    @classmethod
-    def call(cls, converter, func, container):
+    def call(self, converter, func, container):
         return container.type.cap(converter, container)

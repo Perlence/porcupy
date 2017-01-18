@@ -1,7 +1,6 @@
 import ast
 from collections import defaultdict
 from fractions import Fraction
-from numbers import Number
 
 import attr
 
@@ -9,7 +8,7 @@ from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
                   Label)
 from .runtime import Yegik, Timer, Point, Bot, System
-from .types import GameObjectRef, GameObjectList, ListPointer, Slice, Range, Length, Capacity
+from .types import NumberType, IntType, BoolType, StringType, GameObjectRef, GameObjectList, ListPointer, Slice, Range, Length, Capacity
 
 
 def compile(source, filename='<unknown>'):
@@ -122,8 +121,8 @@ class NodeConverter(ast.NodeVisitor):
         if self.is_body_empty(node.body) and self.is_body_empty(node.orelse):
             return
 
-        index = self.scope.get_temporary(int)
-        self.append_to_body(Assign(index, Const(-1, int)))
+        index = self.scope.get_temporary(IntType())
+        self.append_to_body(Assign(index, Const(-1)))
 
         iter_slot = self.load_expr(node.iter)
         iter_len = iter_slot.type.len(self, iter_slot)
@@ -134,7 +133,7 @@ class NodeConverter(ast.NodeVisitor):
         assign = ast.Assign(targets=[node.target], value=subscript)
         body = [assign] + node.body
 
-        increment_index = ast.AugAssign(target=index, op=ast.Add(), value=Const(1, int))
+        increment_index = ast.AugAssign(target=index, op=ast.Add(), value=Const(1))
 
         self.visit_While(ast.While(test, body, node.orelse), before_test=increment_index)
 
@@ -180,7 +179,7 @@ class NodeConverter(ast.NodeVisitor):
 
         test = self.load_expr(node.test)
         if not isinstance(test, Compare):
-            test = Compare(test, ast.NotEq(), Const(False, bool))
+            test = Compare(test, ast.NotEq(), Const(False))
         not_test = self.negate_bool(test)
 
         label_end = self.new_label()
@@ -245,9 +244,9 @@ class NodeConverter(ast.NodeVisitor):
         elif isinstance(value, ast.Num):
             return self.load_num(value)
         elif isinstance(value, ast.Str):
-            return Const(value.s, str)
+            return Const(value.s)
         elif isinstance(value, ast.NameConstant):
-            return Const(value.value, type(value.value))
+            return Const(value.value)
         elif isinstance(value, ast.List):
             return self.load_list(value)
         elif isinstance(value, ast.Name):
@@ -273,9 +272,9 @@ class NodeConverter(ast.NodeVisitor):
 
     def load_num(self, value):
         if not isinstance(value.n, float):
-            return Const(value.n, Number)
+            return Const(value.n)
         frac = Fraction(str(value.n))
-        return self.load_bin_op(BinOp(Const(frac.numerator, int), Div(), Const(frac.denominator, int)))
+        return self.load_bin_op(BinOp(Const(frac.numerator), Div(), Const(frac.denominator)))
 
     def load_list(self, value):
         if not value.elts:
@@ -291,7 +290,7 @@ class NodeConverter(ast.NodeVisitor):
         for dest_slot, item in zip(item_slots, loaded_items):
             self.append_to_body(Assign(dest_slot, item))
         first_item = item_slots[0]
-        return Const(first_item.index, ListPointer.of_type(capacity, item_type))
+        return Const(first_item.index, ListPointer(capacity, item_type))
 
     def type_of_objects(self, objects):
         type_set = set()
@@ -311,7 +310,7 @@ class NodeConverter(ast.NodeVisitor):
     def load_subscript(self, value):
         value_slot = self.load_expr(value.value)
         slice_slot = self.load_expr(value.slice)
-        if issubclass(slice_slot.type, Slice):
+        if isinstance(slice_slot, slice):
             return self.load_slice_subscript(value_slot, slice_slot)
         else:
             return self.load_index_subscript(value_slot, slice_slot, value.ctx)
@@ -336,16 +335,16 @@ class NodeConverter(ast.NodeVisitor):
             lower = self.load_expr(value.lower)
         if value.upper is not None:
             upper = self.load_expr(value.upper)
-        return Slice.new(lower, upper)
+        return slice(lower, upper)
 
     def load_slice_subscript(self, value_slot, slice_slot):
-        lower = slice_slot.metadata['lower']
-        upper = slice_slot.metadata['upper']
+        lower = slice_slot.start
+        upper = slice_slot.stop
 
         src_capacity = value_slot.type.cap(self, value_slot)
 
         if lower is None:
-            lower = Const(0, int)
+            lower = Const(0)
         if upper is None:
             upper = src_capacity
 
@@ -362,7 +361,7 @@ class NodeConverter(ast.NodeVisitor):
                 if bound.value < 0:
                     bounds[i].value = src_capacity.value + bound.value
             else:
-                tmp[i] = self.scope.get_temporary(int)
+                tmp[i] = self.scope.get_temporary(IntType())
                 self.append_to_body(If(
                     Compare(bound, ast.Gt(), src_capacity),
                     body=[
@@ -371,10 +370,10 @@ class NodeConverter(ast.NodeVisitor):
                 self.append_to_body(If(
                     Compare(bound, ast.LtE(), self.load_unary_op(ast.UnaryOp(ast.USub(), src_capacity))),
                     body=[
-                        Assign(tmp[i], Const(0, int)),
+                        Assign(tmp[i], Const(0)),
                     ]))
                 self.append_to_body(If(
-                    Compare(bound, ast.Lt(), Const(0, int)),
+                    Compare(bound, ast.Lt(), Const(0)),
                     body=[
                         Assign(tmp[i], self.load_bin_op(BinOp(src_capacity, Add(), bound))),
                     ]))
@@ -386,7 +385,7 @@ class NodeConverter(ast.NodeVisitor):
         cap_value = self.load_bin_op(BinOp(src_capacity, Sub(), lower))
         pointer_value = self.load_bin_op(BinOp(value_slot, Add(), lower))
 
-        len_slot, cap_slot = self.scope.allocate_many(int, 2)
+        len_slot, cap_slot = self.scope.allocate_many(IntType(), 2)
         self.append_to_body(Assign(len_slot, len_value))
         self.append_to_body(Assign(cap_slot, cap_value))
 
@@ -398,21 +397,21 @@ class NodeConverter(ast.NodeVisitor):
             'length': len_value,
             'capacity': cap_value,
         }
-        return attr.assoc(pointer_value, type=Slice, metadata=metadata)
+        return attr.assoc(pointer_value, type=Slice(value_slot.type.item_type), metadata=metadata)
 
     def load_extended_bool_op(self, value):
-        initial = Const(False, bool)
+        initial = Const(False)
         if isinstance(value, ast.Compare):
             expr = self.load_compare(value)
         elif isinstance(value, ast.BoolOp):
             # TODO: AND must return last value, OR must return first
             expr = self.load_bool_op(value)
             if isinstance(expr.op, ast.Or):
-                initial = Const(True, bool)
+                initial = Const(True)
                 expr.op = ast.And()
                 expr.values = list(map(self.negate_bool, expr.values))
 
-        bool_slot = self.scope.get_temporary(bool)
+        bool_slot = self.scope.get_temporary(BoolType())
         self.append_to_body(Assign(bool_slot, initial))
         assign = Assign(bool_slot, self.negate_bool(initial))
         self.append_to_body(If(expr, [assign]))
@@ -441,7 +440,7 @@ class NodeConverter(ast.NodeVisitor):
                 compare = self.load_compare(bool_op_value)
             else:
                 slot = self.load_expr(bool_op_value)
-                compare = Compare(slot, ast.NotEq(), Const(False, bool))
+                compare = Compare(slot, ast.NotEq(), Const(False))
             values.append(compare)
         return BoolOp(value.op, values)
 
@@ -479,7 +478,7 @@ class NodeConverter(ast.NodeVisitor):
 
         if isinstance(left, Const) and isinstance(right, Const) and not isinstance(op, Div):
             value = op(left.value, right.value)
-            return Const(value, type(value))
+            return Const(value)
 
         temp = []
         if isinstance(left, Const):
@@ -535,12 +534,12 @@ class NodeConverter(ast.NodeVisitor):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=-operand.value)
             else:
-                return self.load_bin_op(BinOp(operand, Mult(), Const(-1, Number)))
+                return self.load_bin_op(BinOp(operand, Mult(), Const(-1)))
         elif isinstance(value.op, ast.Invert):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=~operand.value)
             else:
-                return self.load_bin_op(BinOp(BinOp(operand, Mult(), Const(-1, Number)), Sub(), Const(1, Number)))
+                return self.load_bin_op(BinOp(BinOp(operand, Mult(), Const(-1)), Sub(), Const(1)))
         else:
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(value.op))
 
@@ -582,16 +581,16 @@ class Scope:
         self.populate_game_objects()
 
     def populate_builtins(self):
-        self.names['cap'] = Const(None, Capacity)
-        self.names['len'] = Const(None, Length)
-        self.names['range'] = Const(None, Range)
+        self.names['cap'] = Const(None, Capacity())
+        self.names['len'] = Const(None, Length())
+        self.names['range'] = Const(None, Range())
 
     def populate_game_objects(self):
-        self.names['bots'] = Const(None, GameObjectList.of_type(Bot, 1, 10))
-        self.names['points'] = Const(None, GameObjectList.of_type(Point, 1, 100))
-        self.names['timers'] = Const(None, GameObjectList.of_type(Timer, 0, 100))
-        self.names['yegiks'] = Const(None, GameObjectList.of_type(Yegik, 1, 10))
-        self.names['system'] = Slot(System.metadata['abbrev'], None, None, GameObjectRef.of_type(System))
+        self.names['bots'] = Const(None, GameObjectList(Bot, 1, 10))
+        self.names['points'] = Const(None, GameObjectList(Point, 1, 100))
+        self.names['timers'] = Const(None, GameObjectList(Timer, 0, 100))
+        self.names['yegiks'] = Const(None, GameObjectList(Yegik, 1, 10))
+        self.names['system'] = Slot(System.metadata['abbrev'], None, None, GameObjectRef(System))
 
     def define_const(self, name, value):
         self.names[name] = value
@@ -608,10 +607,10 @@ class Scope:
         return slot
 
     def get_by_index(self, index, type):
-        if issubclass(type, Number):
+        if isinstance(type, NumberType):
             slots = self.numeric_slots.slots
             register = 'p'
-        elif issubclass(type, str):
+        elif isinstance(type, StringType):
             slots = self.string_slots.slots
             register = 's'
         else:
@@ -623,12 +622,12 @@ class Scope:
         return Slot(register, index, 'z', type)
 
     def allocate(self, type):
-        if issubclass(type, Number):
+        if isinstance(type, NumberType):
             index = self.numeric_slots.allocate()
-            return Slot('p', index, 'z', Number)
-        elif issubclass(type, str):
+            return Slot('p', index, 'z', type)
+        elif isinstance(type, StringType):
             index = self.string_slots.allocate()
-            return Slot('s', index, 'z', str)
+            return Slot('s', index, 'z', type)
         else:
             raise TypeError("cannot allocate slot of type '{}'".format(type))
 
@@ -636,16 +635,28 @@ class Scope:
         return [self.allocate(type) for _ in range(length)]
 
     def get_temporary(self, type):
-        if not issubclass(type, (Number, str)):
+        if not isinstance(type, (NumberType, StringType)):
             raise TypeError("cannot create temporary slot of type '{}'".format(type))
-        if self.recycled_temporary_slots[type]:
-            return self.recycled_temporary_slots[type].pop()
+
+        base_type = self.base_type(type)
+        if self.recycled_temporary_slots[base_type]:
+            slot = self.recycled_temporary_slots[base_type].pop()
+            slot.type = type
+            return slot
+
         slot = Slot('p', None, 'z', type)
         self.temporary_slots.append(slot)
         return slot
 
     def recycle_temporary(self, slot):
-        self.recycled_temporary_slots[slot.type].append(slot)
+        base_type = self.base_type(slot.type)
+        self.recycled_temporary_slots[base_type].append(slot)
+
+    def base_type(self, type):
+        if isinstance(type, NumberType):
+            return NumberType()
+        elif isinstance(type, StringType):
+            return StringType()
 
     def allocate_temporary(self):
         for slot in self.temporary_slots:
