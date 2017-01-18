@@ -22,7 +22,7 @@ def test_consts():
 
 def test_numbers():
     assert compile_('x = 4') == 'p1z 4'
-    assert compile_('x = 4.0') == 'p1z 4'
+    assert compile_('x = 4.5') == 'p2z 9 p1z p2z/2'
     assert compile_('x = 4; y = 5') == 'p1z 4 p2z 5'
     assert compile_('x = 4; x = 5') == 'p1z 4 p1z 5'
 
@@ -221,9 +221,9 @@ def test_aug_assign():
     assert compile_('x = 5; x *= 4') == 'p1z 5 p1z p1z*4'
     assert compile_('x = 5; x /= 4') == 'p1z 5 p1z p1z/4'
 
-    assert compile_('yegiks[0].speed_y *= 0.88') == 'e1v e1v*0,88'
-    assert compile_('x = 2; yegiks[x].speed_y *= 0.88') == 'p1z 2 p2z p1z+1 e^2v e^2v*0,88'
-    assert compile_('YEGS = [yegiks[4], yegiks[5]]; x = 1; YEGS[x].speed_y *= 0.88') == 'p1z 5 p2z 6 p3z 1 p4z p3z+1 p5z p^4z e^5v e^5v*0,88'
+    assert compile_('yegiks[0].speed_y *= 0.88') == 'p1z 22 p2z p1z/25 e1v e1v*p2z'
+    assert compile_('x = 2; yegiks[x].speed_y *= 0.88') == 'p1z 2 p2z 22 p3z p1z+1 p4z p2z/25 e^3v e^3v*p4z'
+    assert compile_('YEGS = [yegiks[4], yegiks[5]]; x = 1; YEGS[x].speed_y *= 0.88') == 'p1z 5 p2z 6 p3z 1 p4z 22 p5z p3z+1 p6z p^5z p7z p4z/25 e^6v e^6v*p7z'
 
     # with pytest.raises(NameError) as exc_info:
     #     compile_('x += 4')

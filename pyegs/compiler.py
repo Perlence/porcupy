@@ -1,5 +1,6 @@
 import ast
 from collections import defaultdict
+from fractions import Fraction
 from numbers import Number
 
 import attr
@@ -242,7 +243,7 @@ class NodeConverter(ast.NodeVisitor):
         if isinstance(value, AST):
             return value
         elif isinstance(value, ast.Num):
-            return Const(value.n, Number)
+            return self.load_num(value)
         elif isinstance(value, ast.Str):
             return Const(value.s, str)
         elif isinstance(value, ast.NameConstant):
@@ -267,6 +268,12 @@ class NodeConverter(ast.NodeVisitor):
             return self.load_call(value)
         else:
             raise NotImplementedError("expression '{}' is not implemented yet".format(value))
+
+    def load_num(self, value):
+        if not isinstance(value.n, float):
+            return Const(value.n, Number)
+        frac = Fraction(str(value.n))
+        return self.load_bin_op(BinOp(Const(frac.numerator, int), Div(), Const(frac.denominator, int)))
 
     def load_list(self, value):
         loaded_items = [self.load_expr(item) for item in value.elts]
@@ -378,6 +385,7 @@ class NodeConverter(ast.NodeVisitor):
 
     def load_bin_op(self, value):
         # TODO: Initialize lists, e.g. 'x = [0] * 3'
+        # TODO: Implement bit shift operations
         left = self.load_expr(value.left)
         op = self.load_bin_operator(value.op)
         right = self.load_expr(value.right)
@@ -387,7 +395,7 @@ class NodeConverter(ast.NodeVisitor):
         if isinstance(right, BinOp):
             right = self.load_bin_op(right)
 
-        if isinstance(left, Const) and isinstance(right, Const):
+        if isinstance(left, Const) and isinstance(right, Const) and not isinstance(op, Div):
             value = op(left.value, right.value)
             return Const(value, type(value))
 
