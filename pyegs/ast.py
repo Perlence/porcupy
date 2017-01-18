@@ -1,4 +1,5 @@
 import ast
+import locale
 from numbers import Number
 from operator import add, sub, mul, truediv, floordiv, mod
 
@@ -48,7 +49,7 @@ class Const(AST):
         if issubclass(self.type, bool):
             return str(int(self.value))
         elif issubclass(self.type, Number):
-            return str(self.value).replace('.', ',')
+            return locale.str(self.value)
         elif issubclass(self.type, str):
             return self.value.replace(' ', '_')
         else:
