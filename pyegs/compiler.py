@@ -9,7 +9,7 @@ from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
                   Label)
 from .runtime import Yegik, Timer, Point, Bot, System
-from .types import GameObjectRef, GameObjectList, ListPointer, Range
+from .types import GameObjectRef, GameObjectList, ListPointer, Slice, Range, Length, Capacity
 
 
 def compile(source, filename='<unknown>'):
@@ -258,6 +258,8 @@ class NodeConverter(ast.NodeVisitor):
             return self.load_subscript(value)
         elif isinstance(value, ast.Index):
             return self.load_expr(value.value)
+        elif isinstance(value, ast.Slice):
+            return self.load_slice(value)
         elif isinstance(value, (ast.Compare, ast.BoolOp)):
             return self.load_extended_bool_op(value)
         elif isinstance(value, ast.BinOp):
@@ -276,6 +278,9 @@ class NodeConverter(ast.NodeVisitor):
         return self.load_bin_op(BinOp(Const(frac.numerator, int), Div(), Const(frac.denominator, int)))
 
     def load_list(self, value):
+        if not value.elts:
+            raise ValueError('cannot allocate an empty list')
+
         loaded_items = [self.load_expr(item) for item in value.elts]
         item_type = self.type_of_objects(loaded_items)
         if item_type is None:
@@ -306,17 +311,94 @@ class NodeConverter(ast.NodeVisitor):
     def load_subscript(self, value):
         value_slot = self.load_expr(value.value)
         slice_slot = self.load_expr(value.slice)
+        if issubclass(slice_slot.type, Slice):
+            return self.load_slice_subscript(value_slot, slice_slot)
+        else:
+            return self.load_index_subscript(value_slot, slice_slot, value.ctx)
 
-        if isinstance(value.ctx, ast.Load):
+    def load_index_subscript(self, value_slot, slice_slot, ctx):
+        if isinstance(ctx, ast.Load):
             if not hasattr(value_slot.type, 'getitem'):
                 raise NotImplementedError("getting item of collection of type '{}' is not implemented yet".format(value_slot.type))
 
             return value_slot.type.getitem(self, value_slot, slice_slot)
 
-        elif isinstance(value.ctx, ast.Store):
+        elif isinstance(ctx, ast.Store):
             if not hasattr(value_slot.type, 'setitem'):
                 raise NotImplementedError("setting item of collection of type '{}' is not implemented yet".format(value_slot.type))
             return value_slot.type.setitem(self, value_slot, slice_slot)
+
+    def load_slice(self, value):
+        lower, upper = None, None
+        if value.step is not None:
+            raise NotImplementedError('slice step is not supported')
+        if value.lower is not None:
+            lower = self.load_expr(value.lower)
+        if value.upper is not None:
+            upper = self.load_expr(value.upper)
+        return Slice.new(lower, upper)
+
+    def load_slice_subscript(self, value_slot, slice_slot):
+        lower = slice_slot.metadata['lower']
+        upper = slice_slot.metadata['upper']
+
+        src_capacity = value_slot.type.cap(self, value_slot)
+
+        if lower is None:
+            lower = Const(0, int)
+        if upper is None:
+            upper = src_capacity
+
+        bounds = [lower, upper]
+        tmp = [None, None]
+        for i, bound in enumerate(bounds):
+            if isinstance(bound, Const) and isinstance(src_capacity, Const):
+                # This clause will be unnecessary once comparison
+                # optimization is complete
+                if bound.value > src_capacity.value:
+                    bounds[i].value = src_capacity.value
+                elif bound.value <= -src_capacity.value:
+                    bounds[i].value = 0
+                if bound.value < 0:
+                    bounds[i].value = src_capacity.value + bound.value
+            else:
+                tmp[i] = self.scope.get_temporary(int)
+                self.append_to_body(If(
+                    Compare(bound, ast.Gt(), src_capacity),
+                    body=[
+                        Assign(tmp[i], src_capacity),
+                    ]))
+                self.append_to_body(If(
+                    Compare(bound, ast.LtE(), self.load_unary_op(ast.UnaryOp(ast.USub(), src_capacity))),
+                    body=[
+                        Assign(tmp[i], Const(0, int)),
+                    ]))
+                self.append_to_body(If(
+                    Compare(bound, ast.Lt(), Const(0, int)),
+                    body=[
+                        Assign(tmp[i], self.load_bin_op(BinOp(src_capacity, Add(), bound))),
+                    ]))
+                bounds[i] = tmp[i]
+
+        lower, upper = bounds
+
+        len_value = self.load_bin_op(BinOp(upper, Sub(), lower))
+        cap_value = self.load_bin_op(BinOp(src_capacity, Sub(), lower))
+        pointer_value = self.load_bin_op(BinOp(value_slot, Add(), lower))
+
+        len_slot, cap_slot = self.scope.allocate_many(int, 2)
+        self.append_to_body(Assign(len_slot, len_value))
+        self.append_to_body(Assign(cap_slot, cap_value))
+
+        for slot in tmp:
+            if slot is not None:
+                self.scope.recycle_temporary(slot)
+
+        metadata = {
+            'length': len_value,
+            'capacity': cap_value,
+        }
+        return attr.assoc(pointer_value, type=Slice, metadata=metadata)
 
     def load_extended_bool_op(self, value):
         initial = Const(False, bool)
@@ -469,7 +551,7 @@ class NodeConverter(ast.NodeVisitor):
         args = [self.load_expr(arg) for arg in value.args]
         if not hasattr(func.type, 'call'):
             raise NotImplementedError("calling function '{}' is not implemented yet".format(func))
-        return func.type.call(self, func, args)
+        return func.type.call(self, func, *args)
 
     def append_to_body(self, stmt):
         self.body.append(stmt)
@@ -500,13 +582,15 @@ class Scope:
         self.populate_game_objects()
 
     def populate_builtins(self):
+        self.names['cap'] = Const(None, Capacity)
+        self.names['len'] = Const(None, Length)
         self.names['range'] = Const(None, Range)
 
     def populate_game_objects(self):
-        self.names['yegiks'] = Const(None, GameObjectList.of_type(Yegik, 1, 10))
-        self.names['points'] = Const(None, GameObjectList.of_type(Point, 1, 100))
         self.names['bots'] = Const(None, GameObjectList.of_type(Bot, 1, 10))
+        self.names['points'] = Const(None, GameObjectList.of_type(Point, 1, 100))
         self.names['timers'] = Const(None, GameObjectList.of_type(Timer, 0, 100))
+        self.names['yegiks'] = Const(None, GameObjectList.of_type(Yegik, 1, 10))
         self.names['system'] = Slot(System.metadata['abbrev'], None, None, GameObjectRef.of_type(System))
 
     def define_const(self, name, value):

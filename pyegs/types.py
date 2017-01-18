@@ -15,6 +15,7 @@ class ListPointer(int):
     def getitem(cls, converter, slot, slice_slot):
         if isinstance(slice_slot, Const) and slice_slot.value >= cls.capacity:
             raise IndexError('list index out of range')
+        # TODO: Check list bounds in run-time
         if isinstance(slot, Const) and isinstance(slice_slot, Const):
             return converter.scope.get_by_index(slot.value + slice_slot.value, cls.item_type)
 
@@ -55,6 +56,31 @@ class ListPointer(int):
     def len(cls, converter, slot):
         return Const(cls.capacity, int)
 
+    @classmethod
+    def cap(cls, converter, slot):
+        return Const(cls.capacity, int)
+
+
+class Slice(int):
+    # TODO: Implement 'getitem' method
+    # TODO: Implement 'append' method
+
+    @classmethod
+    def new(cls, lower, upper):
+        metadata = {
+            'lower': lower,
+            'upper': upper,
+        }
+        return Const(None, cls, metadata=metadata)
+
+    @classmethod
+    def len(cls, converter, slot):
+        return slot.metadata['length']
+
+    @classmethod
+    def cap(cls, converter, slot):
+        return slot.metadata['capacity']
+
 
 class Range:
     @classmethod
@@ -72,7 +98,7 @@ class Range:
         return converter.load_bin_op(BinOp(start, Add(), BinOp(step, Mult(), slice_slot)))
 
     @classmethod
-    def call(cls, converter, func, args):
+    def call(cls, converter, func, *args):
         start_value, step_value = Const(0, int), Const(1, int)
         if len(args) == 1:
             stop_value = args[0]
@@ -86,7 +112,7 @@ class Range:
             'stop': stop_value,
             'step': step_value,
         }
-        return Const(None, Range, metadata=metadata)
+        return Const(None, cls, metadata=metadata)
 
 
 class GameObjectList:
@@ -154,7 +180,7 @@ class GameObjectMethod:
         return type('SignedFunctionType', (cls,), {'signature': signature(fn)})
 
     @classmethod
-    def call(cls, converter, func, args):
+    def call(cls, converter, func, *args):
         cls.signature.bind(None, *args)
         args = cls._shorten_args(args)
         return Call(func, args)
@@ -167,3 +193,15 @@ class GameObjectMethod:
                 arg = AssociatedSlot(arg, short_form=True)
             short_args.append(arg)
         return short_args
+
+
+class Length:
+    @classmethod
+    def call(cls, converter, func, container):
+        return container.type.len(converter, container)
+
+
+class Capacity:
+    @classmethod
+    def call(cls, converter, func, container):
+        return container.type.cap(converter, container)
