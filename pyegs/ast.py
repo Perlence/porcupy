@@ -162,12 +162,15 @@ class BinOp(AST):
     metadata = attr.ib(default=attr.Factory(dict))
 
     def __attrs_post_init__(self):
-        if issubclass(self.left.type, self.right.type):
-            self.type = self.right.type
-        elif issubclass(self.right.type, self.left.type):
-            self.type = self.left.type
+        left_type = self.left.type
+        right_type = self.right.type
+        if not issubclass(left_type, Number) or not issubclass(right_type, Number):
+            raise TypeError("binary operands '{}' and '{}' must be numbers".format(self.left, self.right))
+
+        if issubclass(left_type, float) or issubclass(right_type, float) or isinstance(self.op, Div):
+            self.type = float
         else:
-            raise TypeError("operands '{}' and '{}' are not of the same type".format(self.left, self.right))
+            self.type = int
 
     def __str__(self):
         return '{}{}{}'.format(self.left, self.op, self.right)
