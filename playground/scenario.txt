@@ -1,35 +1,36 @@
-# t1i = 1 (
-  p0z 10
+# t1i > 1 ( g99z )
 
-  p1z -5
-  // p1z -p1z -- '-p1z' is not a valid floating point value
-  // p1z 4-p1z -- '4-p1z' is not a valid floating point value
-  // p1z p1z-3-2 -- '3-2' is not a valid floating point value
+p0z 10
 
-  p1z p1z*-1
-  // p1z 3+2 -- '3+2' is not a valid floating point value
-  p1z p1z-1 yy 10 ^0 200 p1z_^1 p0z p0z+20
+p1z -5
+// p1z -p1z -- '-p1z' is not a valid floating point value
+// p1z 4-p1z -- '4-p1z' is not a valid floating point value
+// p1z p1z-3-2 -- '3-2' is not a valid floating point value
 
-  p1z 5
-  p1z p1z/0 yy 10 ^0 200 p1z_^1 p0z p0z+20
-  p1z p1z/p1z yy 10 ^0 200 p1z_^1 p0z p0z+20
+p1z p1z*-1
+// p1z 3+2 -- '3+2' is not a valid floating point value
+p1z p1z-1 yy 10 ^0 200 p1z_^1 p0z p0z+20
 
-  p1z 5
-  // p1z -1-p1z yy 10 ^0 200 p1z_^1 p0z p0z+20
+p1z 5
+p1z p1z/0 yy 10 ^0 200 p1z_^1 p0z p0z+20 // INF
+p1z p1z/p1z yy 10 ^0 200 p1z_^1 p0z p0z+20 // NAN
 
-  p1z 5
-) # t1i = 1 & 1 ! 0 ( yy 10 ^0 200 1_!_0 p0z p0z+20 )
-# t1i = 1 & -1 ! 0 ( yy 10 ^0 200 -1_!_0 p0z p0z+20 )
-# t1i = 1 & p1z+5 > 0 ( yy 10 ^0 200 p1z+5_>_0 p0z p0z+20 )
-# t1i = 1 & p1z-5 > 0 ( yy 10 ^0 200 p1z-5_>_0 p0z p0z+20 )
-# t1i = 1 & p1z+5 > p1z-5 ( yy 10 ^0 200 p1z+5_>_p1z-5 p0z p0z+20 )
-# t1i = 1 (
-  // # 5+7 ! 0 ( yy 10 ^0 200 5+7_!_0 p0z p0z+20 )
-  // # p1z+5 < 6+8 ( yy 10 ^0 200 p1z+5_<_5+7 p0z p0z+20 )
+p1z 5
+// p1z -1-p1z yy 10 ^0 200 p1z_^1 p0z p0z+20
 
-  p1z 5
-) # t1i = 1 & p1z > 0 ( yy 10 ^0 200 p1z_>_0 p0z p0z+20 ) # t1i = 1 & p1z > 0 & p1z < 3 ( yy 10 ^0 200 p1z_<_3 p0z p0z+20 )
+p1z 5
+# 1 ! 0 ( yy 10 ^0 200 1_!_0 p0z p0z+20 )
+# -1 ! 0 ( yy 10 ^0 200 -1_!_0 p0z p0z+20 )
+# p1z+5 > 0 ( yy 10 ^0 200 p1z+5_>_0 p0z p0z+20 )
+# p1z-5 > 0 ( yy 10 ^0 200 p1z-5_>_0 p0z p0z+20 )
+# p1z+5 > p1z-5 ( yy 10 ^0 200 p1z+5_>_p1z-5 p0z p0z+20 )
 
-# t1i = 1 (
-     // p22z 33 p33z 44 ym ^^22 -- '^2' is not a valid floating point value
-)
+// # 5+7 ! 0 ( yy 10 ^0 200 5+7_!_0 p0z p0z+20 ) -- '5+7' is not a valid floating point value
+// # p1z+5 < 6+8 ( yy 10 ^0 200 p1z+5_<_5+7 p0z p0z+20 ) -- '6+8' is not a valid floating point value
+
+p1z 5
+# p1z > 0 ( yy 10 ^0 200 p1z_>_0 p0z p0z+20 ) # t1i = 1 & p1z > 0 & p1z < 3 ( yy 10 ^0 200 p1z_<_3 p0z p0z+20 )
+
+// p22z 33 p33z 44 ym ^^22 -- '^2' is not a valid floating point value
+
+:99
