@@ -57,7 +57,7 @@ class ListPointer(int):
         return Const(cls.capacity, int)
 
 
-class Range(int):
+class Range:
     @classmethod
     def len(cls, converter, slot):
         start = slot.metadata['start']
@@ -70,12 +70,10 @@ class Range(int):
         # TODO: Raise error if index is greater than range length
         start = slot.metadata['start']
         step = slot.metadata['step']
-        print(repr(start), repr(step))
         return converter.load_bin_op(BinOp(start, Add(), BinOp(step, Mult(), slice_slot)))
 
     @classmethod
     def call(cls, converter, func, args):
-        # TODO: Range must be immutable
         start_value, step_value = Const(0, int), Const(1, int)
         if len(args) == 1:
             stop_value = args[0]
@@ -84,17 +82,12 @@ class Range(int):
         elif len(args) == 3:
             start_value, stop_value, step_value = args
 
-        start_slot, stop_slot, step_slot = converter.scope.allocate_many(int, 3)
-        converter.append_to_body(Assign(start_slot, start_value))
-        converter.append_to_body(Assign(stop_slot, stop_value))
-        converter.append_to_body(Assign(step_slot, step_value))
-
         metadata = {
             'start': start_value,
             'stop': stop_value,
             'step': step_value,
         }
-        return Const(start_slot.index, Range, metadata=metadata)
+        return Const(None, Range, metadata=metadata)
 
 
 class GameObjectList:

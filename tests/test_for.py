@@ -101,12 +101,11 @@ def test_continue():
 
 def test_range():
     assert (compile_('for item in range(1, 40, 3): system.message(item)') ==
-            'p5z -1 '
-            'p1z 1 p2z 40 p3z 3 '
-            ':1 p5z p5z+1 '
-            '# p5z >= 13 ( g2z ) '
-            'p6z p5z*3 p4z p6z+1 '
-            'ym ^4 '
+            'p2z -1 '
+            ':1 p2z p2z+1 '
+            '# p2z >= 13 ( g2z ) '
+            'p3z p2z*3 p1z p3z+1 '
+            'ym ^1 '
             'g1z '
             ':2')
 
@@ -114,13 +113,12 @@ def test_range():
                      'for item in range(1, x, 3):\n'
                      '    system.message(item)') ==
             'p1z 40 '
-            'p6z -1 '
-            'p2z 1 p3z p1z p4z 3 '
-            'p7z p1z-1 '
-            ':1 p6z p6z+1 '
-            '# p6z >= p7z{3 ( g2z ) '
-            'p8z p6z*3 p5z p8z+1 '
-            'ym ^5 '
+            'p3z -1 '
+            'p4z p1z-1 '
+            ':1 p3z p3z+1 '
+            '# p3z >= p4z{3 ( g2z ) '
+            'p5z p3z*3 p2z p5z+1 '
+            'ym ^2 '
             'g1z '
             ':2')
 
