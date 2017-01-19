@@ -8,7 +8,7 @@ from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
                   Label)
 from .runtime import Yegik, Timer, Point, Bot, System
-from .types import NumberType, IntType, BoolType, StringType, GameObjectRef, GameObjectList, ListPointer, Slice, Range, Length, Capacity
+from .types import NumberType, IntType, BoolType, StringType, GameObjectRef, GameObjectList, ListPointer, Slice, Range
 
 
 def compile(source, filename='<unknown>', width=None):
@@ -237,7 +237,8 @@ class NodeConverter(ast.NodeVisitor):
     def visit_Expr(self, node):
         if isinstance(node.value, ast.Call):
             expr = self.load_expr(node.value)
-            self.append_to_body(expr)
+            if expr is not None:
+                self.append_to_body(expr)
         else:
             raise NotImplementedError('plain expressions are not supported')
 
@@ -592,8 +593,10 @@ class Scope:
         self.populate_game_objects()
 
     def populate_builtins(self):
-        self.names['cap'] = Const(None, Capacity())
-        self.names['len'] = Const(None, Length())
+        from .functions import CallableType, length, capacity
+
+        self.names['cap'] = Const(None, CallableType.from_function(capacity))
+        self.names['len'] = Const(None, CallableType.from_function(length))
         self.names['range'] = Const(None, Range())
 
     def populate_game_objects(self):

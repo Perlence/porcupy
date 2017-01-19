@@ -212,15 +212,3 @@ class GameObjectMethod:
                 arg = AssociatedSlot(arg, short_form=True)
             short_args.append(arg)
         return short_args
-
-
-@attr.s
-class Length:
-    def call(self, converter, func, container):
-        return container.type.len(converter, container)
-
-
-@attr.s
-class Capacity:
-    def call(self, converter, func, container):
-        return container.type.cap(converter, container)
