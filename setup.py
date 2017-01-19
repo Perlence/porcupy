@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
-# with open('README.rst') as fp:
-#     README = fp.read()
+with open('README.rst') as fp:
+    README = fp.read()
 
 setup(
     name='porcupy',
@@ -9,7 +9,7 @@ setup(
     author='Sviatoslav Abakumov',
     author_email='dust.harvesting@gmail.com',
     description='Compile a subset of Python to Egiks in Quake II scenarios',
-    # long_description=README,
+    long_description=README,
     url='https://github.com/Perlence/porcupy',
     download_url='https://github.com/Perlence/porcupy/archive/master.zip',
     packages=find_packages('.'),
@@ -21,7 +21,6 @@ setup(
     },
     install_requires=[
         'attrs',
-        'funcy',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
