@@ -12,14 +12,15 @@ if timers[1].value == 1:
     PLAYER.spawn(2)
     PLAYER.weapon = 2
     PLAYER.has_weapon = True
+    PLAYER.ammo = 50
 
+# Restart game after player shoots
+if timers[1].value == 1 or PLAYER.ammo < 50 and BALL.health == 0:
     BALL.spawn(1)
     BALL_BOT.ai = False
     ball_speed_x = 0.0
 
-    green_armor = 0
-    yellow_armor = 0
-    red_armor = 0
+    green_armor = yellow_armor = red_armor = 0
     ball_damage = 0
 
 # Infinite ammo
@@ -33,12 +34,15 @@ if -BALL.pos_y < -FLOOR:
     BALL.health = 0
 
     system.message_at(280, 200, 1, 'Game_Over!')
-    system.message_at(280, 215, 1, 'Your score: {score}')
-    system.message_at(280, 230, 1, 'Green: {green_armor}')
-    system.message_at(280, 245, 1, 'Yellow: {yellow_armor}')
-    system.message_at(280, 260, 1, 'Red: {red_armor}')
-    system.message_at(280, 275, 1, 'Game duration: {game_duration}')
-    system.message_at(280, 290, 1, 'Ball damage: {ball_damage}')
+
+    system.message_at(280, 230, 1, 'Your score: {score}')
+    system.message_at(280, 245, 1, 'Green: {green_armor}')
+    system.message_at(280, 260, 1, 'Yellow: {yellow_armor}')
+    system.message_at(280, 275, 1, 'Red: {red_armor}')
+    system.message_at(280, 290, 1, 'Game duration: {game_duration}')
+    system.message_at(280, 305, 1, 'Ball damage: {ball_damage}')
+
+    system.message_at(280, 335, 1, 'Shoot to restart')
 
 # Scoring
 if BALL.armor > 0:
