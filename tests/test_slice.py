@@ -147,3 +147,39 @@ def test_for():
             '# p12z >= p9z ( g2z ) '
             'p13z p8z+p12z p16z p^13z p11z p16z ym ^11 '
             'g1z :2')
+
+
+def test_append():
+    assert (compile_('x = [0, 0, 0]\n'
+                     'y = x[:0]\n'
+                     'y.append(11)\n'
+                     'y.append(22)\n'
+                     'y.append(33)') ==
+            'p1z 0 p2z 0 p3z 0 p4z 1 '
+            'p5z p4z+0 p6z 0 p7z 3 '
+            'p8z p5z+p6z p^8z 11 p6z p6z+1 '
+            'p8z p5z+p6z p^8z 22 p6z p6z+1 '
+            'p8z p5z+p6z p^8z 33 p6z p6z+1')
+
+    assert (compile_('x = [0, 0, 0]\n'
+                     'y = x[:0]\n'
+                     'y.append(11)\n'
+                     'y.append(22)\n'
+                     'y.append(33)\n'
+                     'for item in y:'
+                     '    system.message(item)') ==
+            'p1z 0 p2z 0 p3z 0 p4z 1 '
+            'p5z p4z+0 p6z 0 p7z 3 '
+            'p9z p5z+p6z p^9z 11 p6z p6z+1 '
+            'p9z p5z+p6z p^9z 22 p6z p6z+1 '
+            'p9z p5z+p6z p^9z 33 p6z p6z+1 '
+            'p9z -1 :1 p9z p9z+1 # p9z >= p6z ( g2z ) '
+            'p10z p5z+p9z p11z p^10z p8z p11z ym ^8 g1z :2')
+
+"""
+# p0z ! 0 ( yc 188 yy 10 10 1 $0 g99z )
+
+p0z 1 s0z cannot_append_to_a_full_slice g99z
+
+:99
+"""

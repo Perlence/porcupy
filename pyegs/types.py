@@ -1,8 +1,10 @@
+import ast
 from inspect import signature
 
 import attr
 
 from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Mult, FloorDiv, Assign, Call
+from .functions import CallableType
 
 
 @attr.s
@@ -87,11 +89,10 @@ def item_addr(converter, slot, index_slot):
 
 
 @attr.s
-class Slice(IntType):
-    # TODO: Implement 'getitem' method
-    # TODO: Implement 'append' method
-
+class Slice:
     item_type = attr.ib()
+
+    slot_methods = {'append'}
 
     def get_pointer(self, converter, slot):
         return slot.metadata['pointer']
@@ -105,6 +106,37 @@ class Slice(IntType):
 
     def cap(self, converter, slot):
         return slot.metadata['capacity']
+
+    def getattr(self, converter, slot, attr_name):
+        attrib = getattr(self, attr_name)
+        if attr_name in self.slot_methods:
+            return Const(None, CallableType.from_function(attrib, slot))
+        raise AttributeError("type object '{}' has no attribute '{}'".format(self, attr_name))
+
+    def append(self, converter, slot, value):
+        pointer = slot.metadata['pointer']
+        length = slot.metadata['length']
+        length_slot = slot.metadata['length_slot']
+        capacity = slot.metadata['capacity']
+
+        if isinstance(length, Const) and isinstance(capacity, Const):
+            if length.value >= capacity.value:
+                raise IndexError('cannot append to a full slice')
+        else:
+            # TODO: Raise error in real-time
+            pass
+
+        tmp = converter.scope.get_temporary(IntType())
+        new_item_ptr = converter.load_bin_op(BinOp(pointer, Add(), length_slot))
+        converter.append_to_body(Assign(tmp, new_item_ptr))
+
+        reference = AssociatedSlot(tmp, ref=tmp)
+        converter.append_to_body(Assign(reference, value))
+        converter.scope.recycle_temporary(tmp)
+
+        converter.visit(ast.AugAssign(length_slot, ast.Add(), ast.Num(1)))
+
+        slot.metadata['length'] = length_slot
 
 
 @attr.s

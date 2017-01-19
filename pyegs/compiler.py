@@ -377,6 +377,7 @@ class NodeConverter(ast.NodeVisitor):
         result.metadata['pointer'] = ptr_value if isinstance(ptr_value, Const) else ptr_slot
         result.metadata['length'] = len_value if isinstance(len_value, Const) else len_slot
         result.metadata['capacity'] = cap_value if isinstance(cap_value, Const) else cap_slot
+        result.metadata['length_slot'] = len_slot
         result.metadata['pointer'].metadata = result.metadata
         return result
 
