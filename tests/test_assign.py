@@ -230,11 +230,17 @@ def test_aug_assign():
     # assert "name 'x' is not defined" in str(exc_info.value)
 
 
-@pytest.mark.skip('Not implemented yet')
 def test_static_type():
-    with pytest.raises(TypeError) as exc_info:
-        compile_('x = 1; x = "s"')
-    assert "cannot assign object of type 'str' to variable of type 'Number'" in str(exc_info.value)
+    sources = [
+        'x = 1; x = "s"',
+        'x = [11, 22, 33]; x = 3',
+        'x = [11, 22, 33]; x = [44, 55, 66, 77]',
+        'x = range(4); x = 0',
+        'x = [11, 22, 33]; y = x[:]; y = [1]',
+        # 'bots[2].goto = 4',
+    ]
 
-    with pytest.raises(TypeError) as exc_info:
-        assert compile_('bots[2].goto = 4')
+    for source in sources:
+        with pytest.raises(TypeError) as exc_info:
+            compile_('x = 1; x = "s"')
+        assert 'cannot assign object of type' in str(exc_info.value)

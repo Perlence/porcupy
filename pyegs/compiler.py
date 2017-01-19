@@ -613,13 +613,21 @@ class Scope:
 
         slot = self.names.get(name)
         if slot is not None:
-            # TODO: Check destination type
+            self.check_type(slot, src_slot)
             return slot
+
         slot = self.allocate(src_slot.type)
         slot.type = src_slot.type
         slot.metadata = src_slot.metadata
         self.names[name] = slot
         return slot
+
+    def check_type(self, dest_slot, src_slot):
+        dest_type = dest_slot.type
+        src_type = src_slot.type
+        if (not isinstance(src_type, type(dest_type)) or
+                attr.fields(type(src_type)) and src_type != dest_type):
+            raise TypeError("cannot assign object of type '{!r}' to variable of type '{!r}'".format(src_type, dest_type))
 
     def get_by_index(self, index, type):
         if isinstance(type, NumberType):
