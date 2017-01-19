@@ -5,17 +5,19 @@ BALL_BOT = bots[1]
 FLOOR = points[0].pos_y
 CEIL = points[1].pos_y
 
+PUNCH_VELOCITY = 15
+
 # Initialization
 if timers[1].value == 1:
     system.bots = 1
 
     PLAYER.spawn(2)
-    PLAYER.weapon = 2
+    PLAYER.weapon = 7
     PLAYER.has_weapon = True
-    PLAYER.ammo = 50
+    PLAYER.ammo = 30
 
 # Restart game after player shoots
-if timers[1].value == 1 or PLAYER.ammo < 50 and BALL.health == 0:
+if timers[1].value == 1 or PLAYER.ammo < 30 and BALL.health == 0:
     BALL.spawn(1)
     BALL_BOT.ai = False
     ball_speed_x = 0.0
@@ -23,8 +25,12 @@ if timers[1].value == 1 or PLAYER.ammo < 50 and BALL.health == 0:
     green_armor = yellow_armor = red_armor = 0
     ball_damage = 0
 
-# Infinite ammo
-PLAYER.ammo = 50
+PLAYER.health = 100
+
+if PLAYER.ammo < 30:
+    launch_x = PLAYER.pos_x
+    launch_y = PLAYER.pos_y
+    PLAYER.ammo = 30
 
 # End screen
 if -BALL.pos_y < -FLOOR:
@@ -60,32 +66,34 @@ if BALL.health > 0:
     system.message_at(30, 30, 1, 'Your score: {score}')
 
 # Ball movement
-BALL.speed_y *= 0.9
+if BALL.speed_y > 0:
+    BALL.speed_y *= 0.9
 
 # Ball bouncing off the walls
 if BALL.speed_x != 0 and BALL.speed_y != 0:
     ball_speed_x = BALL.speed_x
+    ball_speed_y = BALL.speed_y
 if ball_speed_x != 0 and BALL.speed_x == 0 and BALL.speed_y != 0:
     ball_speed_x *= -1.0
     BALL.speed_x = ball_speed_x
 if -BALL.pos_y > -CEIL:
     BALL.pos_y = CEIL
-    BALL.speed_y *= -0.5
+    BALL.speed_y *= -1.0
 
 # Ball impulse
 is_ball_damaged = 0 < BALL.health < 100
 if is_ball_damaged:
-    speed_x = BALL.pos_x - PLAYER.pos_x
-    speed_y = (PLAYER.pos_y - BALL.pos_y) / (speed_x * 0.1)
+    dist_x = BALL.pos_x - launch_x
+    dist_y = BALL.pos_y - launch_y
 
-    if speed_x < 0:
-        speed_x = -10.0
-    elif speed_x > 0:
-        speed_x = 10.0
-        speed_y *= -1.0
+    # Calculate length of speed vector via Newton's method
+    sqr_hypo = dist_y*dist_y + dist_x*dist_x
+    hypo = sqr_hypo/2
+    for _ in range(8):
+        hypo = (hypo + sqr_hypo/hypo) / 2
 
-    BALL.speed_x = speed_x
-    BALL.speed_y = speed_y
+    BALL.speed_x = dist_x/hypo * PUNCH_VELOCITY/2
+    BALL.speed_y = dist_y/hypo * PUNCH_VELOCITY
 
     ball_damage += 100 - BALL.health
     BALL.health = 100
