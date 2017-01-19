@@ -1,6 +1,6 @@
 import pytest
 
-from pyegs.compiler import compile as compile_
+from porcupy.compiler import compile as compile_
 
 
 def test_iterate_lists():

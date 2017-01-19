@@ -1,6 +1,6 @@
 import pytest
 
-from pyegs.compiler import compile as compile_
+from porcupy.compiler import compile as compile_
 
 
 @pytest.mark.skip('Not implemented yet')

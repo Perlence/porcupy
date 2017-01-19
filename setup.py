@@ -4,19 +4,19 @@ from setuptools import setup, find_packages
 #     README = fp.read()
 
 setup(
-    name='pyegs',
+    name='porcupy',
     version='0.1',
     author='Sviatoslav Abakumov',
     author_email='dust.harvesting@gmail.com',
     description='Compile a subset of Python to Egiks in Quake II scenarios',
     # long_description=README,
-    url='https://github.com/Perlence/pyegs',
-    download_url='https://github.com/Perlence/pyegs/archive/master.zip',
+    url='https://github.com/Perlence/porcupy',
+    download_url='https://github.com/Perlence/porcupy/archive/master.zip',
     packages=find_packages('.'),
     zip_safe=False,
     entry_points={
         'console_scripts': [
-            'pyegs = pyegs.cli:main',
+            'porcupy = porcupy.cli:main',
         ],
     },
     install_requires=[
