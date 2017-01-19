@@ -9,6 +9,7 @@ def test_call():
     assert compile_('yegiks[1].spawn(1)') == 'e2b 1'
     assert compile_('timers[2].start()') == 't2g'
     assert compile_('SPAWNS = [2, 3]; yegiks[1].spawn(SPAWNS[0])') == 'p1z 2 p2z 3 e2b ^1'
+    assert compile_('SPAWNS = [2, 3]; yegiks[1].spawn(SPAWNS[0]); yegiks[1].spawn(SPAWNS[1])') == 'p1z 2 p2z 3 e2b ^1 e2b ^2'
 
     with pytest.raises(NotImplementedError):
         assert compile_('yegiks[1].spawn(point=1)')

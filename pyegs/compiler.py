@@ -11,18 +11,21 @@ from .runtime import Yegik, Timer, Point, Bot, System
 from .types import NumberType, IntType, BoolType, StringType, GameObjectRef, GameObjectList, ListPointer, Slice, Range, Length, Capacity
 
 
-def compile(source, filename='<unknown>'):
+def compile(source, filename='<unknown>', width=None):
     top = ast.parse(source, filename)
 
     converter = NodeConverter()
     converted_top = converter.visit(top)
     converter.scope.allocate_temporary()
     compiled = str(converted_top)
-    return codewrap(compiled)
+    return codewrap(compiled, width)
 
 
-def codewrap(text, width=255):
+def codewrap(text, width):
     stmts = text.split('  ')
+    if width is None:
+        return ' '.join(stmts)
+
     lines = []
     line = []
     for stmt in stmts:
@@ -290,7 +293,7 @@ class NodeConverter(ast.NodeVisitor):
         for dest_slot, item in zip(item_slots, loaded_items):
             self.append_to_body(Assign(dest_slot, item))
         first_item = item_slots[0]
-        return Const(first_item.index, ListPointer(capacity, item_type))
+        return Const(first_item.index, ListPointer(item_type, capacity))
 
     def type_of_objects(self, objects):
         type_set = set()
@@ -319,7 +322,6 @@ class NodeConverter(ast.NodeVisitor):
         if isinstance(ctx, ast.Load):
             if not hasattr(value_slot.type, 'getitem'):
                 raise NotImplementedError("getting item of collection of type '{}' is not implemented yet".format(value_slot.type))
-
             return value_slot.type.getitem(self, value_slot, slice_slot)
 
         elif isinstance(ctx, ast.Store):
@@ -338,10 +340,11 @@ class NodeConverter(ast.NodeVisitor):
         return slice(lower, upper)
 
     def load_slice_subscript(self, value_slot, slice_slot):
+        list_ptr = value_slot.type.get_pointer(self, value_slot)
+        src_capacity = value_slot.type.cap(self, value_slot)
+
         lower = slice_slot.start
         upper = slice_slot.stop
-
-        src_capacity = value_slot.type.cap(self, value_slot)
 
         if lower is None:
             lower = Const(0)
@@ -351,42 +354,17 @@ class NodeConverter(ast.NodeVisitor):
         bounds = [lower, upper]
         tmp = [None, None]
         for i, bound in enumerate(bounds):
-            if isinstance(bound, Const) and isinstance(src_capacity, Const):
-                # This clause will be unnecessary once comparison
-                # optimization is complete
-                if bound.value > src_capacity.value:
-                    bounds[i].value = src_capacity.value
-                elif bound.value <= -src_capacity.value:
-                    bounds[i].value = 0
-                if bound.value < 0:
-                    bounds[i].value = src_capacity.value + bound.value
-            else:
-                tmp[i] = self.scope.get_temporary(IntType())
-                self.append_to_body(Assign(tmp[i], bound))
-                self.append_to_body(If(
-                    Compare(bound, ast.Gt(), src_capacity),
-                    body=[
-                        Assign(tmp[i], src_capacity),
-                    ]))
-                self.append_to_body(If(
-                    Compare(bound, ast.LtE(), self.load_unary_op(ast.UnaryOp(ast.USub(), src_capacity))),
-                    body=[
-                        Assign(tmp[i], Const(0)),
-                    ]))
-                self.append_to_body(If(
-                    Compare(bound, ast.Lt(), Const(0)),
-                    body=[
-                        Assign(tmp[i], self.load_bin_op(BinOp(src_capacity, Add(), bound))),
-                    ]))
-                bounds[i] = tmp[i]
+            bounds[i], tmp[i] = self.simplify_slice_bound(bound, src_capacity)
 
         lower, upper = bounds
 
+        ptr_value = self.load_bin_op(BinOp(list_ptr, Add(), lower))
         len_value = self.load_bin_op(BinOp(upper, Sub(), lower))
         cap_value = self.load_bin_op(BinOp(src_capacity, Sub(), lower))
-        pointer_value = self.load_bin_op(BinOp(value_slot, Add(), lower))
 
+        ptr_slot = self.scope.allocate(ListPointer(value_slot.type.item_type, None))
         len_slot, cap_slot = self.scope.allocate_many(IntType(), 2)
+        self.append_to_body(Assign(ptr_slot, ptr_value))
         self.append_to_body(Assign(len_slot, len_value))
         self.append_to_body(Assign(cap_slot, cap_value))
 
@@ -394,18 +372,43 @@ class NodeConverter(ast.NodeVisitor):
             if slot is not None:
                 self.scope.recycle_temporary(slot)
 
-        # TODO: Store 'pointer_value' in a temporary slot
+        result = Const(None, Slice(value_slot.type.item_type))
+        result.metadata['pointer'] = ptr_value if isinstance(ptr_value, Const) else ptr_slot
+        result.metadata['length'] = len_value if isinstance(len_value, Const) else len_slot
+        result.metadata['capacity'] = cap_value if isinstance(cap_value, Const) else cap_slot
+        result.metadata['pointer'].metadata = result.metadata
+        return result
 
-        # pointer_tmp = self.scope.get_temporary(Slice(value_slot.type.item_type))
-        # self.append_to_body(Assign(pointer_tmp, pointer_value))
-        # self.recycle_later(pointer_tmp)
+    def simplify_slice_bound(self, bound, src_capacity):
+        if isinstance(bound, Const) and isinstance(src_capacity, Const):
+            # This clause will be unnecessary once comparison
+            # optimization is complete
+            if bound.value > src_capacity.value:
+                bound.value = src_capacity.value
+            elif bound.value <= -src_capacity.value:
+                bound.value = 0
+            if bound.value < 0:
+                bound.value = src_capacity.value + bound.value
+            return bound, None
 
-        pointer_value.type = Slice(value_slot.type.item_type)
-        pointer_value.metadata = {
-            'length': len_value,
-            'capacity': cap_value,
-        }
-        return pointer_value
+        tmp = self.scope.get_temporary(IntType())
+        self.append_to_body(Assign(tmp, bound))
+        self.append_to_body(If(
+            Compare(bound, ast.Gt(), src_capacity),
+            body=[
+                Assign(tmp, src_capacity),
+            ]))
+        self.append_to_body(If(
+            Compare(bound, ast.LtE(), self.load_unary_op(ast.UnaryOp(ast.USub(), src_capacity))),
+            body=[
+                Assign(tmp, Const(0)),
+            ]))
+        self.append_to_body(If(
+            Compare(bound, ast.Lt(), Const(0)),
+            body=[
+                Assign(tmp, self.load_bin_op(BinOp(src_capacity, Add(), bound))),
+            ]))
+        return tmp, tmp
 
     def load_extended_bool_op(self, value):
         initial = Const(False)
@@ -604,6 +607,10 @@ class Scope:
         self.names[name] = value
 
     def assign(self, name, src_slot):
+        if isinstance(src_slot, Const) and src_slot.value is None:
+            self.define_const(name, src_slot)
+            return
+
         slot = self.names.get(name)
         if slot is not None:
             # TODO: Check destination type
@@ -616,17 +623,16 @@ class Scope:
 
     def get_by_index(self, index, type):
         if isinstance(type, NumberType):
-            slots = self.numeric_slots.slots
+            slots = self.numeric_slots
             register = 'p'
         elif isinstance(type, StringType):
-            slots = self.string_slots.slots
+            slots = self.string_slots
             register = 's'
         else:
             raise TypeError("cannot get slot of type '{}'".format(type))
 
-        is_reserved = slots[index]
-        if not is_reserved:
-            raise IndexError("variable #{} is not reserved".format(index))
+        if not slots.is_reserved(index):
+            raise IndexError("slot #{} is not reserved".format(index))
         return Slot(register, index, 'z', type)
 
     def allocate(self, type):
@@ -694,8 +700,8 @@ class Slots:
                 return addr + self.start
         raise MemoryError('ran out of variable slots')
 
-    def free(self, addr):
-        self.slots[addr-self.start] = None
+    def is_reserved(self, addr):
+        return self.slots[addr-self.start] is RESERVED
 
     def count_reserved(self):
         return len(slot for slot in self.slots if slot is RESERVED)

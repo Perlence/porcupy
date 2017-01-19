@@ -24,7 +24,7 @@ def main():
 
 def cli(reader, writer):
     source = reader.read()
-    print(compiler.compile(source), file=writer)
+    print(compiler.compile(source, width=59), file=writer)
 
 
 if __name__ == '__main__':

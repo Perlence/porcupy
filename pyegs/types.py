@@ -32,8 +32,11 @@ class StringType:
 
 @attr.s
 class ListPointer(NumberType):
-    capacity = attr.ib()
     item_type = attr.ib()
+    capacity = attr.ib()
+
+    def get_pointer(self, converter, slot):
+        return slot
 
     def getitem(self, converter, slot, slice_slot):
         capacity_slot = self.cap(converter, slot)
@@ -46,12 +49,12 @@ class ListPointer(NumberType):
 
         pointer_math_slot = item_addr(converter, slot, slice_slot)
         reference = AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
-        slot = converter.scope.get_temporary(self.item_type)
-        converter.append_to_body(Assign(slot, reference))
+        item_slot = converter.scope.get_temporary(self.item_type)
+        converter.append_to_body(Assign(item_slot, reference))
         converter.scope.recycle_temporary(pointer_math_slot)
-        converter.recycle_later(slot)
+        converter.recycle_later(item_slot)
 
-        return slot
+        return item_slot
 
     def setitem(self, converter, slot, slice_slot):
         if isinstance(slot, Const):
@@ -60,10 +63,10 @@ class ListPointer(NumberType):
             raise IndexError('list index out of range')
 
         if isinstance(self.item_type, GameObjectRef):
-            slot = converter.scope.get_temporary(self.item_type)
-            converter.append_to_body(Assign(slot, slot))
-            converter.recycle_later(slot)
-            return slot
+            item_slot = converter.scope.get_temporary(self.item_type)
+            converter.append_to_body(Assign(item_slot, slot))
+            converter.recycle_later(item_slot)
+            return item_slot
         else:
             pointer_math_slot = item_addr(converter, slot, slice_slot)
             converter.recycle_later(pointer_math_slot)
@@ -90,8 +93,12 @@ class Slice(IntType):
 
     item_type = attr.ib()
 
+    def get_pointer(self, converter, slot):
+        return slot.metadata['pointer']
+
     def getitem(self, converter, slot, slice_slot):
-        return ListPointer.getitem(self, converter, slot, slice_slot)
+        ptr_slot = slot.metadata['pointer']
+        return ListPointer.getitem(self, converter, ptr_slot, slice_slot)
 
     def len(self, converter, slot):
         return slot.metadata['length']
@@ -201,7 +208,7 @@ class GameObjectMethod:
     def _shorten_args(self, args):
         short_args = []
         for arg in args:
-            if isinstance(arg, Slot):
+            if isinstance(arg, (Slot, AssociatedSlot)):
                 arg = AssociatedSlot(arg, short_form=True)
             short_args.append(arg)
         return short_args

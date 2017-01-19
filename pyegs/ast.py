@@ -68,7 +68,7 @@ class Const(AST):
         elif isinstance(self.type, StringType):
             return self.value.replace(' ', '_')
         else:
-            raise TypeError("cannot format '{}' const".format(self.type.type))
+            raise TypeError("cannot format '{}' const".format(self.type))
 
 
 @attr.s

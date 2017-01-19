@@ -182,9 +182,7 @@ def test_range():
 
     assert compile_('X = range(11, 44, 11); y = X[0]; y = X[2]') == 'p1z 11 p1z 33'
 
-    with pytest.raises(TypeError) as exc_info:
-        compile_('x = range(5)')
-    assert 'cannot allocate slot' in str(exc_info)
+    assert compile_('x = range(5)') == ''
 
 
 def test_multiple_assign():
