@@ -191,6 +191,9 @@ def test_multiple_assign():
 
 
 def test_game_objects():
+    # TODO: Make this assertion work
+    # assert compile_('x = system') == ''
+
     assert compile_('x = yegiks[0].frags') == 'p1z e1f'
     assert compile_('x = 1; y = yegiks[x].frags') == 'p1z 1 p3z p1z+1 p2z e^3f'
     assert compile_('x = 5; y = yegiks[x]') == 'p1z 5 p3z p1z+1 p2z p3z'
@@ -228,6 +231,8 @@ def test_aug_assign():
     # with pytest.raises(NameError) as exc_info:
     #     compile_('x += 4')
     # assert "name 'x' is not defined" in str(exc_info.value)
+
+    assert compile_('x = yegiks[1].speed_x; x *= -1') == 'p1z e2u p1z p1z*-1'
 
 
 def test_static_type():

@@ -26,6 +26,7 @@ def test_call():
 
     assert compile_('x = 2; system.message(x)') == 'p1z 2 ym ^1'
     assert compile_('s = "Hello World"; system.message(s)') == 's0z Hello_World ym $0'
+    assert compile_('system.message(yegiks[0].health)') == 'p1z e1h ym ^1'
 
     # assert compile_('subject = "World"; system.message("Hello {subject}")') == 's0z World ym Hello_$0'
     # assert compile_('n = 2; system.message("Egiks in Quake {n}")') == 'p1z 2 ym Egiks_in_Quake_^1'

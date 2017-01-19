@@ -87,7 +87,7 @@ class Slot(AST):
     def __str__(self):
         if self.short_form:
             if self.register not in ('p', 's'):
-                raise ValueError("unable output slot '{}' in short form".format(self))
+                raise ValueError("unable output slot '{!r}' in short form".format(self))
             prefix = '^' if self.register == 'p' else '$'
             return '{}{}'.format(prefix, self.index)
         elif self.attrib is not None:
