@@ -8,7 +8,8 @@ from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
                   Label)
 from .runtime import Yegik, Timer, Point, Bot, System
-from .types import NumberType, IntType, BoolType, StringType, GameObjectRef, GameObjectList, ListPointer, Slice, Range
+from .types import (NumberType, IntType, BoolType, FloatType, StringType,
+                    GameObjectRef, GameObjectList, ListPointer, Slice, Range)
 
 
 def compile(source, filename='<unknown>', width=None):
@@ -279,7 +280,8 @@ class NodeConverter(ast.NodeVisitor):
             return Const(value.n)
         frac = Fraction(str(value.n))
         if frac.denominator == 1:
-            return Const(frac.numerator)
+            return Const(frac.numerator, FloatType())
+        # TODO: Check when defining a floating point constant
         return self.load_bin_op(BinOp(Const(frac.numerator), Div(), Const(frac.denominator)))
 
     def load_list(self, value):
