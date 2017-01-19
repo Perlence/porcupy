@@ -22,6 +22,7 @@ def test_consts():
 
 def test_numbers():
     assert compile_('x = 4') == 'p1z 4'
+    assert compile_('x = 4.0') == 'p1z 4'
     assert compile_('x = 4.5') == 'p2z 9 p1z p2z/2'
     assert compile_('x = 4; y = 5') == 'p1z 4 p2z 5'
     assert compile_('x = 4; x = 5') == 'p1z 4 p1z 5'

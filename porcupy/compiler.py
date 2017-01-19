@@ -278,6 +278,8 @@ class NodeConverter(ast.NodeVisitor):
         if not isinstance(value.n, float):
             return Const(value.n)
         frac = Fraction(str(value.n))
+        if frac.denominator == 1:
+            return Const(frac.numerator)
         return self.load_bin_op(BinOp(Const(frac.numerator), Div(), Const(frac.denominator)))
 
     def load_list(self, value):
