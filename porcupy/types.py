@@ -103,14 +103,14 @@ class Slice:
         return ListPointer.getitem(self, converter, ptr_slot, slice_slot)
 
     def setitem(self, converter, slot, slice_slot):
-        ptr_slot = slot.metadata['pointer_slot']
+        ptr_slot = slot.metadata['pointer']
         return ListPointer.setitem(self, converter, ptr_slot, slice_slot)
 
     def len(self, converter, slot):
-        return slot.metadata['length']
+        return slot.metadata['length'][0]
 
     def cap(self, converter, slot):
-        return slot.metadata['capacity']
+        return slot.metadata['capacity'][0]
 
     def getattr(self, converter, slot, attr_name):
         attrib = getattr(self, attr_name)
@@ -120,28 +120,27 @@ class Slice:
 
     def append(self, converter, slot, value):
         pointer = slot.metadata['pointer']
-        length = slot.metadata['length']
-        length_slot = slot.metadata['length_slot']
-        capacity = slot.metadata['capacity']
+        len_slot, len_value = slot.metadata['length']
+        _, cap_value = slot.metadata['capacity']
 
-        if isinstance(length, Const) and isinstance(capacity, Const):
-            if length.value >= capacity.value:
+        if isinstance(len_value, Const) and isinstance(cap_value, Const):
+            if len_value.value >= cap_value.value:
                 raise IndexError('cannot append to a full slice')
         else:
             # TODO: Raise error in real-time
             pass
 
         tmp = converter.scope.get_temporary(IntType())
-        new_item_ptr = converter.load_bin_op(BinOp(pointer, Add(), length_slot))
+        new_item_ptr = converter.load_bin_op(BinOp(pointer, Add(), len_slot))
         converter.append_to_body(Assign(tmp, new_item_ptr))
 
         reference = AssociatedSlot(tmp, ref=tmp)
         converter.append_to_body(Assign(reference, value))
         converter.scope.recycle_temporary(tmp)
 
-        converter.visit(ast.AugAssign(length_slot, ast.Add(), ast.Num(1)))
+        converter.visit(ast.AugAssign(len_slot, ast.Add(), ast.Num(1)))
 
-        slot.metadata['length'] = length_slot
+        slot.metadata['length'] = (len_slot, len_value)
 
 
 @attr.s

@@ -53,7 +53,9 @@ def test_assign():
                      'z = y[:]') ==
             'p1z 11 p2z 22 p3z 33 p4z 1 '
             'p5z p4z+0 p6z 3 p7z 3 '
-            'p8z p5z+0 p9z 3 p10z 3')
+            'p11z 0 # 0 > p7z ( p11z p7z ) # 0 <= p7z*-1 ( p11z 0 ) # 0 < 0 ( p11z p7z+0 ) '
+            'p12z p7z # p7z > p7z ( p12z p7z ) # p7z <= p7z*-1 ( p12z 0 ) # p7z < 0 ( p12z p7z+p7z ) '
+            'p8z p5z+p11z p9z p12z-p11z p10z p7z-p11z')
 
 
 def test_len_cap():
@@ -72,12 +74,12 @@ def test_len_cap():
 
     assert (compile_('x = [11, 22, 33]\n'
                      'y = x[:]\n'
-                     'z = len(x)\n'
-                     'z = cap(x)') ==
+                     'z = len(y)\n'
+                     'z = cap(y)') ==
             'p1z 11 p2z 22 p3z 33 p4z 1 '
             'p5z p4z+0 p6z 3 p7z 3 '
-            'p8z 3 '
-            'p8z 3')
+            'p8z p6z '
+            'p8z p7z')
 
 
 def test_get_item():
@@ -184,7 +186,8 @@ def test_set_item():
             'p1z 11 p2z 22 p3z 33 '
             'p4z 2 p5z 2 p6z 2 '
             'p7z p4z+0 p^7z 55 '
-            'ym ^2')
+            'p7z p4z+0 p8z p^7z '
+            'ym ^8')
     assert (compile_('x = [11, 22, 33]\n'
                      'y = x[1:]\n'
                      'y[0] = 55\n'

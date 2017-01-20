@@ -378,13 +378,10 @@ class NodeConverter(ast.NodeVisitor):
                 self.scope.recycle_temporary(slot)
 
         result = Const(None, Slice(value_slot.type.item_type))
-        result.metadata['pointer'] = ptr_value if isinstance(ptr_value, Const) else ptr_slot
-        result.metadata['length'] = len_value if isinstance(len_value, Const) else len_slot
-        result.metadata['capacity'] = cap_value if isinstance(cap_value, Const) else cap_slot
-        result.metadata['pointer_slot'] = ptr_slot
-        result.metadata['length_slot'] = len_slot
+        result.metadata['pointer'] = ptr_slot
+        result.metadata['length'] = (len_slot, len_value)
+        result.metadata['capacity'] = (cap_slot, cap_value)
         result.metadata['pointer'].metadata = result.metadata
-        result.metadata['pointer_slot'].metadata = result.metadata
         return result
 
     def simplify_slice_bound(self, bound, src_capacity):
