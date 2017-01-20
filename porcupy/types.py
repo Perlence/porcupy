@@ -3,7 +3,7 @@ from inspect import signature
 
 import attr
 
-from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Mult, FloorDiv, Assign, Call
+from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Mult, FloorDiv, Mod, Assign, Call
 from .functions import CallableType
 
 
@@ -42,22 +42,13 @@ class ListPointer(NumberType):
 
     def getitem(self, converter, slot, slice_slot):
         # TODO: Implement negative indices
-        capacity_slot = self.cap(converter, slot)
-        if isinstance(slice_slot, Const) and isinstance(capacity_slot, Const):
-            if slice_slot.value >= capacity_slot.value:
-                raise IndexError('list index out of range')
+        if isinstance(slice_slot, Const) and slice_slot.value >= self.capacity:
+            raise IndexError('list index out of range')
         # TODO: Check list bounds in run-time
         if isinstance(slot, Const) and isinstance(slice_slot, Const):
             return converter.scope.get_by_index(slot.value + slice_slot.value, self.item_type)
 
-        pointer_math_slot = item_addr(converter, slot, slice_slot)
-        reference = AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
-        item_slot = converter.scope.get_temporary(self.item_type)
-        converter.append_to_body(Assign(item_slot, reference))
-        converter.scope.recycle_temporary(pointer_math_slot)
-        converter.recycle_later(item_slot)
-
-        return item_slot
+        return get_slot_via_offset(converter, slot, slice_slot, self.item_type)
 
     def setitem(self, converter, slot, slice_slot):
         capacity_slot = self.cap(converter, slot)
@@ -82,35 +73,59 @@ class ListPointer(NumberType):
         return Const(self.capacity)
 
 
-def item_addr(converter, slot, index_slot):
+def get_slot_via_offset(converter, pointer, offset, type):
+    pointer_math_slot = item_addr(converter, pointer, offset)
+    reference = AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
+
+    item_slot = converter.scope.get_temporary(type)
+    converter.append_to_body(Assign(item_slot, reference))
+    converter.scope.recycle_temporary(pointer_math_slot)
+    converter.recycle_later(item_slot)
+
+    return item_slot
+
+
+def item_addr(converter, pointer, offset):
     pointer_math_slot = converter.scope.get_temporary(IntType())
-    addition = converter.load_bin_op(BinOp(slot, Add(), index_slot))
+    addition = converter.load_bin_op(BinOp(pointer, Add(), offset))
     converter.append_to_body(Assign(pointer_math_slot, addition))
     return pointer_math_slot
 
 
 @attr.s
-class Slice:
+class Slice(IntType):
     item_type = attr.ib()
 
     slot_methods = {'append'}
 
+    def new(self, converter, pointer, length, capacity):
+        # pointer * 16384 + length * 128 + capacity
+        result = converter.load_bin_op(
+            BinOp(BinOp(pointer, Mult(), Const(16384)), Add(),
+                  BinOp(BinOp(length, Mult(), Const(128)), Add(),
+                        capacity)))
+        result.type = self
+        return result
+
     def get_pointer(self, converter, slot):
-        return slot.metadata['pointer']
-
-    def getitem(self, converter, slot, slice_slot):
-        ptr_slot = slot.metadata['pointer']
-        return ListPointer.getitem(self, converter, ptr_slot, slice_slot)
-
-    def setitem(self, converter, slot, slice_slot):
-        ptr_slot = slot.metadata['pointer']
-        return ListPointer.setitem(self, converter, ptr_slot, slice_slot)
+        # slot // 16384
+        return converter.load_bin_op(BinOp(slot, FloorDiv(), Const(16384)))
 
     def len(self, converter, slot):
-        return slot.metadata['length'][0]
+        # slot // 128 % 128
+        return converter.load_bin_op(BinOp(BinOp(slot, FloorDiv(), Const(128)), Mod(), Const(128)))
 
     def cap(self, converter, slot):
-        return slot.metadata['capacity'][0]
+        # slot % 128
+        return converter.load_bin_op(BinOp(slot, Mod(), Const(128)))
+
+    def getitem(self, converter, slot, slice_slot):
+        ptr_slot = self.get_pointer(converter, slot)
+        return get_slot_via_offset(converter, ptr_slot, slice_slot, self.item_type)
+
+    def setitem(self, converter, slot, slice_slot):
+        ptr_slot = self.get_pointer(converter, slot)
+        return ListPointer.setitem(self, converter, ptr_slot, slice_slot)
 
     def getattr(self, converter, slot, attr_name):
         attrib = getattr(self, attr_name)
@@ -119,28 +134,22 @@ class Slice:
         raise AttributeError("type object '{}' has no attribute '{}'".format(self, attr_name))
 
     def append(self, converter, slot, value):
-        pointer = slot.metadata['pointer']
-        len_slot, len_value = slot.metadata['length']
-        _, cap_value = slot.metadata['capacity']
+        pointer = self.get_pointer(converter, slot)
+        length = self.len(converter, slot)
+        # capacity = self.cap(converter, slot)
 
-        if isinstance(len_value, Const) and isinstance(cap_value, Const):
-            if len_value.value >= cap_value.value:
-                raise IndexError('cannot append to a full slice')
-        else:
-            # TODO: Raise error in real-time
-            pass
+        # TODO: Raise an error if length equals capacity
 
         tmp = converter.scope.get_temporary(IntType())
-        new_item_ptr = converter.load_bin_op(BinOp(pointer, Add(), len_slot))
+        new_item_ptr = converter.load_bin_op(BinOp(pointer, Add(), length))
         converter.append_to_body(Assign(tmp, new_item_ptr))
 
         reference = AssociatedSlot(tmp, ref=tmp)
         converter.append_to_body(Assign(reference, value))
         converter.scope.recycle_temporary(tmp)
 
-        converter.visit(ast.AugAssign(len_slot, ast.Add(), ast.Num(1)))
-
-        slot.metadata['length'] = (len_slot, len_value)
+        # Increment length
+        converter.visit(ast.AugAssign(slot, ast.Add(), ast.Num(128)))
 
 
 @attr.s

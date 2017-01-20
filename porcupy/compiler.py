@@ -108,7 +108,9 @@ class NodeConverter(ast.NodeVisitor):
             return target
         elif isinstance(target, ast.Name):
             if self.is_const(target):
-                if target.id in self.scope.names:
+                if isinstance(src_slot.type, Slice):
+                    raise TypeError('slice cannot be constant')
+                elif target.id in self.scope.names:
                     raise ValueError('cannot redefine a constant')
                 self.scope.define_const(target.id, src_slot)
             else:
@@ -356,64 +358,14 @@ class NodeConverter(ast.NodeVisitor):
         if upper is None:
             upper = src_capacity
 
-        bounds = [lower, upper]
-        tmp = [None, None]
-        for i, bound in enumerate(bounds):
-            bounds[i], tmp[i] = self.simplify_slice_bound(bound, src_capacity)
-
-        lower, upper = bounds
-
         ptr_value = self.load_bin_op(BinOp(list_ptr, Add(), lower))
         len_value = self.load_bin_op(BinOp(upper, Sub(), lower))
         cap_value = self.load_bin_op(BinOp(src_capacity, Sub(), lower))
 
-        ptr_slot = self.scope.allocate(ListPointer(value_slot.type.item_type, None))
-        len_slot, cap_slot = self.scope.allocate_many(IntType(), 2)
-        self.append_to_body(Assign(ptr_slot, ptr_value))
-        self.append_to_body(Assign(len_slot, len_value))
-        self.append_to_body(Assign(cap_slot, cap_value))
+        slice_type = Slice(value_slot.type.item_type)
+        slice_value = slice_type.new(self, ptr_value, len_value, cap_value)
 
-        for slot in tmp:
-            if slot is not None:
-                self.scope.recycle_temporary(slot)
-
-        result = Const(None, Slice(value_slot.type.item_type))
-        result.metadata['pointer'] = ptr_slot
-        result.metadata['length'] = (len_slot, len_value)
-        result.metadata['capacity'] = (cap_slot, cap_value)
-        result.metadata['pointer'].metadata = result.metadata
-        return result
-
-    def simplify_slice_bound(self, bound, src_capacity):
-        if isinstance(bound, Const) and isinstance(src_capacity, Const):
-            # This clause will be unnecessary once comparison
-            # optimization is complete
-            if bound.value > src_capacity.value:
-                bound.value = src_capacity.value
-            elif bound.value <= -src_capacity.value:
-                bound.value = 0
-            if bound.value < 0:
-                bound.value = src_capacity.value + bound.value
-            return bound, None
-
-        tmp = self.scope.get_temporary(IntType())
-        self.append_to_body(Assign(tmp, bound))
-        self.append_to_body(If(
-            Compare(bound, ast.Gt(), src_capacity),
-            body=[
-                Assign(tmp, src_capacity),
-            ]))
-        self.append_to_body(If(
-            Compare(bound, ast.LtE(), self.load_unary_op(ast.UnaryOp(ast.USub(), src_capacity))),
-            body=[
-                Assign(tmp, Const(0)),
-            ]))
-        self.append_to_body(If(
-            Compare(bound, ast.Lt(), Const(0)),
-            body=[
-                Assign(tmp, self.load_bin_op(BinOp(src_capacity, Add(), bound))),
-            ]))
-        return tmp, tmp
+        return slice_value
 
     def load_extended_bool_op(self, value):
         initial = Const(False)
@@ -557,6 +509,7 @@ class NodeConverter(ast.NodeVisitor):
             else:
                 return self.load_bin_op(BinOp(BinOp(operand, Mult(), Const(-1)), Sub(), Const(1)))
         else:
+            # TODO: Implement 'not'
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(value.op))
 
     def load_call(self, value):
