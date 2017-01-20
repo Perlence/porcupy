@@ -168,13 +168,10 @@ def test_const_list():
 
     assert compile_('X = [11, 22, 33]; y = X[0]') == 'p1z 11 p2z 22 p3z 33 p4z p1z'
 
-    with pytest.raises(ValueError) as exc_info:
-        assert compile_('X = [11, 22, 33]; X[0] = 44')
-    assert 'cannot modify items' in str(exc_info)
-
-    with pytest.raises(ValueError) as exc_info:
-        assert compile_('X = [11, 22, 33]; X[0] += 44')
-    assert 'cannot modify items' in str(exc_info)
+    # Constant list is not *immutable*, so it must be possible to set
+    # items
+    assert compile_('X = [11, 22, 33]; X[0] = 44') == 'p1z 11 p2z 22 p3z 33 p4z 1 p^4z 44'
+    assert compile_('X = [11, 22, 33]; X[0] += 44') == 'p1z 11 p2z 22 p3z 33 p4z 1 p^4z p^4z+44'
 
 
 def test_range():

@@ -60,10 +60,10 @@ class ListPointer(NumberType):
         return item_slot
 
     def setitem(self, converter, slot, slice_slot):
-        if isinstance(slot, Const):
-            raise ValueError('cannot modify items of constant list pointer')
-        if isinstance(slice_slot, Const) and slice_slot.value >= self.capacity:
-            raise IndexError('list index out of range')
+        capacity_slot = self.cap(converter, slot)
+        if isinstance(slice_slot, Const) and isinstance(capacity_slot, Const):
+            if slice_slot.value >= capacity_slot.value:
+                raise IndexError('list index out of range')
 
         if isinstance(self.item_type, GameObjectRef):
             item_slot = converter.scope.get_temporary(self.item_type)
@@ -101,6 +101,10 @@ class Slice:
     def getitem(self, converter, slot, slice_slot):
         ptr_slot = slot.metadata['pointer']
         return ListPointer.getitem(self, converter, ptr_slot, slice_slot)
+
+    def setitem(self, converter, slot, slice_slot):
+        ptr_slot = slot.metadata['pointer_slot']
+        return ListPointer.setitem(self, converter, ptr_slot, slice_slot)
 
     def len(self, converter, slot):
         return slot.metadata['length']
