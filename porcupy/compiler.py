@@ -631,6 +631,7 @@ class Scope:
         return slot
 
     def check_type(self, dest_slot, src_slot):
+        # TODO: It should be possible to multiply float variable by int constant
         dest_type = dest_slot.type
         src_type = src_slot.type
         if (not isinstance(src_type, type(dest_type)) or

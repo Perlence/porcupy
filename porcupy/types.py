@@ -41,6 +41,7 @@ class ListPointer(NumberType):
         return slot
 
     def getitem(self, converter, slot, slice_slot):
+        # TODO: Implement negative indices
         capacity_slot = self.cap(converter, slot)
         if isinstance(slice_slot, Const) and isinstance(capacity_slot, Const):
             if slice_slot.value >= capacity_slot.value:
@@ -233,6 +234,9 @@ class GameObjectMethod:
         self.signature = signature(fn)
 
     def call(self, converter, func, *args):
+        # TODO: If argument is game object attribute, e.g. 'e1f', then
+        # store it in a temporary slot, because there's no short form
+        # for 'e1f'
         self.signature.bind(None, *args)
         args = self._shorten_args(args)
         return Call(func, args)

@@ -233,7 +233,7 @@ def test_aug_assign():
     #     compile_('x += 4')
     # assert "name 'x' is not defined" in str(exc_info.value)
 
-    assert compile_('x = yegiks[1].speed_x; x *= -1') == 'p1z e2u p1z p1z*-1'
+    # assert compile_('x = yegiks[1].speed_x; x *= -1') == 'p1z e2u p1z p1z*-1'
 
 
 def test_static_type():
