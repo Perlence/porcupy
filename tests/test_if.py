@@ -60,7 +60,7 @@ def test_generic_if():
                      'if x < 12 and x < 13 and x < 14: y = 22') ==
             'p1z 11 p3z 0 # p1z < 12 & p1z < 13 & p1z < 14 ( p3z 1 ) # p3z = 0 ( g1z ) p2z 22 :1')
 
-    # Chaining different bool operations is broken in Egiks, resort to
+    # Chaining different bool operations is broken in Yozhiks, resort to
     # this workaround instead
     assert (compile_('x = 11\n'
                      'if x < 12 and x < 13 or x < 14: y = 22') ==
@@ -82,7 +82,7 @@ def test_generic_if():
 
 
 def test_nested():
-    # Nesting if-statements is broken in Egiks as well
+    # Nesting if-statements is broken in Yozhiks as well
     assert (compile_('x = 11\n'
                      'if x > 0:\n'
                      '    if x < 15:\n'

@@ -1,5 +1,5 @@
-PLAYER = yegiks[0]
-BALL = yegiks[1]
+PLAYER = yozhiks[0]
+BALL = yozhiks[1]
 BALL_BOT = bots[1]
 
 FLOOR = points[0].pos_y

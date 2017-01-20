@@ -1,5 +1,5 @@
-PLAYERS = [yegiks[0], yegiks[1]]
-BALL = yegiks[2]
+PLAYERS = [yozhiks[0], yozhiks[1]]
+BALL = yozhiks[2]
 
 PLAYER_BOT = bots[1]
 BALL_BOT = bots[2]

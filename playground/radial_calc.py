@@ -1,4 +1,4 @@
-PLAYER = yegiks[0]
+PLAYER = yozhiks[0]
 
 NUMBER = 1
 
@@ -25,7 +25,7 @@ if timers[1].value == 1:
 
     clear_display_on_next_number = False
 
-PLAYER.health = 1
+PLAYER.health = 100
 
 # Display controls
 x = points[0].pos_x; y = points[0].pos_y; system.message_at(x, y, 1, '1')
@@ -104,7 +104,6 @@ while value != NOP:
         # Apply operation
         if value <= OPERATION:
             len_stack = len(stack)
-            system.message(len_stack)
             if len(stack) < 2:
                 system.message('Error: not enough values on the stack, 2 required')
                 break

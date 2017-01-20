@@ -8,7 +8,7 @@ setup(
     version='0.1',
     author='Sviatoslav Abakumov',
     author_email='dust.harvesting@gmail.com',
-    description='Compile a subset of Python to Egiks in Quake II scenarios',
+    description='Compile a subset of Python to Yozhiks in Quake II scenarios',
     long_description=README,
     url='https://github.com/Perlence/porcupy',
     download_url='https://github.com/Perlence/porcupy/archive/master.zip',

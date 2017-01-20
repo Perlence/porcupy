@@ -7,7 +7,7 @@ import attr
 from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
                   Label)
-from .runtime import Yegik, Timer, Point, Bot, System
+from .runtime import Yozhik, Timer, Point, Bot, System
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
                     GameObjectRef, GameObjectList, ListPointer, Slice, Range)
 
@@ -560,7 +560,7 @@ class Scope:
         self.names['bots'] = Const(None, GameObjectList(Bot, 1, 10))
         self.names['points'] = Const(None, GameObjectList(Point, 1, 100))
         self.names['timers'] = Const(None, GameObjectList(Timer, 0, 100))
-        self.names['yegiks'] = Const(None, GameObjectList(Yegik, 1, 10))
+        self.names['yozhiks'] = Const(None, GameObjectList(Yozhik, 1, 10))
         self.names['system'] = Slot(System.metadata['abbrev'], None, None, GameObjectRef(System))
 
     def define_const(self, name, value):

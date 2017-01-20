@@ -3,7 +3,7 @@ porcupy
 
     What do you get when you cross a snake and a hedgehog?
 
-Compile a subset of Python to `Egiks in Quake II <http://gegames.org>`_ scenarios.
+Compile a subset of Python to `Yozhiks in Quake II <http://gegames.org>`_ scenarios.
 
 
 Installation

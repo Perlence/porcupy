@@ -2,7 +2,7 @@ import attr
 
 from .types import IntType, FloatType, BoolType, StringType, GameObjectRef, GameObjectMethod
 
-__all__ = ('timers', 'system', 'yegiks', 'bots', 'points')
+__all__ = ('timers', 'system', 'yozhiks', 'bots', 'points')
 
 int_type = IntType()
 bool_type = BoolType()
@@ -89,7 +89,7 @@ bots = [Bot() for x in range(1, 10)]
 
 
 @attr.s
-class Yegik:
+class Yozhik:
     frags = attr.ib(default=0, metadata={'abbrev': 'f', 'type': int_type})
     pos_x = attr.ib(default=0.0, metadata={'abbrev': 'x', 'type': float_type})
     pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y', 'type': float_type})
@@ -110,4 +110,4 @@ class Yegik:
     spawn.metadata = {'abbrev': 'b', 'type': GameObjectMethod(spawn)}
 
 
-yegiks = [Yegik() for x in range(1, 10)]
+yozhiks = [Yozhik() for x in range(1, 10)]
