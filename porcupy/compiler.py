@@ -129,7 +129,16 @@ class NodeConverter(ast.NodeVisitor):
         if self.is_body_empty(node.body) and self.is_body_empty(node.orelse):
             return
 
-        index = self.scope.get_temporary(IntType())
+        temp_index = None
+        if isinstance(node.target, ast.Tuple):
+            if len(node.target.elts) != 2:
+                raise ValueError('exactly 2 receiver variables required, got {}'.format(len(node.target.elts)))
+            index, target = node.target.elts
+            index = self.store_value(index, Const(-1))
+        else:
+            index = temp_index = self.scope.get_temporary(IntType())
+            target = node.target
+
         self.append_to_body(Assign(index, Const(-1)))
 
         iter_slot = self.load_expr(node.iter)
@@ -138,14 +147,15 @@ class NodeConverter(ast.NodeVisitor):
         test = Compare(index, ast.Lt(), iter_len)
 
         subscript = ast.Subscript(value=iter_slot, slice=index, ctx=ast.Load())
-        assign = ast.Assign(targets=[node.target], value=subscript)
+        assign = ast.Assign(targets=[target], value=subscript)
         body = [assign] + node.body
 
         increment_index = ast.AugAssign(target=index, op=ast.Add(), value=Const(1))
 
         self.visit_While(ast.While(test, body, node.orelse), before_test=increment_index)
 
-        self.scope.recycle_temporary(index)
+        if temp_index is not None:
+            self.scope.recycle_temporary(temp_index)
 
     def visit_While(self, node, before_test=None):
         # While(expr test, stmt* body, stmt* orelse)

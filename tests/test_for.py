@@ -122,13 +122,23 @@ def test_range():
             ':2')
 
 
-@pytest.mark.skip('Not implemented yet')
 def test_enumerate():
     assert (compile_('items = [11, 22, 33]\n'
-                     'for i, item in enumerate(items):\n'
-                     '    x = i\n'
-                     '    y = item') ==
+                     'for i, item in items:\n'
+                     '    print(i)\n'
+                     '    print(item)') ==
             'p1z 11 p2z 22 p3z 33 p4z 1 '
-            'p5z 0 p6z p4z+p5z p7z p5z p8z p6z '
-            'p5z 1 p6z p4z+p5z p7z p5z p8z p6z '
-            'p5z 2 p6z p4z+p5z p7z p5z p8z p6z')
+            'p5z -1 '
+            ':1 p5z p5z+1 # p5z >= 3 ( g2z ) '
+            'p7z p4z+p5z p8z p^7z p6z p8z '
+            'ym ^5 '
+            'ym ^6 '
+            'g1z '
+            ':2')
+
+    with pytest.raises(ValueError) as exc_info:
+        compile_('items = [11, 22, 33]\n'
+                 'for i, item, extra in items:\n'
+                 '    print(i)\n'
+                 '    print(item)')
+    assert 'exactly 2 receiver variables required' in str(exc_info.value)

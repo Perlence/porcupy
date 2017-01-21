@@ -1,133 +1,81 @@
-timers = []
-system = object()
-yozhiks = []
-bots = []
-var = []
-points = []
+PLAYERS = [yozhiks[0], yozhiks[1]]
+BALL = yozhiks[2]
+
+PLAYER_BOT = bots[1]
+BALL_BOT = bots[2]
+
+NET = points[0]
+WAYPOINT = points[1]
+
+PLAYER_SPAWNS = [1, 4]
+BALL_SPAWNS = [2, 3]
+
+PUNCH_VELOCITY_X = 10
+PUNCH_VELOCITY_Y = -15
 
 if timers[1].value == 1:
+    player_touches = [0, 0]
+
     system.bots = 2
-    yozhiks[1].spawn = 1
-    yozhiks[2].spawn = 4
-    bots[2].ai = 0
-    bots[2].goto(2)
+    PLAYERS[0].spawn(PLAYER_SPAWNS[0])
+    PLAYERS[1].spawn(PLAYER_SPAWNS[1])
+    PLAYER_BOT.ai = False
+    PLAYER_BOT.goto = WAYPOINT
 
-    yozhiks[3].spawn = 2
-    bots[3].ai = 0
-    yozhiks[3].speed_y = 0
-    yozhiks[3].speed_x = 0
-    var[15].value = 0
-    var[16].value = 0
-    var[90].value = 0
-    var[10].value = 0
-    var[11].value = 0
-    var[12].value = 0
+    BALL.spawn(BALL_SPAWNS[0])
+    BALL_BOT.ai = 0
+    ball_speed_x = BALL.speed_x = BALL.speed_y = 0
 
-yozhiks[3].health = 100
-var[1].value = yozhiks[3].speed_y
-var[1].value = var[1].value * 0.88
-yozhiks[3].speed_y = var[1].value
+# Ball movement
+BALL.health = 100
+BALL.speed_y *= 0.88
 
-if yozhiks[3].speed_x != 0 and yozhiks[3].speed_y != 0:
-    var[15].value = yozhiks[3].speed_x
-    var[16].value = yozhiks[3].speed_y
+if BALL.speed_x != 0 and BALL.speed_y != 0:
+    ball_speed_x = BALL.speed_x
 
-if var[15].value != 0 and yozhiks[3].speed_x == 0 and yozhiks[3].speed_y != 0:
-    var[15].value = var[15].value * -0.8
-    yozhiks[3].speed_x = var[15].value
-    yozhiks[3].speed_y = var[16].value
+if ball_speed_x != 0 and BALL.speed_x == 0 and BALL.speed_y != 0:
+    ball_speed_x *= -0.8
+    BALL.speed_x = ball_speed_x
 
-# p1
-if (yozhiks[3].pos_y > yozhiks[1].pos_y - 20 and yozhiks[3].pos_y < points[1].pos_y and
-        yozhiks[3].pos_x > yozhiks[1].pos_x - 20 and yozhiks[3].pos_x < yozhiks[1].pos_x + 20 and
-        var[10].value != 4):
-    var[7].value = yozhiks[3].pos_x - yozhiks[1].pos_x
-    var[8].value = -15
-    var[12].value = 0
-    var[10].value = var[10].value + 1
+# Calculate punches
+for player_num, player in PLAYERS:
+    if player_touches[player_num] >= 3:
+        continue
+    if (player.pos_y - 20 < BALL.pos_y < NET.pos_y and
+            player.pos_x - 20 < BALL.pos_x < player.pos_x + 20):
+        player_touches[player_num] += 1
+        player_touches[1-player_num] = 0
+        player_ball_distance_x = BALL.pos_x - player.pos_x
 
-if (yozhiks[3].pos_y > yozhiks[1].pos_y - 20 and yozhiks[3].pos_y < points[1].pos_y and
-        yozhiks[3].pos_x > yozhiks[1].pos_x - 20 and yozhiks[3].pos_x < yozhiks[1].pos_x + 20 and
-        var[7].value > 0 and var[10].value != 4):
-    var[7].value = 10
+        BALL.speed_x = PUNCH_VELOCITY_X
+        if player_ball_distance_x < 0:
+            BALL.speed_x *= -1
 
-if (yozhiks[3].pos_y > yozhiks[1].pos_y - 20 and yozhiks[3].pos_y < points[1].pos_y and
-        yozhiks[3].pos_x > yozhiks[1].pos_x - 20 and yozhiks[3].pos_x < yozhiks[1].pos_x + 20 and
-        var[7].value < 0 and var[10].value != 4):
-    var[7].value = 10
-    var[7].value = var[7].value * -1
+        BALL.speed_y = PUNCH_VELOCITY_Y
 
-if (yozhiks[3].pos_y > yozhiks[1].pos_y - 20 and yozhiks[3].pos_y < points[1].pos_y and
-        yozhiks[3].pos_x > yozhiks[1].pos_x - 20 and yozhiks[3].pos_x < yozhiks[1].pos_x + 20 and
-        var[10].value != 4):
-    yozhiks[3].speed_x = var[7].value
-    yozhiks[3].speed_y = var[8].value
-# ------------------------------------------------------------------------------
+# Check touches
+if player_touches[0] == 3 or player_touches[1] == 3:
+    system.color = 188
+    print_at(282, 100, 50, '3 kasaniya!')
+    system.color = 200*256
 
-# p2
-if (yozhiks[3].pos_y > yozhiks[2].pos_y - 20 and yozhiks[3].pos_y < points[1].pos_y and
-        yozhiks[3].pos_x > yozhiks[2].pos_x - 20 and yozhiks[3].pos_x < yozhiks[2].pos_x + 20 and
-        var[12].value != 4):
-    var[7].value = yozhiks[3].pos_x-yozhiks[2].pos_x
-    var[8].value = -15
-    var[10].value = 0
-    var[12].value += 1
+# Player scores
+player_num_scores = -1
+if BALL.pos_y > NET.pos_y and BALL.pos_x > NET.pos_x:
+    player_num_scores = 0
+elif BALL.pos_y > NET.pos_y and BALL.pos_x < NET.pos_x:
+    player_num_scores = 1
 
-if (yozhiks[3].pos_y > yozhiks[2].pos_y - 20 and yozhiks[3].pos_y < points[1].pos_y and
-        yozhiks[3].pos_x > yozhiks[2].pos_x - 20 and yozhiks[3].pos_x < yozhiks[2].pos_x + 20 and
-        var[7].value > 0 and var[12].value != 4):
-    var[7].value = var[7].value + 0.4
-    var[7].value = var[7].value + 10
+if player_num_scores > -1:
+    PLAYERS[player_num_scores].frags += 1
 
-if (yozhiks[3].pos_y > yozhiks[2].pos_y - 20 and yozhiks[3].pos_y < points[1].pos_y and
-        yozhiks[3].pos_x > yozhiks[2].pos_x - 20 and yozhiks[3].pos_x < yozhiks[2].pos_x + 20 and
-        var[7].value < 0 and var[12].value != 4):
-    var[7].value = var[7].value * 0.4
-    var[7].value = var[7].value + 10
-    var[7].value = var[7].value * -1
+    BALL.spawn(BALL_SPAWNS[player_num_scores])
+    ball_speed_x = BALL.speed_x = BALL.speed_y = 0
 
-if (yozhiks[3].pos_y > yozhiks[2].pos_y - 20 and yozhiks[3].pos_y < points[1].pos_y and
-        yozhiks[3].pos_x > yozhiks[2].pos_x - 20 and yozhiks[3].pos_x < yozhiks[2].pos_x + 20 and
-        var[12].value != 4):
-    yozhiks[3].speed_x = var[7].value
-    yozhiks[3].speed_y = var[8].value
-# ------------------------------------------------------------------------------
+    # player_touches = [0, 0]
+    player_touches[0] = player_touches[1] = 0
 
-if var[10].value == 3 or var[12].value == 3:
-    system.message_point(282, 100, 50, '3 касания!')
-
-# +1
-if yozhiks[3].pos_y > points[1].pos_y and yozhiks[3].pos_x > points[1].pos_x:
-    timers[1].value = 5
-    var[11].value = yozhiks[1].frags+1
-    yozhiks[1].frags = var[11].value
-    var[11].value = 0
-    yozhiks[3].spawn = 2
-    yozhiks[3].speed_y = 0
-    yozhiks[3].speed_x = 0
-    var[15].value = 0
-    var[16].value = 0
-    var[90].value = 0
-    var[10].value = 0
-    var[11].value = 0
-    var[12].value = 0
-
-if yozhiks[3].pos_y > points[1].pos_y and yozhiks[3].pos_x < points[1].pos_x:
-    timers[1].value = 5
-    var[11].value = yozhiks[2].frags+1
-    yozhiks[2].frags = var[11].value
-    var[11].value = 0
-    yozhiks[3].spawn = 3
-    yozhiks[3].speed_y = 0
-    yozhiks[3].speed_x = 0
-    var[15].value = 0
-    var[16].value = 0
-    var[90].value = 0
-    var[10].value = 0
-    var[11].value = 0
-    var[12].value = 0
-
-# aihg
-points[2].pos_y = 425
-points[2].pos_x = yozhiks[3].pos_x
-bots[2].goto = 2
+# Bot intelligence
+WAYPOINT.pos_y = 425
+WAYPOINT.pos_x = BALL.pos_x
+PLAYER_BOT.goto = WAYPOINT
