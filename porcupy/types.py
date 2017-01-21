@@ -45,6 +45,23 @@ class NumberType:
 
         return BinOp(left, op, right)
 
+    def unary_op(self, converter, op, operand):
+        if isinstance(op, ast.UAdd):
+            return operand
+        elif isinstance(op, ast.USub):
+            if isinstance(operand, Const):
+                return attr.assoc(operand, value=-operand.value)
+            else:
+                return converter.load_bin_op(BinOp(operand, Mult(), Const(-1)))
+        elif isinstance(op, ast.Invert):
+            if isinstance(operand, Const):
+                return attr.assoc(operand, value=~operand.value)
+            else:
+                return converter.load_bin_op(BinOp(BinOp(operand, Mult(), Const(-1)), Sub(), Const(1)))
+        else:
+            # TODO: Implement 'not'
+            raise NotImplementedError("unary operation '{}' is not implemented yet".format(op))
+
 
 @attr.s
 class FloatType(NumberType):

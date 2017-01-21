@@ -463,21 +463,7 @@ class NodeConverter(ast.NodeVisitor):
 
     def load_unary_op(self, value):
         operand = self.load_expr(value.operand)
-        if isinstance(value.op, ast.UAdd):
-            return operand
-        elif isinstance(value.op, ast.USub):
-            if isinstance(operand, Const):
-                return attr.assoc(operand, value=-operand.value)
-            else:
-                return self.load_bin_op(BinOp(operand, Mult(), Const(-1)))
-        elif isinstance(value.op, ast.Invert):
-            if isinstance(operand, Const):
-                return attr.assoc(operand, value=~operand.value)
-            else:
-                return self.load_bin_op(BinOp(BinOp(operand, Mult(), Const(-1)), Sub(), Const(1)))
-        else:
-            # TODO: Implement 'not'
-            raise NotImplementedError("unary operation '{}' is not implemented yet".format(value.op))
+        return operand.type.unary_op(self, value.op, operand)
 
     def load_call(self, value):
         if value.keywords:
