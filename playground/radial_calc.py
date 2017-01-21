@@ -28,32 +28,32 @@ if timers[1].value == 1:
 PLAYER.health = 100
 
 # Display controls
-x = points[0].pos_x; y = points[0].pos_y; system.message_at(x, y, 1, '1')
-x = points[1].pos_x; y = points[1].pos_y; system.message_at(x, y, 1, '0')
-x = points[2].pos_x; y = points[2].pos_y; system.message_at(x, y, 1, '-1')
-x = points[9].pos_x; y = points[9].pos_y; system.message_at(x, y, 1, 'P')
-x = points[10].pos_x; y = points[10].pos_y; system.message_at(x, y, 1, '+')
-x = points[11].pos_x; y = points[11].pos_y; system.message_at(x, y, 1, '-')
-x = points[12].pos_x; y = points[12].pos_y; system.message_at(x, y, 1, '*')
-x = points[13].pos_x; y = points[13].pos_y; system.message_at(x, y, 1, '/')
-# x = points[3].pos_x; y = points[3].pos_y; system.message_at(x, y, 1, '0')
-# x = points[4].pos_x; y = points[4].pos_y; system.message_at(x, y, 1, '1')
-# x = points[5].pos_x; y = points[5].pos_y; system.message_at(x, y, 1, '/')
-# x = points[17].pos_x; y = points[17].pos_y; system.message_at(x, y, 1, '*')
-# x = points[7].pos_x; y = points[7].pos_y; system.message_at(x, y, 1, '-')
-# x = points[8].pos_x; y = points[8].pos_y; system.message_at(x, y, 1, '+')
-x = points[16].pos_x; y = points[16].pos_y; system.message_at(x, y, 1, 'R')
+x = points[0].pos_x; y = points[0].pos_y; print_at(x, y, 1, '1')
+x = points[1].pos_x; y = points[1].pos_y; print_at(x, y, 1, '0')
+x = points[2].pos_x; y = points[2].pos_y; print_at(x, y, 1, '-1')
+x = points[9].pos_x; y = points[9].pos_y; print_at(x, y, 1, 'P')
+x = points[10].pos_x; y = points[10].pos_y; print_at(x, y, 1, '+')
+x = points[11].pos_x; y = points[11].pos_y; print_at(x, y, 1, '-')
+x = points[12].pos_x; y = points[12].pos_y; print_at(x, y, 1, '*')
+x = points[13].pos_x; y = points[13].pos_y; print_at(x, y, 1, '/')
+# x = points[3].pos_x; y = points[3].pos_y; print_at(x, y, 1, '0')
+# x = points[4].pos_x; y = points[4].pos_y; print_at(x, y, 1, '1')
+# x = points[5].pos_x; y = points[5].pos_y; print_at(x, y, 1, '/')
+# x = points[17].pos_x; y = points[17].pos_y; print_at(x, y, 1, '*')
+# x = points[7].pos_x; y = points[7].pos_y; print_at(x, y, 1, '-')
+# x = points[8].pos_x; y = points[8].pos_y; print_at(x, y, 1, '+')
+x = points[16].pos_x; y = points[16].pos_y; print_at(x, y, 1, 'R')
 
 # LED
 x = points[15].pos_x
 y = points[15].pos_y
 for digit in digits:
     if digit < 0:
-        system.message_at(x, y, 1, '-')
+        print_at(x, y, 1, '-')
     elif digit == 0:
-        system.message_at(x, y, 1, digit)
+        print_at(x, y, 1, digit)
     else:
-        system.message_at(x, y, 1, '+')
+        print_at(x, y, 1, '+')
     x += 12.0
 
 # Handle controls
@@ -105,7 +105,7 @@ while value != NOP:
         if value <= OPERATION:
             len_stack = len(stack)
             if len(stack) < 2:
-                system.message('Error: not enough values on the stack, 2 required')
+                print('Error: not enough values on the stack, 2 required')
                 break
 
             op1 = stack[len(stack)-2]
@@ -124,7 +124,7 @@ while value != NOP:
             # TODO: Unary operation Not is not implemented
             # if not (-3280 <= result <= 3280):
             if -3280 > result or result > 3280:
-                system.message('Error: number is too big')
+                print('Error: number is too big')
                 break
 
             stack.append(result)

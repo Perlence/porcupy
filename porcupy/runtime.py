@@ -35,15 +35,15 @@ class System:
 
     metadata = {'abbrev': 'y'}
 
-    def message(self, s: str_type) -> None:
+    def print(self, s: str_type) -> None:
         pass
 
-    message.metadata = {'abbrev': 'm', 'type': GameObjectMethod(message)}
+    print.metadata = {'abbrev': 'm', 'type': GameObjectMethod(print)}
 
-    def message_at(self, x: float_type, y: float_type, dur: float_type, s: str_type) -> None:
+    def print_at(self, x: float_type, y: float_type, dur: float_type, s: str_type) -> None:
         pass
 
-    message_at.metadata = {'abbrev': 'y', 'type': GameObjectMethod(message_at)}
+    print_at.metadata = {'abbrev': 'y', 'type': GameObjectMethod(print_at)}
 
     # def set_color(self, r: int_type, g: int_type, b: int_type) -> None:
     #     self.color = r + (g << 8) + (b << 16)

@@ -39,16 +39,16 @@ if -BALL.pos_y < -FLOOR:
 
     BALL.health = 0
 
-    system.message_at(280, 200, 1, 'Game_Over!')
+    print_at(280, 200, 1, 'Game_Over!')
 
-    system.message_at(280, 230, 1, 'Your score: {score}')
-    system.message_at(280, 245, 1, 'Green: {green_armor}')
-    system.message_at(280, 260, 1, 'Yellow: {yellow_armor}')
-    system.message_at(280, 275, 1, 'Red: {red_armor}')
-    system.message_at(280, 290, 1, 'Game duration: {game_duration}')
-    system.message_at(280, 305, 1, 'Ball damage: {ball_damage}')
+    print_at(280, 230, 1, 'Your score: {score}')
+    print_at(280, 245, 1, 'Green: {green_armor}')
+    print_at(280, 260, 1, 'Yellow: {yellow_armor}')
+    print_at(280, 275, 1, 'Red: {red_armor}')
+    print_at(280, 290, 1, 'Game duration: {game_duration}')
+    print_at(280, 305, 1, 'Ball damage: {ball_damage}')
 
-    system.message_at(280, 335, 1, 'Shoot to restart')
+    print_at(280, 335, 1, 'Shoot to restart')
 
 # Scoring
 if BALL.armor > 0:
@@ -63,7 +63,7 @@ if BALL.armor > 0:
 score = green_armor*100 + yellow_armor*150 + red_armor*200
 
 if BALL.health > 0:
-    system.message_at(30, 30, 1, 'Your score: {score}')
+    print_at(30, 30, 1, 'Your score: {score}')
 
 # Ball movement
 if BALL.speed_y > 0:

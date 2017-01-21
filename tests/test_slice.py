@@ -50,14 +50,14 @@ def test_len_cap():
 def test_get_item():
     assert (compile_('x = [11, 22, 33]\n'
                      'y = x[:]\n'
-                     'system.message(y[0])') ==
+                     'print(y[0])') ==
             'p1z 11 p2z 22 p3z 33 p4z 1 '
             'p6z p4z+0 p7z p6z*16384 p5z p7z+387 '
             'p6z p5z{16384 p7z p6z+0 p8z p^7z ym ^8')
     assert (compile_('x = [11, 22, 33]\n'
                      'start = 1\n'
                      'y = x[start:len(x)-1]\n'
-                     'system.message(y[0])') ==
+                     'print(y[0])') ==
             'p1z 11 p2z 22 p3z 33 p4z 1 '
             'p5z 1 '
             'p7z 2 p8z 3 '
@@ -70,7 +70,7 @@ def test_for():
     assert (compile_('x = [11, 22, 33, 44, 55]\n'
                      'start = 1\n'
                      'for item in x[start:len(x)-1]:\n'
-                     '    system.message(item)') ==
+                     '    print(item)') ==
             'p1z 11 p2z 22 p3z 33 p4z 44 p5z 55 p6z 1 '
             'p7z 1 '
             'p9z -1 '
@@ -98,7 +98,7 @@ def test_append():
 def test_set_item():
     assert (compile_('x = [11, 22, 33][1:]\n'
                      'x[0] = 55\n'
-                     'system.message(x[0])') ==
+                     'print(x[0])') ==
             'p1z 11 p2z 22 p3z 33 '
             'p4z 33026 '
             'p5z p4z{16384 p7z p4z{16384 p6z p7z+0 p^6z 55 p7z p4z{16384 p6z p7z+0 p5z p^6z '
@@ -106,7 +106,7 @@ def test_set_item():
     assert (compile_('x = [11, 22, 33]\n'
                      'y = x[1:]\n'
                      'y[0] = 55\n'
-                     'system.message(y[0])') ==
+                     'print(y[0])') ==
             'p1z 11 p2z 22 p3z 33 p4z 1 '
             'p6z p4z+1 p7z p6z*16384 p5z p7z+258 '
             'p7z p5z{16384 p8z p5z{16384 p6z p8z+0 p^6z 55 '

@@ -549,6 +549,7 @@ class Scope:
     def __attrs_post_init__(self):
         self.populate_builtins()
         self.populate_game_objects()
+        self.populate_system_functions()
 
     def populate_builtins(self):
         from .functions import CallableType, length, capacity
@@ -563,6 +564,14 @@ class Scope:
         self.names['timers'] = Const(None, GameObjectList(Timer, 0, 100))
         self.names['yozhiks'] = Const(None, GameObjectList(Yozhik, 1, 10))
         self.names['system'] = Slot(System.metadata['abbrev'], None, None, GameObjectRef(System))
+
+    def populate_system_functions(self):
+        for method in (System.print, System.print_at, System.load_map):
+            name = method.__name__
+            self.names[name] = Slot(System.metadata['abbrev'],
+                                    None,
+                                    method.metadata['abbrev'],
+                                    method.metadata['type'])
 
     def define_const(self, name, value):
         self.names[name] = value

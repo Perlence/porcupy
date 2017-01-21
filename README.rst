@@ -19,5 +19,5 @@ Usage
 
 .. code-block:: bash
 
-    $ echo 'system.message("Hello, World!")' | porcupy
+    $ echo 'print("Hello, World!")' | porcupy
     ym Hello,_World!

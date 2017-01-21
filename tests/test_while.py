@@ -4,7 +4,7 @@ from porcupy.compiler import compile as compile_
 def test_while():
     assert (compile_('x = 0\n'
                      'while x < 5:\n'
-                     '    system.message(x)\n'
+                     '    print(x)\n'
                      '    x += 1') ==
             'p1z 0 '
             ':1 p2z 0 # p1z < 5 ( p2z 1 ) # p2z = 0 ( g2z ) '
@@ -16,10 +16,10 @@ def test_while():
 def test_else():
     assert (compile_('x = 0\n'
                      'while x < 5:\n'
-                     '    system.message(x)\n'
+                     '    print(x)\n'
                      '    x += 1\n'
                      'else:\n'
-                     '    system.message("else")') ==
+                     '    print("else")') ==
             'p1z 0 '
             ':1 p2z 0 # p1z < 5 ( p2z 1 ) # p2z = 0 ( g3z ) '
             'ym ^1 p1z p1z+1 '
@@ -31,11 +31,11 @@ def test_else():
 def test_break():
     assert (compile_('x = 0\n'
                      'while x < 5:\n'
-                     '    system.message(x)\n'
+                     '    print(x)\n'
                      '    x += 1\n'
                      '    break\n'
                      'else:\n'
-                     '    system.message("else")') ==
+                     '    print("else")') ==
             'p1z 0 '
             ':1 p2z 0 # p1z < 5 ( p2z 1 ) # p2z = 0 ( g3z ) '
             'ym ^1 p1z p1z+1 '
@@ -50,7 +50,7 @@ def test_pass():
                      'while x < 5:\n'
                      '    pass\n'
                      'else:\n'
-                     '    system.message("else")') ==
+                     '    print("else")') ==
             'p1z 0 '
             ':1 p2z 0 # p1z < 5 ( p2z 1 ) # p2z = 0 ( g3z ) '
             'g1z '
@@ -59,7 +59,7 @@ def test_pass():
 
     assert (compile_('x = 0\n'
                      'while x < 5:\n'
-                     '    system.message(x)\n'
+                     '    print(x)\n'
                      'else:\n'
                      '    pass') ==
             'p1z 0 '
@@ -76,7 +76,7 @@ def test_continue():
                      '    if x < 3:\n'
                      '        continue\n'
                      'else:\n'
-                     '    system.message("else")') ==
+                     '    print("else")') ==
             'p1z 0 '
             ':1 p2z 0 # p1z < 5 ( p2z 1 ) # p2z = 0 ( g3z ) '
             'p1z p1z+1 '
