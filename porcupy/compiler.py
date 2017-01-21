@@ -435,6 +435,7 @@ class NodeConverter(ast.NodeVisitor):
     def load_bin_op(self, value):
         # TODO: Initialize lists, e.g. 'x = [0] * 3'
         # TODO: Implement bit shift operations
+        # TODO: Move number specific aspects to NumberType class
         left = self.load_expr(value.left)
         op = self.load_bin_operator(value.op)
         right = self.load_expr(value.right)

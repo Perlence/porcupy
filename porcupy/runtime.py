@@ -2,12 +2,12 @@ import attr
 
 from .types import IntType, FloatType, BoolType, StringType, GameObjectRef, GameObjectMethod
 
-__all__ = ('timers', 'system', 'yozhiks', 'bots', 'points')
-
 int_type = IntType()
 bool_type = BoolType()
 float_type = FloatType()
 str_type = StringType()
+
+# TODO: Add more game objects
 
 
 @attr.s
@@ -28,10 +28,6 @@ class Timer:
     stop.metadata = {'abbrev': 's', 'type': GameObjectMethod(stop)}
 
 
-timers = [Timer() for x in range(100)]
-timers[1].enabled = 1
-
-
 @attr.s
 class System:
     bots = attr.ib(default=0, metadata={'abbrev': 'b', 'type': int_type})
@@ -49,18 +45,15 @@ class System:
 
     message_at.metadata = {'abbrev': 'y', 'type': GameObjectMethod(message_at)}
 
-    def set_color(self, r: int_type, g: int_type, b: int_type) -> None:
-        self.color = r + (g << 8) + (b << 16)
+    # def set_color(self, r: int_type, g: int_type, b: int_type) -> None:
+    #     self.color = r + (g << 8) + (b << 16)
 
-    set_color.metadata = {'type': GameObjectMethod(set_color)}
+    # set_color.metadata = {'type': GameObjectMethod(set_color)}
 
     def load_map(self, name: str_type) -> None:
         pass
 
     load_map.metadata = {'abbrev': 'l', 'type': GameObjectMethod(load_map)}
-
-
-system = System()
 
 
 @attr.s
@@ -69,9 +62,6 @@ class Point:
     pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y', 'type': float_type})
 
     metadata = {'abbrev': 'c'}
-
-
-points = [Point() for x in range(1, 100)]
 
 
 @attr.s
@@ -83,9 +73,6 @@ class Bot:
     goto = attr.ib(default=0, metadata={'abbrev': 'g', 'type': GameObjectRef(Point)})
 
     metadata = {'abbrev': 'a'}
-
-
-bots = [Bot() for x in range(1, 10)]
 
 
 @attr.s
@@ -108,6 +95,3 @@ class Yozhik:
         pass
 
     spawn.metadata = {'abbrev': 'b', 'type': GameObjectMethod(spawn)}
-
-
-yozhiks = [Yozhik() for x in range(1, 10)]
