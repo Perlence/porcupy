@@ -435,46 +435,10 @@ class NodeConverter(ast.NodeVisitor):
             raise NotImplementedError("cannot invert expression '{}'".format(expr))
 
     def load_bin_op(self, value):
-        # TODO: Initialize lists, e.g. 'x = [0] * 3'
-        # TODO: Implement bit shift operations
-        # TODO: Move number specific aspects to NumberType class
         left = self.load_expr(value.left)
         op = self.load_bin_operator(value.op)
         right = self.load_expr(value.right)
-
-        if isinstance(left, BinOp):
-            left = self.load_bin_op(left)
-        if isinstance(right, BinOp):
-            right = self.load_bin_op(right)
-
-        if isinstance(left, Const) and isinstance(right, Const) and not isinstance(op, Div):
-            value = op(left.value, right.value)
-            return Const(value)
-
-        temp = []
-        if isinstance(left, Const):
-            if isinstance(op, (Sub, Div, FloorDiv, Mod)):
-                left_slot = self.scope.get_temporary(left.type)
-                self.append_to_body(Assign(left_slot, left))
-                temp.append(left_slot)
-                left = left_slot
-            else:
-                left, right = right, left
-
-        if not isinstance(left, (Const, Slot, AssociatedSlot)):
-            left_slot = self.scope.get_temporary(left.type)
-            self.append_to_body(Assign(left_slot, left))
-            temp.append(left_slot)
-            left = left_slot
-        if not isinstance(right, (Const, Slot, AssociatedSlot)):
-            right_slot = self.scope.get_temporary(right.type)
-            self.append_to_body(Assign(right_slot, right))
-            temp.append(right_slot)
-            right = right_slot
-
-        self.recycle_later(*temp)
-
-        return BinOp(left, op, right)
+        return left.type.bin_op(self, left, op, right)
 
     def load_bin_operator(self, value):
         if isinstance(value, operator):

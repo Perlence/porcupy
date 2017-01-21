@@ -3,13 +3,47 @@ from inspect import signature
 
 import attr
 
-from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Mult, FloorDiv, Mod, Assign, Call
+from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Mult, Div, FloorDiv, Mod, Assign, Call
 from .functions import CallableType
 
 
 @attr.s
 class NumberType:
-    pass
+    def bin_op(self, converter, left, op, right):
+        # TODO: Implement bit shift operations
+        if isinstance(left, BinOp):
+            left = converter.load_bin_op(left)
+        if isinstance(right, BinOp):
+            right = converter.load_bin_op(right)
+
+        if isinstance(left, Const) and isinstance(right, Const) and not isinstance(op, Div):
+            value = op(left.value, right.value)
+            return Const(value)
+
+        temp = []
+        if isinstance(left, Const):
+            if isinstance(op, (Sub, Div, FloorDiv, Mod)):
+                left_slot = converter.scope.get_temporary(left.type)
+                converter.append_to_body(Assign(left_slot, left))
+                temp.append(left_slot)
+                left = left_slot
+            else:
+                left, right = right, left
+
+        if not isinstance(left, (Const, Slot, AssociatedSlot)):
+            left_slot = converter.scope.get_temporary(left.type)
+            converter.append_to_body(Assign(left_slot, left))
+            temp.append(left_slot)
+            left = left_slot
+        if not isinstance(right, (Const, Slot, AssociatedSlot)):
+            right_slot = converter.scope.get_temporary(right.type)
+            converter.append_to_body(Assign(right_slot, right))
+            temp.append(right_slot)
+            right = right_slot
+
+        converter.recycle_later(*temp)
+
+        return BinOp(left, op, right)
 
 
 @attr.s
@@ -34,6 +68,8 @@ class StringType:
 
 @attr.s
 class ListPointer(NumberType):
+    # TODO: Initialize lists, e.g. 'x = [0] * 3'
+
     item_type = attr.ib()
     capacity = attr.ib()
 
