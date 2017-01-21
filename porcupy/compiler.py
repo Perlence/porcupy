@@ -583,10 +583,6 @@ class Scope:
         self.names[name] = value
 
     def assign(self, name, src_slot):
-        if isinstance(src_slot, Const) and src_slot.value is None:
-            self.define_const(name, src_slot)
-            return
-
         slot = self.names.get(name)
         if slot is not None:
             self.check_type(slot, src_slot)
