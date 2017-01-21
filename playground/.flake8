@@ -1,2 +1,2 @@
 [flake8]
-builtins = timers,system,yozhiks,bots,points,print_at,load_map
+builtins = timers,system,yozhiks,bots,points,print_at,load_map,cap

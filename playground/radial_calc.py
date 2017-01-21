@@ -28,25 +28,19 @@ if timers[1].value == 1:
 PLAYER.health = 100
 
 # Display controls
-x = points[0].pos_x; y = points[0].pos_y; print_at(x, y, 1, '1')
+x = points[0].pos_x; y = points[0].pos_y; print_at(x, y, 1, '-1')
 x = points[1].pos_x; y = points[1].pos_y; print_at(x, y, 1, '0')
-x = points[2].pos_x; y = points[2].pos_y; print_at(x, y, 1, '-1')
-x = points[9].pos_x; y = points[9].pos_y; print_at(x, y, 1, 'P')
-x = points[10].pos_x; y = points[10].pos_y; print_at(x, y, 1, '+')
-x = points[11].pos_x; y = points[11].pos_y; print_at(x, y, 1, '-')
-x = points[12].pos_x; y = points[12].pos_y; print_at(x, y, 1, '*')
-x = points[13].pos_x; y = points[13].pos_y; print_at(x, y, 1, '/')
-# x = points[3].pos_x; y = points[3].pos_y; print_at(x, y, 1, '0')
-# x = points[4].pos_x; y = points[4].pos_y; print_at(x, y, 1, '1')
-# x = points[5].pos_x; y = points[5].pos_y; print_at(x, y, 1, '/')
-# x = points[17].pos_x; y = points[17].pos_y; print_at(x, y, 1, '*')
-# x = points[7].pos_x; y = points[7].pos_y; print_at(x, y, 1, '-')
-# x = points[8].pos_x; y = points[8].pos_y; print_at(x, y, 1, '+')
-x = points[16].pos_x; y = points[16].pos_y; print_at(x, y, 1, 'R')
+x = points[2].pos_x; y = points[2].pos_y; print_at(x, y, 1, 'R')
+x = points[3].pos_x; y = points[3].pos_y; print_at(x, y, 1, '1')
+x = points[4].pos_x; y = points[4].pos_y; print_at(x, y, 1, 'P')
+x = points[5].pos_x; y = points[5].pos_y; print_at(x, y, 1, '+')
+x = points[6].pos_x; y = points[6].pos_y; print_at(x, y, 1, '-')
+x = points[7].pos_x; y = points[7].pos_y; print_at(x, y, 1, '*')
+x = points[8].pos_x; y = points[8].pos_y; print_at(x, y, 1, '/')
 
 # LED
-x = points[15].pos_x
-y = points[15].pos_y
+x = points[9].pos_x
+y = points[9].pos_y
 for digit in digits:
     if digit < 0:
         print_at(x, y, 1, '-')
@@ -69,26 +63,28 @@ if PLAYER.ammo == 0:
     elif 35 <= PLAYER.view_angle <= 42:
         value = 1
     elif 53 <= PLAYER.view_angle <= 59:
-        value = DIV
+        value = PUSH
     elif 69 <= PLAYER.view_angle <= 76:
-        value = MUL
+        value = ADD
     elif 86 <= PLAYER.view_angle <= 95:
         value = SUB
     elif 106 <= PLAYER.view_angle <= 114:
-        value = ADD
+        value = MUL
     elif 125 <= PLAYER.view_angle <= 127:
-        value = PUSH
+        value = DIV
 
 # Evaluate the stack
 while value != NOP:
     if value <= NUMBER:
+        if len(digits) == cap(digits):
+            break
         if clear_display_on_next_number:
             digits = digits[:0]
             clear_display_on_next_number = False
         digits.append(value)
 
     elif value <= OPERATION or value == PUSH:
-        if clear_display_on_next_number == False and len(digits):
+        if not clear_display_on_next_number and len(digits):
             # Convert ternary digits to a number
             number = 0
             exponent = 1
@@ -99,11 +95,9 @@ while value != NOP:
                 exponent *= 3
 
             stack.append(number)
-            digits = digits[:0]
 
-        # Apply operation
+        # Apply the operation
         if value <= OPERATION:
-            len_stack = len(stack)
             if len(stack) < 2:
                 print('Error: not enough values on the stack, 2 required')
                 break
@@ -121,9 +115,10 @@ while value != NOP:
             elif value == DIV:
                 result = op1 // op2
 
+            print(number)
+
             # TODO: Unary operation Not is not implemented
-            # if not (-3280 <= result <= 3280):
-            if -3280 > result or result > 3280:
+            if not -3280 <= result <= 3280:
                 print('Error: number is too big')
                 break
 
@@ -132,22 +127,24 @@ while value != NOP:
             # Translate number to ternary digits
             reversed_digits = [0, 0, 0, 0, 0, 0, 0, 0][:0]
             while result != 0:
-                if result % 3 == 0:
-                    reversed_digits.append(0)
+                mod = result % 3
+                if mod < 2:
+                    reversed_digits.append(mod)
                     result //= 3
-                elif result % 3 == 1:
-                    reversed_digits.append(1)
-                    result //= 3
-                elif result % 3 == 2:
+                else:
                     reversed_digits.append(-1)
                     result = (result + 1) // 3
             if len(reversed_digits) == 0:
                 reversed_digits.append(0)
 
+            digits = digits[:0]
             for i in range(len(reversed_digits)-1, -1, -1):
                 digits.append(reversed_digits[i])
 
             clear_display_on_next_number = True
+
+        else:
+            digits = digits[:0]
 
     elif value == RESET:
         stack = stack[:0]
