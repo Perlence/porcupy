@@ -63,6 +63,7 @@ class NodeConverter(ast.NodeVisitor):
             raise
 
     def annotate_node_position(self, exc, lineno, col_offset):
+        # TODO: Annotate exception only once
         old_msg, *rest_args = exc.args
         line_col = 'line {}, column {}'.format(lineno, col_offset)
         msg = old_msg + '; ' + line_col if old_msg else line_col
@@ -442,6 +443,7 @@ class NodeConverter(ast.NodeVisitor):
             elif isinstance(op, ast.GtE):
                 return attr.assoc(expr, op=ast.Lt())
         else:
+            # TODO: Negate BoolOp expressions, e.g. 'if x == 1 or x == x == 1: pass'
             raise NotImplementedError("cannot negate expression '{}'".format(expr))
 
     def load_bin_op(self, value):

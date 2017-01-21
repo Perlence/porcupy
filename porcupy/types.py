@@ -88,6 +88,7 @@ class StringType:
 @attr.s
 class ListPointer(NumberType):
     # TODO: Initialize lists, e.g. 'x = [0] * 3'
+    # TODO: Implement __bool__, so list can be used in test expression
 
     item_type = attr.ib()
     capacity = attr.ib()
