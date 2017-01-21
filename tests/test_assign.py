@@ -72,6 +72,7 @@ def test_compare():
 
     assert compile_('x = 3; y = x < 5') == 'p1z 3 p3z 0 # p1z < 5 ( p3z 1 ) p2z p3z'
     assert compile_('x = 3; y = x < 5 < 6') == 'p1z 3 p3z 0 # p1z < 5 & 5 < 6 ( p3z 1 ) p2z p3z'
+    assert compile_('x = 3; y = x < 5 < 6') == 'p1z 3 p3z 0 # p1z < 5 & 5 < 6 ( p3z 1 ) p2z p3z'
 
 
 def test_bool_op():
@@ -109,13 +110,14 @@ def test_unary_op():
     assert compile_('x = ~-6') == 'p1z 5'
     assert compile_('x = ~True') == 'p1z -2'
     assert compile_('x = ~False') == 'p1z -1'
-    # assert compile_('x = 5; y = ~x') == 'p1z 5 p2z p1z*-1 p2z p2z-1'
+    assert compile_('x = 5; y = ~x') == 'p1z 5 p3z p1z*-1 p2z p3z-1'
 
-    # assert compile_('x = not 4') == 'p1z 0'
-    # assert compile_('x = not 0') == 'p1z 1'
-    # assert compile_('x = not True') == 'p1z 0'
-    # assert compile_('x = not False') == 'p1z 1'
-    # assert compile_('x = 4; y = not z') == 'p1z 4 p2z 0 # p1z = 0 ( p2z 1 )'
+    assert compile_('x = not 4') == 'p1z 0'
+    assert compile_('x = not 0') == 'p1z 1'
+    assert compile_('x = not True') == 'p1z 0'
+    assert compile_('x = not False') == 'p1z 1'
+    assert compile_('x = 4; y = not x') == 'p1z 4 p3z 0 # p1z = 0 ( p3z 1 ) p2z p3z'
+    assert compile_('x = 3; y = not x < 5 < 6') == 'p1z 3 p3z 1 # p1z < 5 & 5 < 6 ( p3z 0 ) p2z p3z'
 
 
 def test_undefined():

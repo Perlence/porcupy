@@ -379,15 +379,15 @@ class NodeConverter(ast.NodeVisitor):
 
         return slice_value
 
-    def load_extended_bool_op(self, value):
-        initial = Const(False)
+    def load_extended_bool_op(self, value, initial=False):
+        initial = Const(initial)
         if isinstance(value, ast.Compare):
             expr = self.load_compare(value)
         elif isinstance(value, ast.BoolOp):
             # TODO: AND must return last value, OR must return first
             expr = self.load_bool_op(value)
             if isinstance(expr.op, ast.Or):
-                initial = Const(True)
+                initial = self.negate_bool(initial)
                 expr.op = ast.And()
                 expr.values = list(map(self.negate_bool, expr.values))
 
@@ -442,7 +442,7 @@ class NodeConverter(ast.NodeVisitor):
             elif isinstance(op, ast.GtE):
                 return attr.assoc(expr, op=ast.Lt())
         else:
-            raise NotImplementedError("cannot invert expression '{}'".format(expr))
+            raise NotImplementedError("cannot negate expression '{}'".format(expr))
 
     def load_bin_op(self, value):
         left = self.load_expr(value.left)
@@ -472,6 +472,9 @@ class NodeConverter(ast.NodeVisitor):
             raise NotImplementedError("operation '{}' is not implemented yet".format(value))
 
     def load_unary_op(self, value):
+        if isinstance(value.op, ast.Not) and isinstance(value.operand, (ast.Compare, ast.BoolOp)):
+            return self.load_extended_bool_op(value.operand, initial=True)
+
         operand = self.load_expr(value.operand)
         return operand.type.unary_op(self, value.op, operand)
 

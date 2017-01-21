@@ -51,13 +51,15 @@ class NumberType:
         elif isinstance(op, ast.USub):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=-operand.value)
-            else:
-                return converter.load_bin_op(BinOp(operand, Mult(), Const(-1)))
+            return converter.load_bin_op(BinOp(operand, Mult(), Const(-1)))
         elif isinstance(op, ast.Invert):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=~operand.value)
-            else:
-                return converter.load_bin_op(BinOp(BinOp(operand, Mult(), Const(-1)), Sub(), Const(1)))
+            return converter.load_bin_op(BinOp(BinOp(operand, Mult(), Const(-1)), Sub(), Const(1)))
+        elif isinstance(op, ast.Not):
+            if isinstance(operand, Const):
+                return attr.assoc(operand, value=(not operand.value), type=BoolType())
+            return converter.load_expr(ast.Compare(operand, [ast.Eq()], [Const(0)]))
         else:
             # TODO: Implement 'not'
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(op))
@@ -234,6 +236,9 @@ class Range:
             'step': step_value,
         }
         return Const(None, self, metadata=metadata)
+
+
+# TODO: Implement 'reversed' type
 
 
 @attr.s(init=False)
