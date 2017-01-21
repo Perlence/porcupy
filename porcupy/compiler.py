@@ -12,32 +12,16 @@ from .types import (NumberType, IntType, BoolType, FloatType, StringType,
                     GameObjectRef, GameObjectList, ListPointer, Slice, Range)
 
 
-def compile(source, filename='<unknown>', width=None):
+def compile(source, filename='<unknown>', separate_stmts=False):
     top = ast.parse(source, filename)
 
     converter = NodeConverter()
     converted_top = converter.visit(top)
     converter.scope.allocate_temporary()
     compiled = str(converted_top)
-    return codewrap(compiled, width)
-
-
-def codewrap(text, width):
-    stmts = text.split('  ')
-    if width is None:
-        return ' '.join(stmts)
-
-    lines = []
-    line = []
-    for stmt in stmts:
-        length = len(' '.join(line + [stmt]))
-        if length > width:
-            lines.append(' '.join(line))
-            line = [stmt]
-        else:
-            line.append(stmt)
-    lines.append(' '.join(line))
-    return '\n'.join(lines)
+    if not separate_stmts:
+        compiled = ' '.join(compiled.split('  '))
+    return compiled
 
 
 @attr.s
