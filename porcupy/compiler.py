@@ -46,12 +46,12 @@ class NodeConverter(ast.NodeVisitor):
     body = attr.ib(default=attr.Factory(list))
     last_label = attr.ib(default=0)
     loop_labels = attr.ib(default=attr.Factory(list))
-    current_node = attr.ib(default=None)
+    current_stmt = attr.ib(default=None)
     slots_to_recycle_later = attr.ib(default=attr.Factory(lambda: defaultdict(list)))
 
     def visit(self, node):
         try:
-            self.current_node = node
+            self.current_stmt = node
             result = super().visit(node)
             for slot in self.slots_to_recycle_later[node]:
                 self.scope.recycle_temporary(slot)
@@ -528,7 +528,7 @@ class NodeConverter(ast.NodeVisitor):
         self.body.append(stmt)
 
     def recycle_later(self, *slots):
-        self.slots_to_recycle_later[self.current_node].extend(slots)
+        self.slots_to_recycle_later[self.current_stmt].extend(slots)
 
     def is_body_empty(self, body):
         return all(isinstance(stmt, ast.Pass) for stmt in body)
