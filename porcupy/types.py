@@ -41,7 +41,6 @@ class ListPointer(NumberType):
         return slot
 
     def getitem(self, converter, slot, slice_slot):
-        # TODO: Implement negative indices
         if isinstance(slice_slot, Const) and slice_slot.value >= self.capacity:
             raise IndexError('list index out of range')
         # TODO: Check list bounds in run-time
@@ -154,6 +153,7 @@ class Slice(IntType):
 
 @attr.s
 class Range:
+    # TODO: Pack range object into one slot
     def len(self, converter, slot):
         start = slot.metadata['start']
         stop = slot.metadata['stop']
@@ -185,7 +185,6 @@ class Range:
 
 @attr.s(init=False)
 class GameObjectList:
-    # TODO: Implement GameObjectList iteration
     type = attr.ib()
     start = attr.ib()
     stop = attr.ib()

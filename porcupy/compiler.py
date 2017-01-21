@@ -107,11 +107,13 @@ class NodeConverter(ast.NodeVisitor):
         if isinstance(target, AST):
             return target
         elif isinstance(target, ast.Name):
-            if self.is_const(target):
-                if isinstance(src_slot.type, Slice):
+            if self.is_target_const(target):
+                if not self.is_source_const(src_slot):
+                    raise TypeError("cannot define a constant '{}'".format(target.id))
+                elif isinstance(src_slot.type, Slice):
                     raise TypeError('slice cannot be constant')
                 elif target.id in self.scope.names:
-                    raise ValueError('cannot redefine a constant')
+                    raise ValueError("cannot redefine a constant '{}'".format(target.id))
                 self.scope.define_const(target.id, src_slot)
             else:
                 return self.scope.assign(target.id, src_slot)
@@ -531,8 +533,12 @@ class NodeConverter(ast.NodeVisitor):
     def is_body_empty(self, body):
         return all(isinstance(stmt, ast.Pass) for stmt in body)
 
-    def is_const(self, target):
+    def is_target_const(self, target):
         return target.id is not None and target.id.isupper()
+
+    def is_source_const(self, src_slot):
+        return (isinstance(src_slot, Const) or
+                isinstance(src_slot, (Slot, AssociatedSlot)) and not src_slot.is_variable())
 
     def is_black_hole(self, target):
         return isinstance(target, ast.Name) and target.id == '_'

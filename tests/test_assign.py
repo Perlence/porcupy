@@ -19,6 +19,10 @@ def test_consts():
         compile_('X = 4; X = 5')
     assert 'cannot redefine a constant' in str(exc_info.value)
 
+    with pytest.raises(TypeError) as exc_info:
+        assert compile_('X = 4.5') == ''
+    assert 'cannot define a constant' in str(exc_info.value)
+
 
 def test_numbers():
     assert compile_('x = 4') == 'p1z 4'
@@ -189,9 +193,6 @@ def test_multiple_assign():
 
 
 def test_game_objects():
-    # TODO: Make this assertion work
-    # assert compile_('x = system') == ''
-
     assert compile_('x = yozhiks[0].frags') == 'p1z e1f'
     assert compile_('x = 1; y = yozhiks[x].frags') == 'p1z 1 p3z p1z+1 p2z e^3f'
     assert compile_('x = 5; y = yozhiks[x]') == 'p1z 5 p3z p1z+1 p2z p3z'
