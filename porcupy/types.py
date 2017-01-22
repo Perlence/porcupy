@@ -303,7 +303,7 @@ class GameObjectMethod:
         self.signature = signature(fn)
 
     def call(self, converter, func, *args):
-        self.signature.bind(*args)
+        self.signature.bind(self, *args)
         args = self._shorten_args(converter, args)
         return Call(func, args)
 

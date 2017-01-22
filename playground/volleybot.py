@@ -55,9 +55,9 @@ for player_num, player in PLAYERS:
 
 # Check touches
 if player_touches[0] == 3 or player_touches[1] == 3:
-    system.color = 188
+    set_color(188, 0, 0)
     print_at(282, 100, 50, '3 kasaniya!')
-    system.color = 200*256
+    set_color(0, 188, 0)
 
 # Player scores
 player_num_scores = -1

@@ -7,10 +7,11 @@ import attr
 from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
                   Label)
+from .functions import CallableType
 from .runtime import Yozhik, Timer, Point, Bot, System, Button, Door, Viewport
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
-                    GameObject, GameObjectList, GameObjectMethod, ListPointer,
-                    Slice, Range)
+                    GameObjectList, GameObjectMethod, ListPointer, Slice,
+                    Range)
 
 
 def compile(source, filename='<unknown>', separate_stmts=False):
@@ -516,7 +517,7 @@ class Scope:
         self.populate_system_functions()
 
     def populate_builtins(self):
-        from .functions import CallableType, length, capacity
+        from .functions import length, capacity
 
         self.names['cap'] = Const(None, CallableType.from_function(capacity))
         self.names['len'] = Const(None, CallableType.from_function(length))
@@ -534,12 +535,18 @@ class Scope:
 
     def populate_system_functions(self):
         system = System()
-        for method in (system.print, system.print_at, system.load_map):
+        for method in (system.print, system.print_at, system.set_color, system.load_map):
             name = method.__name__
-            self.names[name] = Slot(system.metadata['abbrev'],
-                                    None,
-                                    method.metadata['abbrev'],
-                                    GameObjectMethod(method))
+            try:
+                metadata = method.metadata
+                method_abbrev = metadata['abbrev']
+            except (AttributeError, KeyError):
+                self.names[name] = Const(None, CallableType.from_function(method))
+            else:
+                self.names[name] = Slot(system.metadata['abbrev'],
+                                        None,
+                                        method_abbrev,
+                                        GameObjectMethod(method))
 
     def define_const(self, name, value):
         self.names[name] = value

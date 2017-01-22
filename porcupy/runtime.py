@@ -2,6 +2,7 @@ import enum
 
 import attr
 
+from .ast import Const, Slot, Assign, BinOp, Add, Mult
 from .types import IntType, FloatType, BoolType, StringType, GameObject
 
 int_type = IntType()
@@ -17,12 +18,12 @@ class Timer(GameObject):
 
     metadata = {'abbrev': 't'}
 
-    def start(self) -> None:
+    def start(self, converter) -> None:
         pass
 
     start.metadata = {'abbrev': 'g'}
 
-    def stop(self) -> None:
+    def stop(self, converter) -> None:
         pass
 
     stop.metadata = {'abbrev': 's'}
@@ -50,20 +51,25 @@ class System(GameObject):
 
     metadata = {'abbrev': 'y'}
 
-    def print(self, s: str_type) -> None:
+    def print(self, converter, s: str_type) -> None:
         pass
 
     print.metadata = {'abbrev': 'm'}
 
-    def print_at(self, x: float_type, y: float_type, dur: float_type, s: str_type) -> None:
+    def print_at(self, converter, x: float_type, y: float_type, dur: float_type, s: str_type) -> None:
         pass
 
     print_at.metadata = {'abbrev': 'y'}
 
-    # def set_color(self, r: int_type, g: int_type, b: int_type) -> None:
-    #     self.color = r + (g << 8) + (b << 16)
+    def set_color(self, converter, r: int_type, g: int_type, b: int_type) -> None:
+        # system.color = r + g * 256 + b * 65536
+        color = converter.load_bin_op(BinOp(BinOp(r, Add(),
+                                                  BinOp(g, Mult(), Const(256))), Add(),
+                                            BinOp(b, Mult(), Const(65536))))
+        sys_slot = Slot(self.metadata['abbrev'], None, self.color.metadata['abbrev'], self.color.metadata['type'])
+        converter.append_to_body(Assign(sys_slot, color))
 
-    def load_map(self, name: str_type) -> None:
+    def load_map(self, converter, name: str_type) -> None:
         pass
 
     load_map.metadata = {'abbrev': 'l'}
@@ -106,7 +112,7 @@ class Yozhik(GameObject):
 
     metadata = {'abbrev': 'e'}
 
-    def spawn(self, point: int_type) -> None:
+    def spawn(self, converter, point: int_type) -> None:
         pass
 
     spawn.metadata = {'abbrev': 'b'}
@@ -114,7 +120,7 @@ class Yozhik(GameObject):
 
 @attr.s(init=False)
 class Sheep(GameObject):
-    def spawn(self, point: int_type) -> None:
+    def spawn(self, converter, point: int_type) -> None:
         pass
 
     spawn.metadata = {'abbrev': 'b'}
@@ -133,12 +139,12 @@ class Door(GameObject):
 
     metadata = {'abbrev': 'd'}
 
-    def open(self) -> None:
+    def open(self, converter) -> None:
         pass
 
     open.metadata = {'abbrev': 'o'}
 
-    def close(self) -> None:
+    def close(self, converter) -> None:
         pass
 
     close.metadata = {'abbrev': 'c'}
@@ -150,7 +156,7 @@ class Button(GameObject):
 
     metadata = {'abbrev': 'b'}
 
-    def press(self) -> None:
+    def press(self, converter) -> None:
         pass
 
     press.metadata = {'abbrev': 'd'}
