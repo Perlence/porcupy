@@ -526,8 +526,7 @@ class Scope:
         self.names['buttons'] = Const(None, GameObjectList(Button, 1, 50))
         self.names['doors'] = Const(None, GameObjectList(Door, 1, 50))
         self.names['points'] = Const(None, GameObjectList(Point, 1, 100))
-        # TODO: Enumerate timers from 1
-        self.names['timers'] = Const(None, GameObjectList(Timer, 0, 100))
+        self.names['timers'] = Const(None, GameObjectList(Timer, 1, 100))
         self.names['yozhiks'] = Const(None, GameObjectList(Yozhik, 1, 10))
         self.names['system'] = Slot(System.metadata['abbrev'], None, None, GameObjectRef(System))
         self.names['viewport'] = Slot(Viewport.metadata['abbrev'], None, None, GameObjectRef(Viewport))

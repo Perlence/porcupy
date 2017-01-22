@@ -8,7 +8,7 @@ CEIL = points[1].pos_y
 PUNCH_VELOCITY = 15
 
 # Initialization
-if timers[1].value == 1:
+if timers[0].value == 1:
     system.bots = 1
 
     PLAYER.spawn(2)
@@ -17,7 +17,7 @@ if timers[1].value == 1:
     PLAYER.ammo = 30
 
 # Restart game after player shoots
-if timers[1].value == 1 or PLAYER.ammo < 30 and BALL.health == 0:
+if timers[0].value == 1 or PLAYER.ammo < 30 and BALL.health == 0:
     BALL.spawn(1)
     BALL_BOT.ai = False
     ball_speed_x = 0.0
@@ -34,8 +34,8 @@ if PLAYER.ammo < 30:
 
 # End screen
 if -BALL.pos_y < -FLOOR:
-    game_duration = timers[1].value / 50
-    timers[1].stop()
+    game_duration = timers[0].value / 50
+    timers[0].stop()
 
     BALL.health = 0
 

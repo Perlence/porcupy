@@ -218,7 +218,7 @@ def test_game_objects():
     assert (compile_('x = [yozhiks[0], yozhiks[1]]; y = 1; y = y+3/y; z = x[0].frags') ==
             'p1z 1 p2z 2 p3z 1 p4z 1 p6z 3 p7z p6z/p4z p4z p4z+p7z p7z p3z+0 p6z p^7z p5z e^6f')
 
-    assert compile_('x = timers[2]; x.value = 0') == 'p1z 2 t^1i 0'
+    assert compile_('x = timers[1]; x.value = 0') == 'p1z 2 t^1i 0'
 
     assert compile_('system.bots = 4') == 'yb 4'
     assert compile_('system.color = 256') == 'yc 256'
@@ -226,7 +226,7 @@ def test_game_objects():
     assert compile_('x = [yozhiks[7], yozhiks[8]]; x[0].frags = 55') == 'p1z 8 p2z 9 p3z 1 p4z p3z+0 p5z p^4z e^5f 55'
 
     read_only_attrs = [
-        'timers[1].enabled',
+        'timers[0].enabled',
         'system.game_mode',
         'bots[0].point',
         'bots[0].can_see_target',

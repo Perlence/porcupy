@@ -16,7 +16,7 @@ NOP = 16
 BASE = 10
 
 # Init
-if timers[1].value == 1:
+if timers[0].value == 1:
     stack = [0, 0, 0, 0, 0][:0]
     digits = [0, 0, 0, 0, 0, 0, 0, 0][:0]
 

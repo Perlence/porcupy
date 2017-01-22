@@ -7,7 +7,7 @@ def test_call():
     assert compile_('print("Hello World")') == 'ym Hello_World'
     assert compile_('print_at(10, 10, 1, "Hello World")') == 'yy 10 10 1 Hello_World'
     assert compile_('yozhiks[1].spawn(1)') == 'e2b 1'
-    assert compile_('timers[2].start()') == 't2g'
+    assert compile_('timers[1].start()') == 't2g'
     assert compile_('SPAWNS = [2, 3]; yozhiks[1].spawn(SPAWNS[0])') == 'p1z 2 p2z 3 e2b ^1'
     assert compile_('SPAWNS = [2, 3]; yozhiks[1].spawn(SPAWNS[0]); yozhiks[1].spawn(SPAWNS[1])') == 'p1z 2 p2z 3 e2b ^1 e2b ^2'
 
