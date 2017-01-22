@@ -2,7 +2,7 @@ import enum
 
 import attr
 
-from .types import IntType, FloatType, BoolType, StringType, GameObjectRef, GameObjectMethod
+from .types import IntType, FloatType, BoolType, StringType, GameObject
 
 int_type = IntType()
 bool_type = BoolType()
@@ -10,8 +10,8 @@ float_type = FloatType()
 str_type = StringType()
 
 
-@attr.s
-class Timer:
+@attr.s(init=False)
+class Timer(GameObject):
     value = attr.ib(metadata={'abbrev': 'i', 'type': int_type})
     enabled = attr.ib(metadata={'abbrev': 'r', 'type': bool_type, 'readonly': True})
 
@@ -20,12 +20,12 @@ class Timer:
     def start(self) -> None:
         pass
 
-    start.metadata = {'abbrev': 'g', 'type': GameObjectMethod(start)}
+    start.metadata = {'abbrev': 'g'}
 
     def stop(self) -> None:
         pass
 
-    stop.metadata = {'abbrev': 's', 'type': GameObjectMethod(stop)}
+    stop.metadata = {'abbrev': 's'}
 
 
 # TODO: Populate scope with enums
@@ -41,8 +41,8 @@ class GameMode(enum.Enum):
     hot_seat_split = 7
 
 
-@attr.s
-class System:
+@attr.s(init=False)
+class System(GameObject):
     bots = attr.ib(metadata={'abbrev': 'b', 'type': int_type})
     color = attr.ib(metadata={'abbrev': 'c', 'type': int_type})
     frag_limit = attr.ib(metadata={'abbrev': 'f', 'type': int_type})
@@ -53,46 +53,44 @@ class System:
     def print(self, s: str_type) -> None:
         pass
 
-    print.metadata = {'abbrev': 'm', 'type': GameObjectMethod(print)}
+    print.metadata = {'abbrev': 'm'}
 
     def print_at(self, x: float_type, y: float_type, dur: float_type, s: str_type) -> None:
         pass
 
-    print_at.metadata = {'abbrev': 'y', 'type': GameObjectMethod(print_at)}
+    print_at.metadata = {'abbrev': 'y'}
 
     # def set_color(self, r: int_type, g: int_type, b: int_type) -> None:
     #     self.color = r + (g << 8) + (b << 16)
 
-    # set_color.metadata = {'type': GameObjectMethod(set_color)}
-
     def load_map(self, name: str_type) -> None:
         pass
 
-    load_map.metadata = {'abbrev': 'l', 'type': GameObjectMethod(load_map)}
+    load_map.metadata = {'abbrev': 'l'}
 
 
-@attr.s
-class Point:
+@attr.s(init=False)
+class Point(GameObject):
     pos_x = attr.ib(metadata={'abbrev': 'x', 'type': float_type})
     pos_y = attr.ib(metadata={'abbrev': 'y', 'type': float_type})
 
     metadata = {'abbrev': 'c'}
 
 
-@attr.s
-class Bot:
+@attr.s(init=False)
+class Bot(GameObject):
     ai = attr.ib(metadata={'abbrev': 'i', 'type': bool_type})
     target = attr.ib(metadata={'abbrev': 't', 'type': int_type})
     level = attr.ib(metadata={'abbrev': 'l', 'type': int_type})
     point = attr.ib(metadata={'abbrev': 'p', 'type': int_type, 'readonly': True})
-    goto = attr.ib(metadata={'abbrev': 'g', 'type': GameObjectRef(Point)})
+    goto = attr.ib(metadata={'abbrev': 'g', 'type': Point})
     can_see_target = attr.ib(metadata={'abbrev': 's', 'type': bool_type, 'readonly': True})
 
     metadata = {'abbrev': 'a'}
 
 
-@attr.s
-class Yozhik:
+@attr.s(init=False)
+class Yozhik(GameObject):
     frags = attr.ib(metadata={'abbrev': 'f', 'type': int_type})
     pos_x = attr.ib(metadata={'abbrev': 'x', 'type': float_type})
     pos_y = attr.ib(metadata={'abbrev': 'y', 'type': float_type})
@@ -111,15 +109,15 @@ class Yozhik:
     def spawn(self, point: int_type) -> None:
         pass
 
-    spawn.metadata = {'abbrev': 'b', 'type': GameObjectMethod(spawn)}
+    spawn.metadata = {'abbrev': 'b'}
 
 
-@attr.s
-class Sheep:
+@attr.s(init=False)
+class Sheep(GameObject):
     def spawn(self, point: int_type) -> None:
         pass
 
-    spawn.metadata = {'abbrev': 'b', 'type': GameObjectMethod(spawn)}
+    spawn.metadata = {'abbrev': 'b'}
 
 
 class DoorState(enum.IntEnum):
@@ -129,8 +127,8 @@ class DoorState(enum.IntEnum):
     closing = 3
 
 
-@attr.s
-class Door:
+@attr.s(init=False)
+class Door(GameObject):
     state = attr.ib(metadata={'abbrev': 's', 'type': DoorState, 'readonly': True})
 
     metadata = {'abbrev': 'd'}
@@ -138,16 +136,16 @@ class Door:
     def open(self) -> None:
         pass
 
-    open.metadata = {'abbrev': 'o', 'type': GameObjectMethod(open)}
+    open.metadata = {'abbrev': 'o'}
 
     def close(self) -> None:
         pass
 
-    close.metadata = {'abbrev': 'c', 'type': GameObjectMethod(close)}
+    close.metadata = {'abbrev': 'c'}
 
 
-@attr.s
-class Button:
+@attr.s(init=False)
+class Button(GameObject):
     is_pressed = attr.ib(metadata={'abbrev': 'u', 'type': bool_type, 'readonly': True})
 
     metadata = {'abbrev': 'b'}
@@ -155,11 +153,11 @@ class Button:
     def press(self) -> None:
         pass
 
-    press.metadata = {'abbrev': 'd', 'type': GameObjectMethod(press)}
+    press.metadata = {'abbrev': 'd'}
 
 
-@attr.s
-class Viewport:
+@attr.s(init=False)
+class Viewport(GameObject):
     pos_x = attr.ib(metadata={'abbrev': 'x', 'type': int_type})
     pos_y = attr.ib(metadata={'abbrev': 'y', 'type': int_type})
 

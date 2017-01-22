@@ -9,7 +9,8 @@ from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   Label)
 from .runtime import Yozhik, Timer, Point, Bot, System, Button, Door, Viewport
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
-                    GameObjectRef, GameObjectList, ListPointer, Slice, Range)
+                    GameObject, GameObjectList, GameObjectMethod, ListPointer,
+                    Slice, Range)
 
 
 def compile(source, filename='<unknown>', separate_stmts=False):
@@ -522,22 +523,23 @@ class Scope:
         self.names['range'] = Const(None, Range())
 
     def populate_game_objects(self):
-        self.names['bots'] = Const(None, GameObjectList(Bot, 1, 10))
-        self.names['buttons'] = Const(None, GameObjectList(Button, 1, 50))
-        self.names['doors'] = Const(None, GameObjectList(Door, 1, 50))
-        self.names['points'] = Const(None, GameObjectList(Point, 1, 100))
-        self.names['timers'] = Const(None, GameObjectList(Timer, 1, 100))
-        self.names['yozhiks'] = Const(None, GameObjectList(Yozhik, 1, 10))
-        self.names['system'] = Slot(System.metadata['abbrev'], None, None, GameObjectRef(System))
-        self.names['viewport'] = Slot(Viewport.metadata['abbrev'], None, None, GameObjectRef(Viewport))
+        self.names['bots'] = Const(None, GameObjectList(Bot(), 1, 10))
+        self.names['buttons'] = Const(None, GameObjectList(Button(), 1, 50))
+        self.names['doors'] = Const(None, GameObjectList(Door(), 1, 50))
+        self.names['points'] = Const(None, GameObjectList(Point(), 1, 100))
+        self.names['timers'] = Const(None, GameObjectList(Timer(), 1, 100))
+        self.names['yozhiks'] = Const(None, GameObjectList(Yozhik(), 1, 10))
+        self.names['system'] = Slot(System.metadata['abbrev'], None, None, System())
+        self.names['viewport'] = Slot(Viewport.metadata['abbrev'], None, None, Viewport())
 
     def populate_system_functions(self):
-        for method in (System.print, System.print_at, System.load_map):
+        system = System()
+        for method in (system.print, system.print_at, system.load_map):
             name = method.__name__
-            self.names[name] = Slot(System.metadata['abbrev'],
+            self.names[name] = Slot(system.metadata['abbrev'],
                                     None,
                                     method.metadata['abbrev'],
-                                    method.metadata['type'])
+                                    GameObjectMethod(method))
 
     def define_const(self, name, value):
         self.names[name] = value

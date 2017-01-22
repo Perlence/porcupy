@@ -111,7 +111,7 @@ class ListPointer(NumberType):
             if slice_slot.value >= capacity_slot.value:
                 raise IndexError('list index out of range')
 
-        if isinstance(self.item_type, GameObjectRef):
+        if isinstance(self.item_type, GameObject):
             item_slot = converter.scope.get_temporary(self.item_type)
             converter.append_to_body(Assign(item_slot, slot))
             converter.recycle_later(item_slot)
@@ -262,25 +262,24 @@ class GameObjectList:
 
     def getitem(self, converter, value_slot, slice_slot):
         register = self.type.metadata['abbrev']
-        slot_type = GameObjectRef(self.type)
         if isinstance(slice_slot, Const):
-            return Slot(register, slice_slot.value + self.start, None, slot_type)
+            return Slot(register, slice_slot.value + self.start, None, self.type)
         else:
             temp = converter.scope.get_temporary(IntType())
             offset = converter.load_bin_op(BinOp(slice_slot, Add(), Const(self.start)))
             converter.append_to_body(Assign(temp, offset))
             converter.recycle_later(temp)
-            return AssociatedSlot(temp, type=slot_type)
+            return AssociatedSlot(temp, type=self.type)
 
 
 @attr.s
-class GameObjectRef(NumberType):
-    type = attr.ib()
-
+class GameObject(IntType):
     def getattr(self, converter, slot, attr_name):
-        game_obj_type = self.type
-        register = game_obj_type.metadata['abbrev']
-        attrib = getattr(game_obj_type, attr_name)
+        register = self.metadata['abbrev']
+        attrib = getattr(self, attr_name)
+        if callable(attrib):
+            attrib.metadata['type'] = GameObjectMethod(attrib)
+
         if slot.is_variable():
             ref = slot
             if slot.ref is not None:
@@ -304,7 +303,7 @@ class GameObjectMethod:
         self.signature = signature(fn)
 
     def call(self, converter, func, *args):
-        self.signature.bind(None, *args)
+        self.signature.bind(*args)
         args = self._shorten_args(converter, args)
         return Call(func, args)
 
