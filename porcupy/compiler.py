@@ -89,8 +89,10 @@ class NodeConverter(ast.NodeVisitor):
         self.append_to_body(Assign(dest_slot, bin_op))
 
     def store_value(self, target, src_slot):
+        # TODO: Check if src_slot has metadata 'readonly'
+        dest_slot = None
         if isinstance(target, AST):
-            return target
+            dest_slot = target
         elif isinstance(target, ast.Name):
             if self.is_target_const(target):
                 if not self.is_source_const(src_slot):
@@ -101,13 +103,19 @@ class NodeConverter(ast.NodeVisitor):
                     raise ValueError("cannot redefine a constant '{}'".format(target.id))
                 self.scope.define_const(target.id, src_slot)
             else:
-                return self.scope.assign(target.id, src_slot)
+                dest_slot = self.scope.assign(target.id, src_slot)
         elif isinstance(target, ast.Attribute):
-            return self.load_attribute(target)
+            dest_slot = self.load_attribute(target)
         elif isinstance(target, ast.Subscript):
-            return self.load_subscript(target)
+            dest_slot = self.load_subscript(target)
         else:
             raise NotImplementedError("assigning values to '{}' is not implemented yet".format(target))
+
+        if dest_slot is None:
+            return
+        elif dest_slot.metadata.get('readonly'):
+            raise TypeError("cannot assign value to a read-only slot '{}'".format(dest_slot))
+        return dest_slot
 
     def visit_For(self, node):
         # For(expr target, expr iter, stmt* body, stmt* orelse)
