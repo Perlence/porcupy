@@ -48,18 +48,17 @@ def cli(filename, reader, writer, width=80):
         lineno = getattr(exc, '_porcupy_lineno', None)
         if lineno is None:
             raise
-        print_exception(exc, filename, lineno)
+        print_exception(sys.exc_info(), filename, lineno)
         return 1
     wrapped = codewrap(compiled, width)
     print(wrapped, file=writer)
 
 
-def print_exception(exc, filename, lineno):
-    te = traceback.TracebackException(type(exc), exc, None)
+def print_exception(exc_info, filename, lineno):
+    te = traceback.TracebackException(*exc_info)
     fs = traceback.FrameSummary(filename, lineno, '<module>')
     te.stack = traceback.StackSummary.from_list([fs])
 
-    print('Traceback (most recent call last):', file=sys.stderr)
     for line in te.format():
         print(line, end='', file=sys.stderr)
 
