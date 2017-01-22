@@ -29,10 +29,7 @@ class Timer(GameObject):
     stop.metadata = {'abbrev': 's'}
 
 
-# TODO: Populate scope with enums
-
-
-class GameMode(enum.Enum):
+class GameMode(enum.IntEnum):
     multi_lan = 1
     multi_duel = 2
     hot_seat = 3

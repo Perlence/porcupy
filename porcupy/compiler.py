@@ -8,7 +8,8 @@ from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
                   Label)
 from .functions import CallableType
-from .runtime import Yozhik, Timer, Point, Bot, System, Button, Door, Viewport
+from .runtime import (Yozhik, Timer, Point, Bot, System, Button, Door,
+                      Viewport, GameMode, DoorState)
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
                     GameObjectList, GameObjectMethod, ListPointer, Slice,
                     Range)
@@ -513,6 +514,7 @@ class Scope:
 
     def __attrs_post_init__(self):
         self.populate_builtins()
+        self.populate_consts()
         self.populate_game_objects()
         self.populate_system_functions()
 
@@ -532,6 +534,20 @@ class Scope:
         self.names['yozhiks'] = Const(None, GameObjectList(Yozhik(), 1, 10))
         self.names['system'] = Slot(System.metadata['abbrev'], None, None, System())
         self.names['viewport'] = Slot(Viewport.metadata['abbrev'], None, None, Viewport())
+
+    def populate_consts(self):
+        self.names['DS_CLOSED'] = Const(int(DoorState.closed), IntType())
+        self.names['DS_OPEN'] = Const(int(DoorState.open), IntType())
+        self.names['DS_OPENING'] = Const(int(DoorState.opening), IntType())
+        self.names['DS_CLOSING'] = Const(int(DoorState.closing), IntType())
+
+        self.names['GM_MULTI_LAN'] = Const(int(GameMode.multi_lan), IntType())
+        self.names['GM_MULTI_DUEL'] = Const(int(GameMode.multi_duel), IntType())
+        self.names['GM_HOT_SEAT'] = Const(int(GameMode.hot_seat), IntType())
+        self.names['GM_MENU'] = Const(int(GameMode.menu), IntType())
+        self.names['GM_SINGLE'] = Const(int(GameMode.single), IntType())
+        self.names['GM_SHEEP'] = Const(int(GameMode.sheep), IntType())
+        self.names['GM_HOT_SEAT_SPLIT'] = Const(int(GameMode.hot_seat_split), IntType())
 
     def populate_system_functions(self):
         system = System()
