@@ -8,8 +8,8 @@ from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
                   Label)
 from .functions import CallableType
-from .runtime import (Yozhik, Timer, Point, Bot, System, Button, Door,
-                      Viewport, GameMode, DoorState)
+from .gameobjs import (Yozhik, Timer, Point, Bot, System, Button, Door,
+                       Viewport, GameMode, DoorState)
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
                     GameObjectList, GameObjectMethod, ListPointer, Slice,
                     Range)
