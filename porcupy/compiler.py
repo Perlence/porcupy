@@ -19,7 +19,9 @@ def compile(source, filename='<unknown>', separate_stmts=False):
     top = ast.parse(source, filename)
 
     converter = NodeConverter()
-    converted_top = visit_with_exc_handling(converter, top)
+    converted_top = visit_with_exc_wrapping(converter, top, filename)
+    if converted_top is None:
+        return
     converter.scope.allocate_temporary()
     compiled = str(converted_top)
     if not separate_stmts:
@@ -27,22 +29,20 @@ def compile(source, filename='<unknown>', separate_stmts=False):
     return compiled
 
 
-def visit_with_exc_handling(converter, node):
+def visit_with_exc_wrapping(converter, node, filename):
     try:
         return converter.visit(node)
     except Exception as exc:
         node = converter.current_stmt
-        if node is None or not hasattr(node, 'lineno') or not hasattr(node, 'col_offset'):
+        if node is None:
             raise
-        add_node_info_to_exception(exc, node.lineno, node.col_offset)
+
+        lineno = getattr(node, 'lineno', None)
+        if lineno is None:
+            raise
+
+        exc._porcupy_lineno = lineno
         raise
-
-
-def add_node_info_to_exception(exc, lineno, col_offset):
-    old_msg, *rest_args = exc.args
-    line_col = 'line {}, column {}'.format(lineno, col_offset)
-    msg = old_msg + '; ' + line_col if old_msg else line_col
-    exc.args = (msg, *rest_args)
 
 
 @attr.s

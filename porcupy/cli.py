@@ -1,6 +1,7 @@
 import argparse
 import struct
 import sys
+import traceback
 import warnings
 
 import attr
@@ -18,8 +19,10 @@ def main():
     args = parser.parse_args()
 
     reader = sys.stdin
+    filename = '<stdin>'
     if args.input is not None:
         reader = open(args.input)
+        filename = args.input
 
     writer = sys.stdout
     line_width = 80
@@ -29,17 +32,36 @@ def main():
         writer = ScenarioAttacher(args.attach, args.encoding)
         line_width = 255
 
-    cli(reader, writer, line_width)
+    status = cli(filename, reader, writer, line_width)
 
     reader.close()
     writer.close()
 
+    sys.exit(status)
 
-def cli(reader, writer, width=80):
+
+def cli(filename, reader, writer, width=80):
     source = reader.read()
-    compiled = compiler.compile(source, separate_stmts=True)
+    try:
+        compiled = compiler.compile(source, filename, separate_stmts=True)
+    except Exception as exc:
+        lineno = getattr(exc, '_porcupy_lineno', None)
+        if lineno is None:
+            raise
+        print_exception(exc, filename, lineno)
+        return 1
     wrapped = codewrap(compiled, width)
     print(wrapped, file=writer)
+
+
+def print_exception(exc, filename, lineno):
+    te = traceback.TracebackException(type(exc), exc, None)
+    fs = traceback.FrameSummary(filename, lineno, '<module>')
+    te.stack = traceback.StackSummary.from_list([fs])
+
+    print('Traceback (most recent call last):', file=sys.stderr)
+    for line in te.format():
+        print(line, end='', file=sys.stderr)
 
 
 def codewrap(text, width):
