@@ -19,12 +19,30 @@ def compile(source, filename='<unknown>', separate_stmts=False):
     top = ast.parse(source, filename)
 
     converter = NodeConverter()
-    converted_top = converter.visit(top)
+    converted_top = visit_with_exc_handling(converter, top)
     converter.scope.allocate_temporary()
     compiled = str(converted_top)
     if not separate_stmts:
         compiled = ' '.join(compiled.split('  '))
     return compiled
+
+
+def visit_with_exc_handling(converter, node):
+    try:
+        return converter.visit(node)
+    except Exception as exc:
+        node = converter.current_stmt
+        if node is None or not hasattr(node, 'lineno') or not hasattr(node, 'col_offset'):
+            raise
+        add_node_info_to_exception(exc, node.lineno, node.col_offset)
+        raise
+
+
+def add_node_info_to_exception(exc, lineno, col_offset):
+    old_msg, *rest_args = exc.args
+    line_col = 'line {}, column {}'.format(lineno, col_offset)
+    msg = old_msg + '; ' + line_col if old_msg else line_col
+    exc.args = (msg, *rest_args)
 
 
 @attr.s
@@ -37,25 +55,11 @@ class NodeConverter(ast.NodeVisitor):
     slots_to_recycle_later = attr.ib(default=attr.Factory(lambda: defaultdict(list)))
 
     def visit(self, node):
-        try:
-            self.current_stmt = node
-            result = super().visit(node)
-            for slot in self.slots_to_recycle_later[node]:
-                self.scope.recycle_temporary(slot)
-            return result
-        except Exception as e:
-            if not hasattr(node, 'lineno') or not hasattr(node, 'col_offset'):
-                raise
-            self.annotate_node_position(e, node.lineno, node.col_offset)
-            raise
-
-    def annotate_node_position(self, exc, lineno, col_offset):
-        # TODO: Annotate exception only once
-        old_msg, *rest_args = exc.args
-        line_col = 'line {}, column {}'.format(lineno, col_offset)
-        msg = old_msg + '; ' + line_col if old_msg else line_col
-        exc.args = [msg] + rest_args
-        return exc
+        self.current_stmt = node
+        result = super().visit(node)
+        for slot in self.slots_to_recycle_later[node]:
+            self.scope.recycle_temporary(slot)
+        return result
 
     def generic_visit(self, node):
         raise NotImplementedError("node '{}' is not implemented yet".format(node))
