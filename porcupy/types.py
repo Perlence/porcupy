@@ -304,17 +304,21 @@ class GameObjectMethod:
         self.signature = signature(fn)
 
     def call(self, converter, func, *args):
-        # TODO: If argument is game object attribute, e.g. 'e1f', then
-        # store it in a temporary slot, because there's no short form
-        # for 'e1f'
         self.signature.bind(None, *args)
-        args = self._shorten_args(args)
+        args = self._shorten_args(converter, args)
         return Call(func, args)
 
-    def _shorten_args(self, args):
+    def _shorten_args(self, converter, args):
         short_args = []
+        tmp_slots = []
         for arg in args:
             if isinstance(arg, (Slot, AssociatedSlot)):
+                if not arg.is_variable():
+                    tmp_slot = converter.scope.get_temporary(arg.type)
+                    tmp_slots.append(tmp_slot)
+                    converter.append_to_body(Assign(tmp_slot, arg))
+                    arg = tmp_slot
                 arg = AssociatedSlot(arg, short_form=True)
             short_args.append(arg)
+        converter.recycle_later(*tmp_slots)
         return short_args

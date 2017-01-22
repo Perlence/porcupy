@@ -28,7 +28,7 @@ def test_call():
 
     assert compile_('x = 2; print(x)') == 'p1z 2 ym ^1'
     assert compile_('s = "Hello World"; print(s)') == 's0z Hello_World ym $0'
-    # assert compile_('print(yozhiks[0].health)') == 'p1z e1h ym ^1'
+    assert compile_('print(yozhiks[0].health)') == 'p1z e1p ym ^1'
 
     # assert compile_('subject = "World"; print("Hello {subject}")') == 's0z World ym Hello_$0'
     # assert compile_('n = 2; print("Yozhiks in Quake {n}")') == 'p1z 2 ym Yozhiks_in_Quake_^1'

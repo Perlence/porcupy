@@ -30,22 +30,22 @@ if timers[1].value == 1:
 PLAYER.health = 100
 
 # Display controls
-x = points[0].pos_x; y = points[0].pos_y; print_at(x, y, 1, '0')
-x = points[1].pos_x; y = points[1].pos_y; print_at(x, y, 1, '1')
-x = points[2].pos_x; y = points[2].pos_y; print_at(x, y, 1, '2')
-x = points[3].pos_x; y = points[3].pos_y; print_at(x, y, 1, '3')
-x = points[4].pos_x; y = points[4].pos_y; print_at(x, y, 1, '4')
-x = points[5].pos_x; y = points[5].pos_y; print_at(x, y, 1, '5')
-x = points[6].pos_x; y = points[6].pos_y; print_at(x, y, 1, '6')
-x = points[7].pos_x; y = points[7].pos_y; print_at(x, y, 1, '7')
-x = points[8].pos_x; y = points[8].pos_y; print_at(x, y, 1, '8')
-x = points[9].pos_x; y = points[9].pos_y; print_at(x, y, 1, '9')
-x = points[10].pos_x; y = points[10].pos_y; print_at(x, y, 1, 'P')
-x = points[11].pos_x; y = points[11].pos_y; print_at(x, y, 1, '+')
-x = points[12].pos_x; y = points[12].pos_y; print_at(x, y, 1, '-')
-x = points[13].pos_x; y = points[13].pos_y; print_at(x, y, 1, '*')
-x = points[14].pos_x; y = points[14].pos_y; print_at(x, y, 1, '/')
-x = points[15].pos_x; y = points[15].pos_y; print_at(x, y, 1, 'C')
+print_at(points[0].pos_x, points[0].pos_y, 1, '0')
+print_at(points[1].pos_x, points[1].pos_y, 1, '1')
+print_at(points[2].pos_x, points[2].pos_y, 1, '2')
+print_at(points[3].pos_x, points[3].pos_y, 1, '3')
+print_at(points[4].pos_x, points[4].pos_y, 1, '4')
+print_at(points[5].pos_x, points[5].pos_y, 1, '5')
+print_at(points[6].pos_x, points[6].pos_y, 1, '6')
+print_at(points[7].pos_x, points[7].pos_y, 1, '7')
+print_at(points[8].pos_x, points[8].pos_y, 1, '8')
+print_at(points[9].pos_x, points[9].pos_y, 1, '9')
+print_at(points[10].pos_x, points[10].pos_y, 1, 'P')
+print_at(points[11].pos_x, points[11].pos_y, 1, '+')
+print_at(points[12].pos_x, points[12].pos_y, 1, '-')
+print_at(points[13].pos_x, points[13].pos_y, 1, '*')
+print_at(points[14].pos_x, points[14].pos_y, 1, '/')
+print_at(points[15].pos_x, points[15].pos_y, 1, 'C')
 
 # LED
 x = points[16].pos_x
@@ -95,7 +95,7 @@ if PLAYER.ammo == 0:
 # Evaluate the stack
 while value != NOP:
     if value <= NUMBER:
-        if len(digits) == cap(digits) or len(digits) == 1 and digits[0] == 0 and value == 0:
+        if len(digits) == cap(digits):
             break
         if len(digits) == 1 and digits[0] == value == 0:
             break
