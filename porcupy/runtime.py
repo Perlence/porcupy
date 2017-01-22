@@ -1,3 +1,5 @@
+import enum
+
 import attr
 
 from .types import IntType, FloatType, BoolType, StringType, GameObjectRef, GameObjectMethod
@@ -7,13 +9,11 @@ bool_type = BoolType()
 float_type = FloatType()
 str_type = StringType()
 
-# TODO: Add more game objects
-
 
 @attr.s
 class Timer:
-    value = attr.ib(default=0, metadata={'abbrev': 'i', 'type': int_type})
-    enabled = attr.ib(default=0, metadata={'abbrev': 'r', 'type': bool_type})
+    value = attr.ib(metadata={'abbrev': 'i', 'type': int_type})
+    enabled = attr.ib(metadata={'abbrev': 'r', 'type': bool_type, 'readonly': True})
 
     metadata = {'abbrev': 't'}
 
@@ -28,10 +28,25 @@ class Timer:
     stop.metadata = {'abbrev': 's', 'type': GameObjectMethod(stop)}
 
 
+# TODO: Populate scope with enums
+
+
+class GameMode(enum.Enum):
+    multi_lan = 1
+    multi_duel = 2
+    hot_seat = 3
+    menu = 4
+    single = 5
+    sheep = 6
+    hot_seat_split = 7
+
+
 @attr.s
 class System:
-    bots = attr.ib(default=0, metadata={'abbrev': 'b', 'type': int_type})
-    color = attr.ib(default=0, metadata={'abbrev': 'c', 'type': int_type})
+    bots = attr.ib(metadata={'abbrev': 'b', 'type': int_type})
+    color = attr.ib(metadata={'abbrev': 'c', 'type': int_type})
+    frag_limit = attr.ib(metadata={'abbrev': 'f', 'type': int_type})
+    game_mode = attr.ib(metadata={'abbrev': 'g', 'type': GameMode, 'readonly': True})
 
     metadata = {'abbrev': 'y'}
 
@@ -58,36 +73,38 @@ class System:
 
 @attr.s
 class Point:
-    pos_x = attr.ib(default=0.0, metadata={'abbrev': 'x', 'type': float_type})
-    pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y', 'type': float_type})
+    pos_x = attr.ib(metadata={'abbrev': 'x', 'type': float_type})
+    pos_y = attr.ib(metadata={'abbrev': 'y', 'type': float_type})
 
     metadata = {'abbrev': 'c'}
 
 
 @attr.s
 class Bot:
-    ai = attr.ib(default=False, metadata={'abbrev': 'i', 'type': bool_type})
-    target = attr.ib(default=0, metadata={'abbrev': 't', 'type': int_type})
-    level = attr.ib(default=0, metadata={'abbrev': 'l', 'type': int_type})
-    point = attr.ib(default=0, metadata={'abbrev': 'p', 'type': int_type})
-    goto = attr.ib(default=0, metadata={'abbrev': 'g', 'type': GameObjectRef(Point)})
+    ai = attr.ib(metadata={'abbrev': 'i', 'type': bool_type})
+    target = attr.ib(metadata={'abbrev': 't', 'type': int_type})
+    level = attr.ib(metadata={'abbrev': 'l', 'type': int_type})
+    point = attr.ib(metadata={'abbrev': 'p', 'type': int_type, 'readonly': True})
+    goto = attr.ib(metadata={'abbrev': 'g', 'type': GameObjectRef(Point)})
+    can_see_target = attr.ib(metadata={'abbrev': 's', 'type': bool_type, 'readonly': True})
 
     metadata = {'abbrev': 'a'}
 
 
 @attr.s
 class Yozhik:
-    frags = attr.ib(default=0, metadata={'abbrev': 'f', 'type': int_type})
-    pos_x = attr.ib(default=0.0, metadata={'abbrev': 'x', 'type': float_type})
-    pos_y = attr.ib(default=0.0, metadata={'abbrev': 'y', 'type': float_type})
-    speed_x = attr.ib(default=0.0, metadata={'abbrev': 'u', 'type': float_type})
-    speed_y = attr.ib(default=0.0, metadata={'abbrev': 'v', 'type': float_type})
-    health = attr.ib(default=0, metadata={'abbrev': 'p', 'type': int_type})
-    armor = attr.ib(default=0, metadata={'abbrev': 'n', 'type': int_type})
-    has_weapon = attr.ib(default=False, metadata={'abbrev': 'e', 'type': bool_type})
-    weapon = attr.ib(default=0, metadata={'abbrev': 'w', 'type': int_type})
-    ammo = attr.ib(default=0, metadata={'abbrev': 's', 'type': int_type})
-    view_angle = attr.ib(default=0.0, metadata={'abbrev': 'a', 'type': float_type})
+    frags = attr.ib(metadata={'abbrev': 'f', 'type': int_type})
+    pos_x = attr.ib(metadata={'abbrev': 'x', 'type': float_type})
+    pos_y = attr.ib(metadata={'abbrev': 'y', 'type': float_type})
+    speed_x = attr.ib(metadata={'abbrev': 'u', 'type': float_type})
+    speed_y = attr.ib(metadata={'abbrev': 'v', 'type': float_type})
+    health = attr.ib(metadata={'abbrev': 'p', 'type': int_type})
+    armor = attr.ib(metadata={'abbrev': 'n', 'type': int_type})
+    has_weapon = attr.ib(metadata={'abbrev': 'e', 'type': bool_type})
+    weapon = attr.ib(metadata={'abbrev': 'w', 'type': int_type})
+    ammo = attr.ib(metadata={'abbrev': 's', 'type': int_type})
+    view_angle = attr.ib(metadata={'abbrev': 'a', 'type': float_type})
+    team = attr.ib(metadata={'abbrev': 't', 'type': int_type})
 
     metadata = {'abbrev': 'e'}
 
@@ -95,3 +112,55 @@ class Yozhik:
         pass
 
     spawn.metadata = {'abbrev': 'b', 'type': GameObjectMethod(spawn)}
+
+
+@attr.s
+class Sheep:
+    def spawn(self, point: int_type) -> None:
+        pass
+
+    spawn.metadata = {'abbrev': 'b', 'type': GameObjectMethod(spawn)}
+
+
+class DoorState(enum.IntEnum):
+    closed = 0
+    open = 1
+    opening = 2
+    closing = 3
+
+
+@attr.s
+class Door:
+    state = attr.ib(metadata={'abbrev': 's', 'type': DoorState, 'readonly': True})
+
+    metadata = {'abbrev': 'd'}
+
+    def open(self) -> None:
+        pass
+
+    open.metadata = {'abbrev': 'o', 'type': GameObjectMethod(open)}
+
+    def close(self) -> None:
+        pass
+
+    close.metadata = {'abbrev': 'c', 'type': GameObjectMethod(close)}
+
+
+@attr.s
+class Button:
+    is_pressed = attr.ib(metadata={'abbrev': 'u', 'type': bool_type, 'readonly': True})
+
+    metadata = {'abbrev': 'b'}
+
+    def press(self) -> None:
+        pass
+
+    press.metadata = {'abbrev': 'd', 'type': GameObjectMethod(press)}
+
+
+@attr.s
+class Viewport:
+    pos_x = attr.ib(metadata={'abbrev': 'x', 'type': int_type})
+    pos_y = attr.ib(metadata={'abbrev': 'y', 'type': int_type})
+
+    metadata = {'abbrev': 'w'}
