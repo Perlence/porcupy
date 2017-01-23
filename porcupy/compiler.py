@@ -200,9 +200,14 @@ class NodeConverter:
     def generic_if(self, node, label_start=None):
         is_loop = label_start is not None
 
-        test = self.visit(node.test)
+        if isinstance(node.test, ast.Compare) and len(node.test.comparators) == 1:
+            test = self.visit_Compare(node.test, wrap_in_if_stmt=False)
+        else:
+            test = self.visit(node.test)
+
         if not isinstance(test, Compare):
             test = Compare(test, ast.NotEq(), Const(False))
+
         not_test = self.negate_bool(test)
 
         label_end = self.new_label()
@@ -372,7 +377,7 @@ class NodeConverter:
             expr = BoolOp(ast.And(), values)
 
         if wrap_in_if_stmt:
-            return self.wrap_bool_in_if_stmt(expr, initial)
+            return self.wrap_in_if_stmt(expr, initial)
         else:
             return expr
 
@@ -385,7 +390,7 @@ class NodeConverter:
             if isinstance(bool_op_value, ast.Compare):
                 compare = self.visit_Compare(bool_op_value, wrap_in_if_stmt=False)
                 if isinstance(compare, BoolOp):
-                    bool_slot = self.wrap_bool_in_if_stmt(compare, initial=const_false)
+                    bool_slot = self.wrap_in_if_stmt(compare, initial=const_false)
                     compare = Compare(bool_slot, ast.NotEq(), const_false)
             else:
                 slot = self.visit(bool_op_value)
@@ -396,13 +401,13 @@ class NodeConverter:
         if isinstance(value.op, ast.Or):
             initial = self.negate_bool(initial)
             op = ast.And()
-            print(values)
             values = list(map(self.negate_bool, values))
 
         expr = BoolOp(op, values)
-        return self.wrap_bool_in_if_stmt(expr, initial)
 
-    def wrap_bool_in_if_stmt(self, expr, initial):
+        return self.wrap_in_if_stmt(expr, initial)
+
+    def wrap_in_if_stmt(self, expr, initial):
         bool_slot = self.scope.get_temporary(BoolType())
         self.append_to_body(Assign(bool_slot, initial))
         assign = Assign(bool_slot, self.negate_bool(initial))

@@ -32,13 +32,13 @@ def test_generic_if():
     assert (compile_('x = 11\n'
                      'if x > 0: y = 22') ==
             'p1z 11 '
-            'p3z 0 # p1z > 0 ( p3z 1 ) # p3z = 0 ( g1z ) p2z 22 :1')
+            '# p1z <= 0 ( g1z ) p2z 22 :1')
     assert (compile_('x = 11\n'
                      'if x > 0:\n'
                      '    y = 22\n'
                      '    z = 33') ==
             'p1z 11 '
-            'p4z 0 # p1z > 0 ( p4z 1 ) # p4z = 0 ( g1z ) p2z 22 p3z 33 :1')
+            '# p1z <= 0 ( g1z ) p2z 22 p3z 33 :1')
     assert (compile_('x = 11\n'
                      'if 0 < x < 5: y = 22') ==
             'p1z 11 '
@@ -50,7 +50,7 @@ def test_generic_if():
     assert (compile_('x = [11, 22, 33]\n'
                      'if x[0] > 0: y = 44') ==
             'p1z 11 p2z 22 p3z 33 p4z 1 '
-            'p6z p4z+0 p7z p^6z p6z 0 # p7z > 0 ( p6z 1 ) # p6z = 0 ( g1z ) p5z 44 :1')
+            'p6z p4z+0 p7z p^6z # p7z <= 0 ( g1z ) p5z 44 :1')
 
     # Test is BoolOp
     assert (compile_('x = 11\n'
@@ -73,7 +73,7 @@ def test_generic_if():
                      'if x < y + 7:'
                      '    z = 33') ==
             'p1z 11 p2z 22 '
-            'p4z 0 # p1z < p2z+7 ( p4z 1 ) # p4z = 0 ( g1z ) p3z 33 :1')
+            '# p1z >= p2z+7 ( g1z ) p3z 33 :1')
 
     # Test is BinOp
     assert compile_('x = 1\nif x + 2: y = 22') == 'p1z 1 # p1z+2 = 0 ( g1z ) p2z 22 :1'
@@ -88,10 +88,10 @@ def test_nested():
                      '    if x < 15:\n'
                      '        y = 22') ==
             'p1z 11 '
-            'p3z 0 # p1z > 0 ( p3z 1 ) '
-            '# p3z = 0 ( g1z ) '
-            'p4z 0 # p1z < 15 ( p4z 1 ) '
-            '# p4z = 0 ( g2z ) p2z 22 :2 '
+            '# p1z <= 0 ( g1z ) '
+            '# p1z >= 15 ( g2z ) '
+            'p2z 22 '
+            ':2 '
             ':1')
 
     assert (compile_('x = 11\n'
@@ -100,11 +100,11 @@ def test_nested():
                      '    if x < 15:\n'
                      '        z = 33') ==
             'p1z 11 '
-            'p4z 0 # p1z > 0 ( p4z 1 ) '
-            '# p4z = 0 ( g1z ) '
+            '# p1z <= 0 ( g1z ) '
             'p2z 22 '
-            'p5z 0 # p1z < 15 ( p5z 1 ) '
-            '# p5z = 0 ( g2z ) p3z 33 :2 '
+            '# p1z >= 15 ( g2z ) '
+            'p3z 33 '
+            ':2 '
             ':1')
 
     assert (compile_('x = 11\n'
@@ -115,13 +115,13 @@ def test_nested():
                      '    if x < 16:\n'
                      '        y = 33') ==
             'p1z 11 '
-            'p3z 0 # p1z > 0 ( p3z 1 ) '
-            '# p3z = 0 ( g1z ) '
-            'p4z 0 # p1z < 15 ( p4z 1 ) '
-            '# p4z = 0 ( g2z ) p2z 22 :2 '
+            '# p1z <= 0 ( g1z ) '
+            '# p1z >= 15 ( g2z ) '
+            'p2z 22 :2 '
             'p2z 33 '
-            'p4z 0 # p1z < 16 ( p4z 1 ) '
-            '# p4z = 0 ( g3z ) p2z 33 :3 '
+            '# p1z >= 16 ( g3z ) '
+            'p2z 33 '
+            ':3 '
             ':1')
 
     assert (compile_('x = 11\n'
@@ -131,13 +131,11 @@ def test_nested():
                      '        if x < 16:\n'
                      '            y = 33') ==
             'p1z 11 '
-            'p3z 0 # p1z > 0 ( p3z 1 ) '
-            '# p3z = 0 ( g1z ) '
-            'p4z 0 # p1z < 15 ( p4z 1 ) '
-            '# p4z = 0 ( g2z ) '
+            '# p1z <= 0 ( g1z ) '
+            '# p1z >= 15 ( g2z ) '
             'p2z 22 '
-            'p5z 0 # p1z < 16 ( p5z 1 ) '
-            '# p5z = 0 ( g3z ) p2z 33 '
+            '# p1z >= 16 ( g3z ) '
+            'p2z 33 '
             ':3 '
             ':2 '
             ':1')
@@ -148,10 +146,10 @@ def test_nested():
                      '    if x < 15 or x < 16:\n'
                      '        y = 22') ==
             'p1z 11 '
-            'p3z 0 # p1z > 0 ( p3z 1 ) '
-            '# p3z = 0 ( g1z ) '
-            'p4z 1 # p1z >= 15 & p1z >= 16 ( p4z 0 ) '
-            '# p4z = 0 ( g2z ) p2z 22 :2 '
+            '# p1z <= 0 ( g1z ) '
+            'p3z 1 # p1z >= 15 & p1z >= 16 ( p3z 0 ) # p3z = 0 ( g2z ) '
+            'p2z 22 '
+            ':2 '
             ':1')
 
 
@@ -162,9 +160,12 @@ def test_else():
                      'else:\n'
                      '    y = 23') ==
             'p1z 11 '
-            'p3z 0 # p1z > 0 ( p3z 1 ) '
-            '# p3z = 0 ( g2z ) p2z 22 g1z :2 '
-            'p2z 23 :1')
+            '# p1z <= 0 ( g2z ) '
+            'p2z 22 '
+            'g1z '
+            ':2 '
+            'p2z 23 '
+            ':1')
 
     assert (compile_('x = 11\n'
                      'if x > 0:\n'
@@ -172,7 +173,11 @@ def test_else():
                      'elif x > 5:\n'
                      '    y = 23') ==
             'p1z 11 '
-            'p3z 0 # p1z > 0 ( p3z 1 ) '
-            '# p3z = 0 ( g2z ) p2z 22 g1z :2 '
-            'p4z 0 # p1z > 5 ( p4z 1 ) '
-            '# p4z = 0 ( g3z ) p2z 23 :3 :1')
+            '# p1z <= 0 ( g2z ) '
+            'p2z 22 '
+            'g1z '
+            ':2 '
+            '# p1z <= 5 ( g3z ) '
+            'p2z 23 '
+            ':3 '
+            ':1')

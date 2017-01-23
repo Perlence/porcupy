@@ -7,7 +7,7 @@ def test_while():
                      '    print(x)\n'
                      '    x += 1') ==
             'p1z 0 '
-            ':1 p2z 0 # p1z < 5 ( p2z 1 ) # p2z = 0 ( g2z ) '
+            ':1 # p1z >= 5 ( g2z ) '
             'ym ^1 p1z p1z+1 '
             'g1z '
             ':2')
@@ -21,7 +21,7 @@ def test_else():
                      'else:\n'
                      '    print("else")') ==
             'p1z 0 '
-            ':1 p2z 0 # p1z < 5 ( p2z 1 ) # p2z = 0 ( g3z ) '
+            ':1 # p1z >= 5 ( g3z ) '
             'ym ^1 p1z p1z+1 '
             'g1z '
             ':3 ym else '
@@ -37,7 +37,7 @@ def test_break():
                      'else:\n'
                      '    print("else")') ==
             'p1z 0 '
-            ':1 p2z 0 # p1z < 5 ( p2z 1 ) # p2z = 0 ( g3z ) '
+            ':1 # p1z >= 5 ( g3z ) '
             'ym ^1 p1z p1z+1 '
             'g2z '
             'g1z '
@@ -52,7 +52,7 @@ def test_pass():
                      'else:\n'
                      '    print("else")') ==
             'p1z 0 '
-            ':1 p2z 0 # p1z < 5 ( p2z 1 ) # p2z = 0 ( g3z ) '
+            ':1 # p1z >= 5 ( g3z ) '
             'g1z '
             ':3 ym else '
             ':2')
@@ -63,7 +63,7 @@ def test_pass():
                      'else:\n'
                      '    pass') ==
             'p1z 0 '
-            ':1 p2z 0 # p1z < 5 ( p2z 1 ) # p2z = 0 ( g2z ) '
+            ':1 # p1z >= 5 ( g2z ) '
             'ym ^1 '
             'g1z '
             ':2')
@@ -78,9 +78,9 @@ def test_continue():
                      'else:\n'
                      '    print("else")') ==
             'p1z 0 '
-            ':1 p2z 0 # p1z < 5 ( p2z 1 ) # p2z = 0 ( g3z ) '
+            ':1 # p1z >= 5 ( g3z ) '
             'p1z p1z+1 '
-            'p3z 0 # p1z < 3 ( p3z 1 ) # p3z = 0 ( g4z ) g1z :4 '
+            '# p1z >= 3 ( g4z ) g1z :4 '
             'g1z '
             ':3 ym else '
             ':2')

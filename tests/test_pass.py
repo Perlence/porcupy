@@ -12,7 +12,7 @@ def test_pass_if():
                      'if x > 0: x += 1\n'
                      'else: pass') ==
             'p1z 11 '
-            'p2z 0 # p1z > 0 ( p2z 1 ) # p2z = 0 ( g1z ) p1z p1z+1 :1')
+            '# p1z <= 0 ( g1z ) p1z p1z+1 :1')
 
 
 def test_pass_for():
