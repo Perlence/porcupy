@@ -65,6 +65,7 @@ class NodeConverter:
 
         for slot in self.slots_to_recycle_later[node]:
             self.scope.recycle_temporary(slot)
+        del self.slots_to_recycle_later[node]
 
         return result
 
