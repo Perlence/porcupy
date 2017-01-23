@@ -104,10 +104,10 @@ def test_bool_op():
             'p1z 1 '
             'p3z 0 # p1z = p1z & p1z = 1 ( p3z 1 ) '
             'p4z 1 # p1z ! 1 & p3z = 0 ( p4z 0 ) p2z p4z')
-    # assert (compile_('x = 1; y = x == 1 or x == x == 1') ==
-    #         'p1z 1 '
-    #         'p3z 0 # p1z = p1z & p1z = 1 ( p3z 1 ) '
-    #         'p4z 1 # p1z = 0 & p3z = 0 ( p4z 0 ) p2z p4z')
+    assert (compile_('x = 1; y = x == 1 or x == x == 1') ==
+            'p1z 1 '
+            'p3z 0 # p1z = p1z & p1z = 1 ( p3z 1 ) '
+            'p4z 1 # p1z ! 1 & p3z = 0 ( p4z 0 ) p2z p4z')
 
 
 def test_unary_op():

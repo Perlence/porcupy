@@ -5,8 +5,7 @@ from fractions import Fraction
 import attr
 
 from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
-                  BinOp, operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare,
-                  Label)
+                  operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare, Label)
 from .functions import CallableType
 from .gameobjs import (Yozhik, Timer, Point, Bot, System, Button, Door,
                        Viewport, GameMode, DoorState)
@@ -46,7 +45,7 @@ def visit_with_exc_wrapping(converter, node, filename):
 
 
 @attr.s
-class NodeConverter(ast.NodeVisitor):
+class NodeConverter:
     scope = attr.ib(default=attr.Factory(lambda: Scope()))
     body = attr.ib(default=attr.Factory(list))
     last_label = attr.ib(default=0)
@@ -60,7 +59,9 @@ class NodeConverter(ast.NodeVisitor):
         if isinstance(node, ast.stmt):
             self.current_stmt = node
 
-        result = super().visit(node)
+        method = 'visit_' + node.__class__.__name__
+        visitor = getattr(self, method, self.generic_visit)
+        result = visitor(node)
 
         for slot in self.slots_to_recycle_later[node]:
             self.scope.recycle_temporary(slot)
@@ -354,7 +355,7 @@ class NodeConverter(ast.NodeVisitor):
             upper = self.visit(value.upper)
         return slice(lower, upper)
 
-    def visit_Compare(self, value, initial=False, wrap_in_if=True):
+    def visit_Compare(self, value, initial=False, wrap_in_if_stmt=True):
         # TODO: Try to evaluate comparisons literally, e.g. 'x = 3 < 5' -> p1z 1
         initial = Const(initial)
         left = self.visit(value.left)
@@ -370,33 +371,38 @@ class NodeConverter(ast.NodeVisitor):
         else:
             expr = BoolOp(ast.And(), values)
 
-        if wrap_in_if:
-            return self.compare_to_zero(expr, initial)
+        if wrap_in_if_stmt:
+            return self.wrap_bool_in_if_stmt(expr, initial)
         else:
             return expr
 
     def visit_BoolOp(self, value, initial=False):
         # TODO: Try to evaluate bool operations literally, e.g. 'y = x and False' -> 'p1z 0'
         initial = Const(initial)
+        const_false = Const(False)
         values = []
         for bool_op_value in value.values:
             if isinstance(bool_op_value, ast.Compare):
-                compare = self.visit_Compare(bool_op_value, wrap_in_if=False)
+                compare = self.visit_Compare(bool_op_value, wrap_in_if_stmt=False)
+                if isinstance(compare, BoolOp):
+                    bool_slot = self.wrap_bool_in_if_stmt(compare, initial=const_false)
+                    compare = Compare(bool_slot, ast.NotEq(), const_false)
             else:
                 slot = self.visit(bool_op_value)
-                compare = Compare(slot, ast.NotEq(), Const(False))
+                compare = Compare(slot, ast.NotEq(), const_false)
             values.append(compare)
 
         op = value.op
         if isinstance(value.op, ast.Or):
             initial = self.negate_bool(initial)
             op = ast.And()
+            print(values)
             values = list(map(self.negate_bool, values))
 
         expr = BoolOp(op, values)
-        return self.compare_to_zero(expr, initial)
+        return self.wrap_bool_in_if_stmt(expr, initial)
 
-    def compare_to_zero(self, expr, initial):
+    def wrap_bool_in_if_stmt(self, expr, initial):
         bool_slot = self.scope.get_temporary(BoolType())
         self.append_to_body(Assign(bool_slot, initial))
         assign = Assign(bool_slot, self.negate_bool(initial))
@@ -477,7 +483,6 @@ class NodeConverter(ast.NodeVisitor):
             elif isinstance(op, ast.GtE):
                 return attr.assoc(expr, op=ast.Lt())
         else:
-            # TODO: Negate BoolOp expressions, e.g. 'if x == 1 or x == x == 1: pass'
             raise NotImplementedError("cannot negate expression '{}'".format(expr))
 
     def append_to_body(self, stmt):

@@ -117,7 +117,6 @@ while value != NOP:
 
             print(number)
 
-            # TODO: Unary operation Not is not implemented
             if not -3280 <= result <= 3280:
                 print('Error: number is too big')
                 break

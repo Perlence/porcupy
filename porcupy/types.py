@@ -10,7 +10,6 @@ from .functions import CallableType
 @attr.s
 class NumberType:
     def bin_op(self, converter, left, op, right):
-        # TODO: Implement bit shift operations
         if isinstance(left, Const) and isinstance(right, Const) and not isinstance(op, Div):
             value = op(left.value, right.value)
             return Const(value)
@@ -56,7 +55,6 @@ class NumberType:
                 return attr.assoc(operand, value=(not operand.value), type=BoolType())
             return converter.visit(ast.Compare(operand, [ast.Eq()], [Const(0)]))
         else:
-            # TODO: Implement 'not'
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(op))
 
 
