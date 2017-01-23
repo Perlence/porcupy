@@ -1,8 +1,9 @@
+import ast
 import enum
 
 import attr
 
-from .ast import Const, Slot, Assign, BinOp, Add, Mult
+from .ast import Const, Slot, Assign
 from .types import IntType, FloatType, BoolType, StringType, GameObject
 
 int_type = IntType()
@@ -60,9 +61,9 @@ class System(GameObject):
 
     def set_color(self, converter, r: int_type, g: int_type, b: int_type) -> None:
         # system.color = r + g * 256 + b * 65536
-        color = converter.visit_BinOp(BinOp(BinOp(r, Add(),
-                                                  BinOp(g, Mult(), Const(256))), Add(),
-                                            BinOp(b, Mult(), Const(65536))))
+        color = converter.visit(ast.BinOp(ast.BinOp(r, ast.Add(),
+                                                    ast.BinOp(g, ast.Mult(), Const(256))), ast.Add(),
+                                          ast.BinOp(b, ast.Mult(), Const(65536))))
         sys_slot = Slot(self.metadata['abbrev'], None, self.color.metadata['abbrev'], self.color.metadata['type'])
         converter.append_to_body(Assign(sys_slot, color))
 

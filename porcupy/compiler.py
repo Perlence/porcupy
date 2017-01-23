@@ -98,7 +98,7 @@ class NodeConverter(ast.NodeVisitor):
         dest_slot = self.store_value(node.target, src_slot)
         if dest_slot is None:
             return
-        bin_op = self.visit_BinOp(BinOp(dest_slot, self.convert_bin_operator(node.op), src_slot))
+        bin_op = self.visit(ast.BinOp(dest_slot, node.op, src_slot))
         self.append_to_body(Assign(dest_slot, bin_op))
 
     def store_value(self, target, src_slot):
@@ -268,7 +268,7 @@ class NodeConverter(ast.NodeVisitor):
         if frac.denominator == 1:
             return Const(frac.numerator, FloatType())
         # TODO: Check when defining a floating point constant
-        return self.visit_BinOp(BinOp(Const(frac.numerator), Div(), Const(frac.denominator)))
+        return self.visit(ast.BinOp(Const(frac.numerator), ast.Div(), Const(frac.denominator)))
 
     def visit_Str(self, value):
         return Const(value.s)
@@ -332,9 +332,9 @@ class NodeConverter(ast.NodeVisitor):
         if upper is None:
             upper = src_capacity
 
-        ptr_value = self.visit_BinOp(BinOp(list_ptr, Add(), lower))
-        len_value = self.visit_BinOp(BinOp(upper, Sub(), lower))
-        cap_value = self.visit_BinOp(BinOp(src_capacity, Sub(), lower))
+        ptr_value = self.visit(ast.BinOp(list_ptr, ast.Add(), lower))
+        len_value = self.visit(ast.BinOp(upper, ast.Sub(), lower))
+        cap_value = self.visit(ast.BinOp(src_capacity, ast.Sub(), lower))
 
         slice_type = Slice(value_slot.type.item_type)
         slice_value = slice_type.new(self, ptr_value, len_value, cap_value)
