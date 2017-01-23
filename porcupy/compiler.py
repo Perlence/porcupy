@@ -268,53 +268,53 @@ class NodeConverter:
         else:
             raise NotImplementedError('plain expressions are not supported')
 
-    def visit_Num(self, value):
-        if not isinstance(value.n, float):
-            return Const(value.n)
-        frac = Fraction(str(value.n))
+    def visit_Num(self, node):
+        if not isinstance(node.n, float):
+            return Const(node.n)
+        frac = Fraction(str(node.n))
         if frac.denominator == 1:
             return Const(frac.numerator, FloatType())
         # TODO: Check when defining a floating point constant
         return self.visit(ast.BinOp(Const(frac.numerator), ast.Div(), Const(frac.denominator)))
 
-    def visit_Str(self, value):
-        return Const(value.s)
+    def visit_Str(self, node):
+        return Const(node.s)
 
-    def visit_NameConstant(self, value):
-        return Const(value.value)
+    def visit_NameConstant(self, node):
+        return Const(node.value)
 
-    def visit_List(self, value):
-        if not value.elts:
+    def visit_List(self, node):
+        if not node.elts:
             raise ValueError('cannot allocate an empty list')
 
-        loaded_items = [self.visit(item) for item in value.elts]
+        loaded_items = [self.visit(item) for item in node.elts]
         item_type = self.type_of_objects(loaded_items)
         if item_type is None:
             raise TypeError('list items must be of the same type')
 
-        capacity = len(value.elts)
+        capacity = len(node.elts)
         item_slots = self.scope.allocate_many(item_type, capacity)
         for dest_slot, item in zip(item_slots, loaded_items):
             self.append_to_body(Assign(dest_slot, item))
         first_item = item_slots[0]
         return Const(first_item.index, ListPointer(item_type, capacity))
 
-    def visit_Name(self, value):
-        return self.scope.get(value.id)
+    def visit_Name(self, node):
+        return self.scope.get(node.id)
 
-    def visit_Attribute(self, value):
-        value_slot = self.visit(value.value)
+    def visit_Attribute(self, node):
+        value_slot = self.visit(node.value)
         if not hasattr(value_slot.type, 'getattr'):
             raise NotImplementedError("getting attribute of object of type '{}' is not implemented yet".format(value_slot.type))
-        return value_slot.type.getattr(self, value_slot, value.attr)
+        return value_slot.type.getattr(self, value_slot, node.attr)
 
-    def visit_Subscript(self, value):
-        value_slot = self.visit(value.value)
-        slice_slot = self.visit(value.slice)
+    def visit_Subscript(self, node):
+        value_slot = self.visit(node.value)
+        slice_slot = self.visit(node.slice)
         if isinstance(slice_slot, slice):
             return self.load_slice_subscript(value_slot, slice_slot)
         else:
-            return self.load_index_subscript(value_slot, slice_slot, value.ctx)
+            return self.load_index_subscript(value_slot, slice_slot, node.ctx)
 
     def load_index_subscript(self, value_slot, slice_slot, ctx):
         if isinstance(ctx, ast.Load):
@@ -348,27 +348,27 @@ class NodeConverter:
 
         return slice_value
 
-    def visit_Index(self, value):
-        return self.visit(value.value)
+    def visit_Index(self, node):
+        return self.visit(node.value)
 
-    def visit_Slice(self, value):
+    def visit_Slice(self, node):
         lower, upper = None, None
-        if value.step is not None:
+        if node.step is not None:
             raise NotImplementedError('slice step is not supported')
-        if value.lower is not None:
-            lower = self.visit(value.lower)
-        if value.upper is not None:
-            upper = self.visit(value.upper)
+        if node.lower is not None:
+            lower = self.visit(node.lower)
+        if node.upper is not None:
+            upper = self.visit(node.upper)
         return slice(lower, upper)
 
-    def visit_Compare(self, value, initial=False, wrap_in_if_stmt=True):
+    def visit_Compare(self, node, initial=False, wrap_in_if_stmt=True):
         # TODO: Try to evaluate comparisons literally, e.g. 'x = 3 < 5' -> p1z 1
         initial = Const(initial)
-        left = self.visit(value.left)
-        comparators = [self.visit(comparator) for comparator in value.comparators]
+        left = self.visit(node.left)
+        comparators = [self.visit(comparator) for comparator in node.comparators]
 
         values = []
-        for op, comparator in zip(value.ops, comparators):
+        for op, comparator in zip(node.ops, comparators):
             values.append(Compare(left, op, comparator))
             left = comparator
 
@@ -382,12 +382,12 @@ class NodeConverter:
         else:
             return expr
 
-    def visit_BoolOp(self, value, initial=False):
+    def visit_BoolOp(self, node, initial=False):
         # TODO: Try to evaluate bool operations literally, e.g. 'y = x and False' -> 'p1z 0'
         initial = Const(initial)
         const_false = Const(False)
         values = []
-        for bool_op_value in value.values:
+        for bool_op_value in node.values:
             if isinstance(bool_op_value, ast.Compare):
                 compare = self.visit_Compare(bool_op_value, wrap_in_if_stmt=False)
                 if isinstance(compare, BoolOp):
@@ -398,8 +398,8 @@ class NodeConverter:
                 compare = Compare(slot, ast.NotEq(), const_false)
             values.append(compare)
 
-        op = value.op
-        if isinstance(value.op, ast.Or):
+        op = node.op
+        if isinstance(node.op, ast.Or):
             initial = self.negate_bool(initial)
             op = ast.And()
             values = list(map(self.negate_bool, values))
@@ -416,17 +416,17 @@ class NodeConverter:
         self.recycle_later(bool_slot)
         return bool_slot
 
-    def visit_BinOp(self, value):
-        left = self.visit(value.left)
-        op = self.convert_bin_operator(value.op)
-        right = self.visit(value.right)
+    def visit_BinOp(self, node):
+        left = self.visit(node.left)
+        op = self.convert_bin_operator(node.op)
+        right = self.visit(node.right)
         return left.type.bin_op(self, left, op, right)
 
     def convert_bin_operator(self, value):
         if isinstance(value, operator):
             return value
         if not isinstance(value, ast.operator):
-            raise SyntaxError("node '{}' is not a binary operator".format(value))
+            raise SyntaxError("value '{}' is not a binary operator".format(value))
 
         if isinstance(value, ast.Add):
             return Add()
@@ -443,21 +443,21 @@ class NodeConverter:
         else:
             raise NotImplementedError("operation '{}' is not implemented yet".format(value))
 
-    def visit_UnaryOp(self, value):
-        if isinstance(value.op, ast.Not):
-            if isinstance(value.operand, ast.Compare):
-                return self.visit_Compare(value.operand, initial=True)
-            elif isinstance(value.operand, ast.BoolOp):
-                return self.visit_BoolOp(value.operand, initial=True)
+    def visit_UnaryOp(self, node):
+        if isinstance(node.op, ast.Not):
+            if isinstance(node.operand, ast.Compare):
+                return self.visit_Compare(node.operand, initial=True)
+            elif isinstance(node.operand, ast.BoolOp):
+                return self.visit_BoolOp(node.operand, initial=True)
 
-        operand = self.visit(value.operand)
-        return operand.type.unary_op(self, value.op, operand)
+        operand = self.visit(node.operand)
+        return operand.type.unary_op(self, node.op, operand)
 
-    def visit_Call(self, value):
-        if value.keywords:
+    def visit_Call(self, node):
+        if node.keywords:
             raise NotImplementedError('function keywords are not implemented yet')
-        func = self.visit(value.func)
-        args = [self.visit(arg) for arg in value.args]
+        func = self.visit(node.func)
+        args = [self.visit(arg) for arg in node.args]
         if not hasattr(func.type, 'call'):
             raise NotImplementedError("calling function '{}' is not implemented yet".format(func))
         return func.type.call(self, func, *args)
