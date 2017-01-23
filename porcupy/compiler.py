@@ -55,10 +55,16 @@ class NodeConverter(ast.NodeVisitor):
     slots_to_recycle_later = attr.ib(default=attr.Factory(lambda: defaultdict(list)))
 
     def visit(self, node):
-        self.current_stmt = node
+        if isinstance(node, AST):
+            return node
+        if isinstance(node, ast.stmt):
+            self.current_stmt = node
+
         result = super().visit(node)
+
         for slot in self.slots_to_recycle_later[node]:
             self.scope.recycle_temporary(slot)
+
         return result
 
     def generic_visit(self, node):
@@ -80,7 +86,7 @@ class NodeConverter(ast.NodeVisitor):
             if self.is_black_hole(target):
                 continue
             if src_slot is None:
-                src_slot = self.load_expr(node.value)
+                src_slot = self.visit(node.value)
             dest_slot = self.store_value(target, src_slot)
             if dest_slot is None:
                 continue
@@ -88,11 +94,11 @@ class NodeConverter(ast.NodeVisitor):
 
     def visit_AugAssign(self, node):
         # TODO: Raise NameError if target is not defined
-        src_slot = self.load_expr(node.value)
+        src_slot = self.visit(node.value)
         dest_slot = self.store_value(node.target, src_slot)
         if dest_slot is None:
             return
-        bin_op = self.load_bin_op(BinOp(dest_slot, self.load_bin_operator(node.op), src_slot))
+        bin_op = self.visit_BinOp(BinOp(dest_slot, self.convert_bin_operator(node.op), src_slot))
         self.append_to_body(Assign(dest_slot, bin_op))
 
     def store_value(self, target, src_slot):
@@ -111,10 +117,8 @@ class NodeConverter(ast.NodeVisitor):
                 self.scope.define_const(target.id, src_slot)
             else:
                 dest_slot = self.scope.assign(target.id, src_slot)
-        elif isinstance(target, ast.Attribute):
-            dest_slot = self.load_attribute(target)
-        elif isinstance(target, ast.Subscript):
-            dest_slot = self.load_subscript(target)
+        elif isinstance(target, (ast.Attribute, ast.Subscript)):
+            dest_slot = self.visit(target)
         else:
             raise NotImplementedError("assigning values to '{}' is not implemented yet".format(target))
 
@@ -141,7 +145,7 @@ class NodeConverter(ast.NodeVisitor):
 
         self.append_to_body(Assign(index, Const(-1)))
 
-        iter_slot = self.load_expr(node.iter)
+        iter_slot = self.visit(node.iter)
         iter_len = iter_slot.type.len(self, iter_slot)
 
         test = Compare(index, ast.Lt(), iter_len)
@@ -195,7 +199,7 @@ class NodeConverter(ast.NodeVisitor):
     def generic_if(self, node, label_start=None):
         is_loop = label_start is not None
 
-        test = self.load_expr(node.test)
+        test = self.visit(node.test)
         if not isinstance(test, Compare):
             test = Compare(test, ast.NotEq(), Const(False))
         not_test = self.negate_bool(test)
@@ -251,58 +255,32 @@ class NodeConverter(ast.NodeVisitor):
 
     def visit_Expr(self, node):
         if isinstance(node.value, ast.Call):
-            expr = self.load_expr(node.value)
+            expr = self.visit(node.value)
             if expr is not None:
                 self.append_to_body(expr)
         else:
             raise NotImplementedError('plain expressions are not supported')
 
-    def load_expr(self, value):
-        if isinstance(value, AST):
-            return value
-        elif isinstance(value, ast.Num):
-            return self.load_num(value)
-        elif isinstance(value, ast.Str):
-            return Const(value.s)
-        elif isinstance(value, ast.NameConstant):
-            return Const(value.value)
-        elif isinstance(value, ast.List):
-            return self.load_list(value)
-        elif isinstance(value, ast.Name):
-            return self.scope.get(value.id)
-        elif isinstance(value, ast.Attribute):
-            return self.load_attribute(value)
-        elif isinstance(value, ast.Subscript):
-            return self.load_subscript(value)
-        elif isinstance(value, ast.Index):
-            return self.load_expr(value.value)
-        elif isinstance(value, ast.Slice):
-            return self.load_slice(value)
-        elif isinstance(value, (ast.Compare, ast.BoolOp)):
-            return self.load_extended_bool_op(value)
-        elif isinstance(value, ast.BinOp):
-            return self.load_bin_op(value)
-        elif isinstance(value, ast.UnaryOp):
-            return self.load_unary_op(value)
-        elif isinstance(value, ast.Call):
-            return self.load_call(value)
-        else:
-            raise NotImplementedError("expression '{}' is not implemented yet".format(value))
-
-    def load_num(self, value):
+    def visit_Num(self, value):
         if not isinstance(value.n, float):
             return Const(value.n)
         frac = Fraction(str(value.n))
         if frac.denominator == 1:
             return Const(frac.numerator, FloatType())
         # TODO: Check when defining a floating point constant
-        return self.load_bin_op(BinOp(Const(frac.numerator), Div(), Const(frac.denominator)))
+        return self.visit_BinOp(BinOp(Const(frac.numerator), Div(), Const(frac.denominator)))
 
-    def load_list(self, value):
+    def visit_Str(self, value):
+        return Const(value.s)
+
+    def visit_NameConstant(self, value):
+        return Const(value.value)
+
+    def visit_List(self, value):
         if not value.elts:
             raise ValueError('cannot allocate an empty list')
 
-        loaded_items = [self.load_expr(item) for item in value.elts]
+        loaded_items = [self.visit(item) for item in value.elts]
         item_type = self.type_of_objects(loaded_items)
         if item_type is None:
             raise TypeError('list items must be of the same type')
@@ -314,24 +292,18 @@ class NodeConverter(ast.NodeVisitor):
         first_item = item_slots[0]
         return Const(first_item.index, ListPointer(item_type, capacity))
 
-    def type_of_objects(self, objects):
-        type_set = set()
-        for obj in objects:
-            type_set.add(obj.type)
-            if len(type_set) > 1:
-                return
-        if type_set:
-            return next(iter(type_set))
+    def visit_Name(self, value):
+        return self.scope.get(value.id)
 
-    def load_attribute(self, value):
-        value_slot = self.load_expr(value.value)
+    def visit_Attribute(self, value):
+        value_slot = self.visit(value.value)
         if not hasattr(value_slot.type, 'getattr'):
             raise NotImplementedError("getting attribute of object of type '{}' is not implemented yet".format(value_slot.type))
         return value_slot.type.getattr(self, value_slot, value.attr)
 
-    def load_subscript(self, value):
-        value_slot = self.load_expr(value.value)
-        slice_slot = self.load_expr(value.slice)
+    def visit_Subscript(self, value):
+        value_slot = self.visit(value.value)
+        slice_slot = self.visit(value.slice)
         if isinstance(slice_slot, slice):
             return self.load_slice_subscript(value_slot, slice_slot)
         else:
@@ -348,16 +320,6 @@ class NodeConverter(ast.NodeVisitor):
                 raise NotImplementedError("setting item of collection of type '{}' is not implemented yet".format(value_slot.type))
             return value_slot.type.setitem(self, value_slot, slice_slot)
 
-    def load_slice(self, value):
-        lower, upper = None, None
-        if value.step is not None:
-            raise NotImplementedError('slice step is not supported')
-        if value.lower is not None:
-            lower = self.load_expr(value.lower)
-        if value.upper is not None:
-            upper = self.load_expr(value.upper)
-        return slice(lower, upper)
-
     def load_slice_subscript(self, value_slot, slice_slot):
         list_ptr = value_slot.type.get_pointer(self, value_slot)
         src_capacity = value_slot.type.cap(self, value_slot)
@@ -370,27 +332,71 @@ class NodeConverter(ast.NodeVisitor):
         if upper is None:
             upper = src_capacity
 
-        ptr_value = self.load_bin_op(BinOp(list_ptr, Add(), lower))
-        len_value = self.load_bin_op(BinOp(upper, Sub(), lower))
-        cap_value = self.load_bin_op(BinOp(src_capacity, Sub(), lower))
+        ptr_value = self.visit_BinOp(BinOp(list_ptr, Add(), lower))
+        len_value = self.visit_BinOp(BinOp(upper, Sub(), lower))
+        cap_value = self.visit_BinOp(BinOp(src_capacity, Sub(), lower))
 
         slice_type = Slice(value_slot.type.item_type)
         slice_value = slice_type.new(self, ptr_value, len_value, cap_value)
 
         return slice_value
 
-    def load_extended_bool_op(self, value, initial=False):
-        initial = Const(initial)
-        if isinstance(value, ast.Compare):
-            expr = self.load_compare(value)
-        elif isinstance(value, ast.BoolOp):
-            # TODO: AND must return last value, OR must return first
-            expr = self.load_bool_op(value)
-            if isinstance(expr.op, ast.Or):
-                initial = self.negate_bool(initial)
-                expr.op = ast.And()
-                expr.values = list(map(self.negate_bool, expr.values))
+    def visit_Index(self, value):
+        return self.visit(value.value)
 
+    def visit_Slice(self, value):
+        lower, upper = None, None
+        if value.step is not None:
+            raise NotImplementedError('slice step is not supported')
+        if value.lower is not None:
+            lower = self.visit(value.lower)
+        if value.upper is not None:
+            upper = self.visit(value.upper)
+        return slice(lower, upper)
+
+    def visit_Compare(self, value, initial=False, wrap_in_if=True):
+        # TODO: Try to evaluate comparisons literally, e.g. 'x = 3 < 5' -> p1z 1
+        initial = Const(initial)
+        left = self.visit(value.left)
+        comparators = [self.visit(comparator) for comparator in value.comparators]
+
+        values = []
+        for op, comparator in zip(value.ops, comparators):
+            values.append(Compare(left, op, comparator))
+            left = comparator
+
+        if len(values) == 1:
+            expr = values[0]
+        else:
+            expr = BoolOp(ast.And(), values)
+
+        if wrap_in_if:
+            return self.compare_to_zero(expr, initial)
+        else:
+            return expr
+
+    def visit_BoolOp(self, value, initial=False):
+        # TODO: Try to evaluate bool operations literally, e.g. 'y = x and False' -> 'p1z 0'
+        initial = Const(initial)
+        values = []
+        for bool_op_value in value.values:
+            if isinstance(bool_op_value, ast.Compare):
+                compare = self.visit_Compare(bool_op_value, wrap_in_if=False)
+            else:
+                slot = self.visit(bool_op_value)
+                compare = Compare(slot, ast.NotEq(), Const(False))
+            values.append(compare)
+
+        op = value.op
+        if isinstance(value.op, ast.Or):
+            initial = self.negate_bool(initial)
+            op = ast.And()
+            values = list(map(self.negate_bool, values))
+
+        expr = BoolOp(op, values)
+        return self.compare_to_zero(expr, initial)
+
+    def compare_to_zero(self, expr, initial):
         bool_slot = self.scope.get_temporary(BoolType())
         self.append_to_body(Assign(bool_slot, initial))
         assign = Assign(bool_slot, self.negate_bool(initial))
@@ -398,31 +404,60 @@ class NodeConverter(ast.NodeVisitor):
         self.recycle_later(bool_slot)
         return bool_slot
 
-    def load_compare(self, value):
-        # TODO: Try to evaluate comparisons literally, e.g. 'x = 3 < 5' -> p1z 1
-        left = self.load_expr(value.left)
-        comparators = [self.load_expr(comparator) for comparator in value.comparators]
+    def visit_BinOp(self, value):
+        left = self.visit(value.left)
+        op = self.convert_bin_operator(value.op)
+        right = self.visit(value.right)
+        return left.type.bin_op(self, left, op, right)
 
-        values = []
-        for op, comparator in zip(value.ops, comparators):
-            values.append(Compare(left, op, comparator))
-            left = comparator
-        if len(values) == 1:
-            return values[0]
+    def convert_bin_operator(self, value):
+        if isinstance(value, operator):
+            return value
+        if not isinstance(value, ast.operator):
+            raise SyntaxError("node '{}' is not a binary operator".format(value))
+
+        if isinstance(value, ast.Add):
+            return Add()
+        elif isinstance(value, ast.Sub):
+            return Sub()
+        elif isinstance(value, ast.Mult):
+            return Mult()
+        elif isinstance(value, ast.Div):
+            return Div()
+        elif isinstance(value, ast.FloorDiv):
+            return FloorDiv()
+        elif isinstance(value, ast.Mod):
+            return Mod()
         else:
-            return BoolOp(ast.And(), values)
+            raise NotImplementedError("operation '{}' is not implemented yet".format(value))
 
-    def load_bool_op(self, value):
-        # TODO: Try to evaluate bool operations literally, e.g. 'y = x and False' -> 'p1z 0'
-        values = []
-        for bool_op_value in value.values:
-            if isinstance(bool_op_value, ast.Compare):
-                compare = self.load_compare(bool_op_value)
-            else:
-                slot = self.load_expr(bool_op_value)
-                compare = Compare(slot, ast.NotEq(), Const(False))
-            values.append(compare)
-        return BoolOp(value.op, values)
+    def visit_UnaryOp(self, value):
+        if isinstance(value.op, ast.Not):
+            if isinstance(value.operand, ast.Compare):
+                return self.visit_Compare(value.operand, initial=True)
+            elif isinstance(value.operand, ast.BoolOp):
+                return self.visit_BoolOp(value.operand, initial=True)
+
+        operand = self.visit(value.operand)
+        return operand.type.unary_op(self, value.op, operand)
+
+    def visit_Call(self, value):
+        if value.keywords:
+            raise NotImplementedError('function keywords are not implemented yet')
+        func = self.visit(value.func)
+        args = [self.visit(arg) for arg in value.args]
+        if not hasattr(func.type, 'call'):
+            raise NotImplementedError("calling function '{}' is not implemented yet".format(func))
+        return func.type.call(self, func, *args)
+
+    def type_of_objects(self, objects):
+        type_set = set()
+        for obj in objects:
+            type_set.add(obj.type)
+            if len(type_set) > 1:
+                return
+        if type_set:
+            return next(iter(type_set))
 
     def negate_bool(self, expr):
         if isinstance(expr, Const):
@@ -444,49 +479,6 @@ class NodeConverter(ast.NodeVisitor):
         else:
             # TODO: Negate BoolOp expressions, e.g. 'if x == 1 or x == x == 1: pass'
             raise NotImplementedError("cannot negate expression '{}'".format(expr))
-
-    def load_bin_op(self, value):
-        left = self.load_expr(value.left)
-        op = self.load_bin_operator(value.op)
-        right = self.load_expr(value.right)
-        return left.type.bin_op(self, left, op, right)
-
-    def load_bin_operator(self, value):
-        if isinstance(value, operator):
-            return value
-        if not isinstance(value, ast.operator):
-            raise SyntaxError("node '{}' is not a binary operator".format(value))
-
-        if isinstance(value, ast.Add):
-            return Add()
-        elif isinstance(value, ast.Sub):
-            return Sub()
-        elif isinstance(value, ast.Mult):
-            return Mult()
-        elif isinstance(value, ast.Div):
-            return Div()
-        elif isinstance(value, ast.FloorDiv):
-            return FloorDiv()
-        elif isinstance(value, ast.Mod):
-            return Mod()
-        else:
-            raise NotImplementedError("operation '{}' is not implemented yet".format(value))
-
-    def load_unary_op(self, value):
-        if isinstance(value.op, ast.Not) and isinstance(value.operand, (ast.Compare, ast.BoolOp)):
-            return self.load_extended_bool_op(value.operand, initial=True)
-
-        operand = self.load_expr(value.operand)
-        return operand.type.unary_op(self, value.op, operand)
-
-    def load_call(self, value):
-        if value.keywords:
-            raise NotImplementedError('function keywords are not implemented yet')
-        func = self.load_expr(value.func)
-        args = [self.load_expr(arg) for arg in value.args]
-        if not hasattr(func.type, 'call'):
-            raise NotImplementedError("calling function '{}' is not implemented yet".format(func))
-        return func.type.call(self, func, *args)
 
     def append_to_body(self, stmt):
         self.body.append(stmt)

@@ -249,7 +249,9 @@ class Compare(AST):
     metadata = attr.ib(default=attr.Factory(dict))
 
     def __attrs_post_init__(self):
-        self.type = bool
+        from .types import BoolType
+
+        self.type = BoolType()
 
     def __str__(self):
         return '{} {} {}'.format(self.left, self.translate_cmpop(self.op), self.right)

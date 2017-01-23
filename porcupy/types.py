@@ -12,9 +12,9 @@ class NumberType:
     def bin_op(self, converter, left, op, right):
         # TODO: Implement bit shift operations
         if isinstance(left, BinOp):
-            left = converter.load_bin_op(left)
+            left = converter.visit_BinOp(left)
         if isinstance(right, BinOp):
-            right = converter.load_bin_op(right)
+            right = converter.visit_BinOp(right)
 
         if isinstance(left, Const) and isinstance(right, Const) and not isinstance(op, Div):
             value = op(left.value, right.value)
@@ -51,15 +51,15 @@ class NumberType:
         elif isinstance(op, ast.USub):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=-operand.value)
-            return converter.load_bin_op(BinOp(operand, Mult(), Const(-1)))
+            return converter.visit_BinOp(BinOp(operand, Mult(), Const(-1)))
         elif isinstance(op, ast.Invert):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=~operand.value)
-            return converter.load_bin_op(BinOp(BinOp(operand, Mult(), Const(-1)), Sub(), Const(1)))
+            return converter.visit_BinOp(BinOp(BinOp(operand, Mult(), Const(-1)), Sub(), Const(1)))
         elif isinstance(op, ast.Not):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=(not operand.value), type=BoolType())
-            return converter.load_expr(ast.Compare(operand, [ast.Eq()], [Const(0)]))
+            return converter.visit(ast.Compare(operand, [ast.Eq()], [Const(0)]))
         else:
             # TODO: Implement 'not'
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(op))
@@ -142,7 +142,7 @@ def get_slot_via_offset(converter, pointer, offset, type):
 
 def item_addr(converter, pointer, offset):
     pointer_math_slot = converter.scope.get_temporary(IntType())
-    addition = converter.load_bin_op(BinOp(pointer, Add(), offset))
+    addition = converter.visit_BinOp(BinOp(pointer, Add(), offset))
     converter.append_to_body(Assign(pointer_math_slot, addition))
     return pointer_math_slot
 
@@ -155,7 +155,7 @@ class Slice(IntType):
 
     def new(self, converter, pointer, length, capacity):
         # pointer * 16384 + length * 128 + capacity
-        result = converter.load_bin_op(
+        result = converter.visit_BinOp(
             BinOp(BinOp(pointer, Mult(), Const(16384)), Add(),
                   BinOp(BinOp(length, Mult(), Const(128)), Add(),
                         capacity)))
@@ -164,15 +164,15 @@ class Slice(IntType):
 
     def get_pointer(self, converter, slot):
         # slot // 16384
-        return converter.load_bin_op(BinOp(slot, FloorDiv(), Const(16384)))
+        return converter.visit_BinOp(BinOp(slot, FloorDiv(), Const(16384)))
 
     def len(self, converter, slot):
         # slot // 128 % 128
-        return converter.load_bin_op(BinOp(BinOp(slot, FloorDiv(), Const(128)), Mod(), Const(128)))
+        return converter.visit_BinOp(BinOp(BinOp(slot, FloorDiv(), Const(128)), Mod(), Const(128)))
 
     def cap(self, converter, slot):
         # slot % 128
-        return converter.load_bin_op(BinOp(slot, Mod(), Const(128)))
+        return converter.visit_BinOp(BinOp(slot, Mod(), Const(128)))
 
     def getitem(self, converter, slot, slice_slot):
         ptr_slot = self.get_pointer(converter, slot)
@@ -196,7 +196,7 @@ class Slice(IntType):
         # TODO: Raise an error if length equals capacity
 
         tmp = converter.scope.get_temporary(IntType())
-        new_item_ptr = converter.load_bin_op(BinOp(pointer, Add(), length))
+        new_item_ptr = converter.visit_BinOp(BinOp(pointer, Add(), length))
         converter.append_to_body(Assign(tmp, new_item_ptr))
 
         reference = AssociatedSlot(tmp, ref=tmp)
@@ -214,13 +214,13 @@ class Range:
         start = slot.metadata['start']
         stop = slot.metadata['stop']
         step = slot.metadata['step']
-        return converter.load_bin_op(BinOp(BinOp(stop, Sub(), start), FloorDiv(), step))
+        return converter.visit_BinOp(BinOp(BinOp(stop, Sub(), start), FloorDiv(), step))
 
     def getitem(self, converter, slot, slice_slot):
         # TODO: Raise error if index is greater than range length
         start = slot.metadata['start']
         step = slot.metadata['step']
-        return converter.load_bin_op(BinOp(start, Add(), BinOp(step, Mult(), slice_slot)))
+        return converter.visit_BinOp(BinOp(start, Add(), BinOp(step, Mult(), slice_slot)))
 
     def call(self, converter, func, *args):
         start_value, step_value = Const(0), Const(1)
@@ -266,7 +266,7 @@ class GameObjectList:
             return Slot(register, slice_slot.value + self.start, None, self.type)
         else:
             temp = converter.scope.get_temporary(IntType())
-            offset = converter.load_bin_op(BinOp(slice_slot, Add(), Const(self.start)))
+            offset = converter.visit_BinOp(BinOp(slice_slot, Add(), Const(self.start)))
             converter.append_to_body(Assign(temp, offset))
             converter.recycle_later(temp)
             return AssociatedSlot(temp, type=self.type)

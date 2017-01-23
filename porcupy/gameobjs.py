@@ -60,7 +60,7 @@ class System(GameObject):
 
     def set_color(self, converter, r: int_type, g: int_type, b: int_type) -> None:
         # system.color = r + g * 256 + b * 65536
-        color = converter.load_bin_op(BinOp(BinOp(r, Add(),
+        color = converter.visit_BinOp(BinOp(BinOp(r, Add(),
                                                   BinOp(g, Mult(), Const(256))), Add(),
                                             BinOp(b, Mult(), Const(65536))))
         sys_slot = Slot(self.metadata['abbrev'], None, self.color.metadata['abbrev'], self.color.metadata['type'])
