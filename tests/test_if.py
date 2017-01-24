@@ -83,6 +83,34 @@ def test_generic_if():
     # Test is UnaryOp
     assert compile_('x = -1\nif -x: y = 22') == 'p1z -1 # p1z*-1 = 0 ( g1z ) p2z 22 :1'
 
+    # Test is list pointer
+    assert (compile_('x = [1, 2, 3]\n'
+                     'if x: y = 11') ==
+            'p1z 1 p2z 2 p3z 3 p4z 1 '
+            '# 1 = 0 ( g1z ) '
+            'p5z 11 '
+            ':1')
+
+    # Test is slice
+    assert (compile_('x = [1, 2, 3][:]\n'
+                     'if x: y = 11') ==
+            'p1z 1 p2z 2 p3z 3 p4z 16771 '
+            'p6z p4z{128 # p6z}128 = 0 ( g1z ) '
+            'p5z 11 '
+            ':1')
+    assert (compile_('x = [1, 2, 3][:]\n'
+                     'if not x: y = 11') ==
+            'p1z 1 p2z 2 p3z 3 p4z 16771 '
+            'p6z p4z{128 p7z 0 # p6z}128 = 0 ( p7z 1 ) # p7z = 0 ( g1z ) '
+            'p5z 11 '
+            ':1')
+    assert (compile_('x = [1, 2, 3][:0]\n'
+                     'if x: y = 11') ==
+            'p1z 1 p2z 2 p3z 3 p4z 16387 '
+            'p6z p4z{128 # p6z}128 = 0 ( g1z ) '
+            'p5z 11 '
+            ':1')
+
 
 def test_nested():
     # Nesting if-statements is broken in Yozhiks as well

@@ -53,9 +53,12 @@ class NumberType:
         elif isinstance(op, ast.Not):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=(not operand.value), type=BoolType())
-            return converter.visit(ast.Compare(operand, [ast.Eq()], [Const(0)]))
+            return converter.visit(ast.Compare(operand.type.truthy(converter, operand), [ast.Eq()], [Const(0)]))
         else:
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(op))
+
+    def truthy(self, converter, slot):
+        return slot
 
 
 @attr.s
@@ -81,7 +84,6 @@ class StringType:
 @attr.s
 class ListPointer(NumberType):
     # TODO: Initialize lists, e.g. 'x = [0] * 3'
-    # TODO: Implement __bool__, so list can be used in test expression
 
     item_type = attr.ib()
     capacity = attr.ib()
@@ -119,6 +121,10 @@ class ListPointer(NumberType):
 
     def cap(self, converter, slot):
         return Const(self.capacity)
+
+    def truthy(self, converter, slot):
+        # Empty lists are not allowed, so each ListPointer instance is True
+        return Const(True)
 
 
 def get_slot_via_offset(converter, pointer, offset, type):
@@ -174,6 +180,9 @@ class Slice(IntType):
     def setitem(self, converter, slot, slice_slot):
         ptr_slot = self.get_pointer(converter, slot)
         return ListPointer.setitem(self, converter, ptr_slot, slice_slot)
+
+    def truthy(self, converter, slot):
+        return self.len(converter, slot)
 
     def getattr(self, converter, slot, attr_name):
         attrib = getattr(self, attr_name)

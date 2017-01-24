@@ -51,7 +51,7 @@ print_at(points[15].pos_x, points[15].pos_y, 1, 'C')
 x = points[16].pos_x
 y = points[16].pos_y
 print_at(x, y, 1, number)
-for val in stack:
+for val in reversed(stack):
     y -= 15
     print_at(x, y, 1, val)
 
@@ -111,7 +111,7 @@ while value != NOP:
     elif value <= OPERATION or value == PUSH:
         if len(stack) == cap(stack):
             break
-        if len(digits) or value == PUSH:
+        if digits or value == PUSH:
             stack.append(number)
 
         # Calculate the result

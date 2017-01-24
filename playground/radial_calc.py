@@ -84,7 +84,7 @@ while value != NOP:
         digits.append(value)
 
     elif value <= OPERATION or value == PUSH:
-        if not clear_display_on_next_number and len(digits):
+        if not clear_display_on_next_number and digits:
             # Convert ternary digits to a number
             number = 0
             exponent = 1
@@ -131,7 +131,7 @@ while value != NOP:
                 else:
                     reversed_digits.append(-1)
                     result = (result + 1) // 3
-            if len(reversed_digits) == 0:
+            if not reversed_digits:
                 reversed_digits.append(0)
 
             digits = digits[:0]

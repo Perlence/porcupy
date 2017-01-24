@@ -215,7 +215,7 @@ class NodeConverter:
             test = self.visit(node.test)
 
         if not isinstance(test, Compare):
-            test = Compare(test, ast.NotEq(), Const(False))
+            test = Compare(test.type.truthy(self, test), ast.NotEq(), Const(False))
 
         not_test = self.negate_bool(test)
 
@@ -396,14 +396,14 @@ class NodeConverter:
         values = []
         for bool_op_value in node.values:
             if isinstance(bool_op_value, ast.Compare):
-                compare = self.visit_Compare(bool_op_value, wrap_in_if_stmt=False)
-                if isinstance(compare, BoolOp):
-                    bool_slot = self.wrap_in_if_stmt(compare, initial=const_false)
-                    compare = Compare(bool_slot, ast.NotEq(), const_false)
+                value = self.visit_Compare(bool_op_value, wrap_in_if_stmt=False)
+                if isinstance(value, BoolOp):
+                    bool_slot = self.wrap_in_if_stmt(value, initial=const_false)
+                    value = Compare(bool_slot.type.truthy(self, bool_slot), ast.NotEq(), Const(False))
             else:
                 slot = self.visit(bool_op_value)
-                compare = Compare(slot, ast.NotEq(), const_false)
-            values.append(compare)
+                value = Compare(slot.type.truthy(self, slot), ast.NotEq(), Const(False))
+            values.append(value)
 
         op = node.op
         if isinstance(node.op, ast.Or):
