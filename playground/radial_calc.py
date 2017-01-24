@@ -15,8 +15,8 @@ NOP = 8
 
 # Init
 if timers[0].value == 1:
-    stack = [0, 0, 0, 0, 0][:0]
-    digits = [0, 0, 0, 0, 0, 0, 0, 0][:0]
+    stack = slice(int, 0, 5)
+    digits = slice(int, 0, 8)
 
     PLAYER.spawn(1)
     PLAYER.weapon = 4
@@ -122,7 +122,7 @@ while value != NOP:
             stack.append(result)
 
             # Translate number to ternary digits
-            reversed_digits = [0, 0, 0, 0, 0, 0, 0, 0][:0]
+            reversed_digits = slice(int, 0, 8)
             while result != 0:
                 mod = result % 3
                 if mod < 2:

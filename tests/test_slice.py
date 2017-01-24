@@ -1,3 +1,5 @@
+import pytest
+
 from porcupy.compiler import compile as compile_
 
 
@@ -111,3 +113,16 @@ def test_set_item():
             'p6z p4z+1 p7z p6z*16384 p5z p7z+258 '
             'p7z p5z{16384 p8z p5z{16384 p6z p8z+0 p^6z 55 '
             'p8z p5z{16384 p6z p8z+0 p7z p^6z ym ^7')
+
+
+def test_slice_shortcut():
+    assert (compile_('x = slice(int, 5)') == compile_('x = [0, 0, 0, 0, 0][:]'))
+    assert (compile_('x = slice(int, 0, 5)') == compile_('x = [0, 0, 0, 0, 0][:0]'))
+
+    assert (compile_('x = slice(float, 5)') == compile_('x = [0.0, 0.0, 0.0, 0.0, 0.0][:]'))
+
+    assert (compile_('x = slice(float, 5)') == compile_('x = [False, False, False, False, False][:]'))
+
+    with pytest.raises(ValueError) as exc_info:
+        compile_('x = 5; y = slice(int, x)')
+    assert 'slice capacity must be constant' in str(exc_info)

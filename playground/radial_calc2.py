@@ -9,7 +9,7 @@ DIV = 13
 OPERATION = 13
 
 PUSH = 14
-RESET = 15 
+RESET = 15
 
 NOP = 16
 
@@ -17,8 +17,8 @@ BASE = 10
 
 # Init
 if timers[0].value == 1:
-    stack = [0, 0, 0, 0, 0][:0]
-    digits = [0, 0, 0, 0, 0, 0, 0, 0][:0]
+    stack = slice(int, 0, 5)
+    digits = slice(int, 0, 8)
 
     PLAYER.spawn(1)
     PLAYER.weapon = 4
