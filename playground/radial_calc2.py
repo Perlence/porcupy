@@ -17,15 +17,13 @@ BASE = 10
 
 # Init
 if timers[0].value == 1:
-    stack = slice(int, 0, 5)
+    stack = slice(int, 1, 5)
     digits = slice(int, 0, 8)
 
     PLAYER.spawn(1)
     PLAYER.weapon = W_MACHINE_GUN
     PLAYER.has_weapon = 1
     PLAYER.ammo = 1
-
-    number = 0
 
 PLAYER.health = 100
 
@@ -50,7 +48,6 @@ print_at(points[15].pos_x, points[15].pos_y, 1, 'C')
 # LED
 x = points[16].pos_x
 y = points[16].pos_y
-print_at(x, y, 1, number)
 for val in reversed(stack):
     y -= 15
     print_at(x, y, 1, val)
@@ -107,40 +104,37 @@ while value != NOP:
         for digit in reversed(digits):
             number += digit * exponent
             exponent *= BASE
+        stack[len(stack)-1] = number
 
-    elif value <= OPERATION or value == PUSH:
+    elif value == PUSH:
         if len(stack) == cap(stack):
             break
-        if digits or value == PUSH:
-            stack.append(number)
+        stack.append(stack[len(stack)-1])
+        digits = digits[:0]
 
-        # Calculate the result
-        if value <= OPERATION:
-            if len(stack) < 2:
-                print('Error: not enough values on the stack, 2 required')
-                break
+    elif value <= OPERATION:
+        if len(stack) < 2:
+            print('Error: not enough values on the stack, 2 required')
+            break
 
-            op1 = stack[len(stack)-2]
-            op2 = stack[len(stack)-1]
-            stack = stack[:len(stack)-2]
-            if value == ADD:
-                number = op1 + op2
-            elif value == SUB:
-                number = op1 - op2
-            elif value == MUL:
-                number = op1 * op2
-            elif value == DIV:
-                number = op1 / op2
+        op1 = stack[len(stack)-2]
+        op2 = stack[len(stack)-1]
+        stack = stack[:len(stack)-1]
+        if value == ADD:
+            number = op1 + op2
+        elif value == SUB:
+            number = op1 - op2
+        elif value == MUL:
+            number = op1 * op2
+        elif value == DIV:
+            number = op1 / op2
 
-            if len(stack) == cap(stack):
-                break
-            stack.append(number)
-
+        stack[len(stack)-1] = number
         digits = digits[:0]
 
     elif value == RESET:
-        stack = stack[:0]
+        stack = stack[:1]
+        stack[0] = 0
         digits = digits[:0]
-        number = 0
 
     value = NOP
