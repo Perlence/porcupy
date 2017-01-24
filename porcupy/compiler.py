@@ -8,7 +8,7 @@ from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare, Label)
 from .functions import CallableType
 from .gameobjs import (Yozhik, Timer, Point, Bot, System, Button, Door,
-                       Viewport, GameMode, DoorState)
+                       Viewport)
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
                     ListPointer, Slice)
 
@@ -559,18 +559,32 @@ class Scope:
         self.names['viewport'] = Slot(Viewport.metadata['abbrev'], None, None, Viewport())
 
     def populate_consts(self):
-        self.names['DS_CLOSED'] = Const(int(DoorState.closed), IntType())
-        self.names['DS_OPEN'] = Const(int(DoorState.open), IntType())
-        self.names['DS_OPENING'] = Const(int(DoorState.opening), IntType())
-        self.names['DS_CLOSING'] = Const(int(DoorState.closing), IntType())
+        from .gameobjs import Weapon, GameMode, DoorState
+        int_type = IntType()
 
-        self.names['GM_MULTI_LAN'] = Const(int(GameMode.multi_lan), IntType())
-        self.names['GM_MULTI_DUEL'] = Const(int(GameMode.multi_duel), IntType())
-        self.names['GM_HOT_SEAT'] = Const(int(GameMode.hot_seat), IntType())
-        self.names['GM_MENU'] = Const(int(GameMode.menu), IntType())
-        self.names['GM_SINGLE'] = Const(int(GameMode.single), IntType())
-        self.names['GM_SHEEP'] = Const(int(GameMode.sheep), IntType())
-        self.names['GM_HOT_SEAT_SPLIT'] = Const(int(GameMode.hot_seat_split), IntType())
+        self.names['W_BFG10K'] = Const(int(Weapon.bfg10k), int_type)
+        self.names['W_BLASTER'] = Const(int(Weapon.blaster), int_type)
+        self.names['W_SHOTGUN'] = Const(int(Weapon.shotgun), int_type)
+        self.names['W_SUPER_SHOTGUN'] = Const(int(Weapon.super_shotgun), int_type)
+        self.names['W_MACHINE_GUN'] = Const(int(Weapon.machine_gun), int_type)
+        self.names['W_CHAIN_GUN'] = Const(int(Weapon.chain_gun), int_type)
+        self.names['W_GRENADE_LAUNCHER'] = Const(int(Weapon.grenade_launcher), int_type)
+        self.names['W_ROCKET_LAUNCHER'] = Const(int(Weapon.rocket_launcher), int_type)
+        self.names['W_HYPERBLASTER'] = Const(int(Weapon.hyperblaster), int_type)
+        self.names['W_RAILGUN'] = Const(int(Weapon.railgun), int_type)
+
+        self.names['DS_CLOSED'] = Const(int(DoorState.closed), int_type)
+        self.names['DS_OPEN'] = Const(int(DoorState.open), int_type)
+        self.names['DS_OPENING'] = Const(int(DoorState.opening), int_type)
+        self.names['DS_CLOSING'] = Const(int(DoorState.closing), int_type)
+
+        self.names['GM_MULTI_LAN'] = Const(int(GameMode.multi_lan), int_type)
+        self.names['GM_MULTI_DUEL'] = Const(int(GameMode.multi_duel), int_type)
+        self.names['GM_HOT_SEAT'] = Const(int(GameMode.hot_seat), int_type)
+        self.names['GM_MENU'] = Const(int(GameMode.menu), int_type)
+        self.names['GM_SINGLE'] = Const(int(GameMode.single), int_type)
+        self.names['GM_SHEEP'] = Const(int(GameMode.sheep), int_type)
+        self.names['GM_HOT_SEAT_SPLIT'] = Const(int(GameMode.hot_seat_split), int_type)
 
     def populate_system_functions(self):
         from .types import GameObjectMethod

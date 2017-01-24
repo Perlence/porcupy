@@ -12,7 +12,7 @@ if timers[0].value == 1:
     system.bots = 1
 
     PLAYER.spawn(2)
-    PLAYER.weapon = 7
+    PLAYER.weapon = W_ROCKET_LAUNCHER
     PLAYER.has_weapon = True
     PLAYER.ammo = 30
 

@@ -21,7 +21,7 @@ if timers[0].value == 1:
     digits = slice(int, 0, 8)
 
     PLAYER.spawn(1)
-    PLAYER.weapon = 4
+    PLAYER.weapon = W_MACHINE_GUN
     PLAYER.has_weapon = 1
     PLAYER.ammo = 1
 

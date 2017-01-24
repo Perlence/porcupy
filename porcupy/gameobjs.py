@@ -45,7 +45,7 @@ class System(GameObject):
     bots = attr.ib(metadata={'abbrev': 'b', 'type': int_type})
     color = attr.ib(metadata={'abbrev': 'c', 'type': int_type})
     frag_limit = attr.ib(metadata={'abbrev': 'f', 'type': int_type})
-    game_mode = attr.ib(metadata={'abbrev': 'g', 'type': GameMode, 'readonly': True})
+    game_mode = attr.ib(metadata={'abbrev': 'g', 'type': int_type, 'readonly': True})
 
     metadata = {'abbrev': 'y'}
 
@@ -93,6 +93,19 @@ class Bot(GameObject):
     metadata = {'abbrev': 'a'}
 
 
+class Weapon(enum.IntEnum):
+    bfg10k = 0
+    blaster = 1
+    shotgun = 2
+    super_shotgun = 3
+    machine_gun = 4
+    chain_gun = 5
+    grenade_launcher = 6
+    rocket_launcher = 7
+    hyperblaster = 8
+    railgun = 9
+
+
 @attr.s(init=False)
 class Yozhik(GameObject):
     frags = attr.ib(metadata={'abbrev': 'f', 'type': int_type})
@@ -133,7 +146,7 @@ class DoorState(enum.IntEnum):
 
 @attr.s(init=False)
 class Door(GameObject):
-    state = attr.ib(metadata={'abbrev': 's', 'type': DoorState, 'readonly': True})
+    state = attr.ib(metadata={'abbrev': 's', 'type': int_type, 'readonly': True})
 
     metadata = {'abbrev': 'd'}
 
