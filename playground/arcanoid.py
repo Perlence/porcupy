@@ -20,7 +20,7 @@ if timers[0].value == 1:
 if timers[0].value == 1 or PLAYER.ammo < 30 and BALL.health == 0:
     BALL.spawn(1)
     BALL_BOT.ai = False
-    ball_speed_x = 0.0
+    ball_speed_x = 0
 
     green_armor = yellow_armor = red_armor = 0
     ball_damage = 0
@@ -74,11 +74,11 @@ if BALL.speed_x != 0 and BALL.speed_y != 0:
     ball_speed_x = BALL.speed_x
     ball_speed_y = BALL.speed_y
 if ball_speed_x != 0 and BALL.speed_x == 0 and BALL.speed_y != 0:
-    ball_speed_x *= -1.0
+    ball_speed_x *= -1
     BALL.speed_x = ball_speed_x
 if -BALL.pos_y > -CEIL:
     BALL.pos_y = CEIL
-    BALL.speed_y *= -1.0
+    BALL.speed_y *= -1
 
 # Ball impulse
 is_ball_damaged = 0 < BALL.health < 100

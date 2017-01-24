@@ -253,11 +253,12 @@ def test_aug_assign():
     assert compile_('x = 2; yozhiks[x].speed_y *= 0.88') == 'p1z 2 p2z 22 p3z p1z+1 p4z p2z/25 e^3v e^3v*p4z'
     assert compile_('YEGS = [yozhiks[4], yozhiks[5]]; x = 1; YEGS[x].speed_y *= 0.88') == 'p1z 5 p2z 6 p3z 1 p4z 22 p5z p3z+1 p6z p^5z p5z p4z/25 e^6v e^6v*p5z'
 
-    # with pytest.raises(NameError) as exc_info:
-    #     compile_('x += 4')
-    # assert "name 'x' is not defined" in str(exc_info.value)
+    with pytest.raises(NameError) as exc_info:
+        compile_('x += 4')
+    assert "name 'x' is not defined" in str(exc_info.value)
 
-    # assert compile_('x = yozhiks[1].speed_x; x *= -1') == 'p1z e2u p1z p1z*-1'
+    assert compile_('x = yozhiks[1].speed_x; x *= -1') == 'p1z e2u p1z p1z*-1'
+    assert compile_('x = yozhiks[1].speed_x; x *= -1.0') == 'p1z e2u p1z p1z*-1'
 
 
 def test_static_type():
@@ -273,4 +274,4 @@ def test_static_type():
     for source in sources:
         with pytest.raises(TypeError) as exc_info:
             compile_('x = 1; x = "s"')
-        assert 'cannot assign object of type' in str(exc_info.value)
+        assert 'cannot assign value of type' in str(exc_info.value)

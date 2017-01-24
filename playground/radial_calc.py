@@ -48,7 +48,7 @@ for digit in digits:
         print_at(x, y, 1, digit)
     else:
         print_at(x, y, 1, '+')
-    x += 12.0
+    x += 12
 
 # Handle controls
 value = NOP

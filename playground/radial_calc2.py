@@ -52,7 +52,7 @@ x = points[16].pos_x
 y = points[16].pos_y
 print_at(x, y, 1, number)
 for val in stack:
-    y -= 15.0
+    y -= 15
     print_at(x, y, 1, val)
 
 # Handle controls

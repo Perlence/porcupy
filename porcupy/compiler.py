@@ -95,16 +95,13 @@ class NodeConverter:
             self.append_to_body(Assign(dest_slot, src_slot))
 
     def visit_AugAssign(self, node):
-        # TODO: Raise NameError if target is not defined
         src_slot = self.visit(node.value)
-        dest_slot = self.store_value(node.target, src_slot)
-        if dest_slot is None:
-            return
+        dest_slot = self.visit(node.target)
         bin_op = self.visit(ast.BinOp(dest_slot, node.op, src_slot))
+        self.scope.check_type(dest_slot, bin_op)
         self.append_to_body(Assign(dest_slot, bin_op))
 
     def store_value(self, target, src_slot):
-        # TODO: Check if src_slot has metadata 'readonly'
         dest_slot = None
         if isinstance(target, AST):
             dest_slot = target
@@ -587,12 +584,15 @@ class Scope:
         return slot
 
     def check_type(self, dest_slot, src_slot):
-        # TODO: It should be possible to multiply float variable by int constant
-        dest_type = dest_slot.type
-        src_type = src_slot.type
-        if (not isinstance(src_type, type(dest_type)) or
-                attr.fields(type(src_type)) and src_type != dest_type):
-            raise TypeError("cannot assign object of type '{!r}' to variable of type '{!r}'".format(src_type, dest_type))
+        dest_type_obj = dest_slot.type
+        dest_type = type(dest_type_obj)
+        src_type_obj = src_slot.type
+        src_type = type(src_type_obj)
+
+        are_not_related = not isinstance(src_type_obj, dest_type) and not isinstance(dest_type_obj, src_type)
+        have_different_fields = attr.fields(src_type) and src_type_obj != dest_type_obj
+        if are_not_related or have_different_fields:
+            raise TypeError("cannot assign value of type '{!r}' to variable of type '{!r}'".format(src_type_obj, dest_type_obj))
 
     def get_by_index(self, index, type):
         if isinstance(type, NumberType):
