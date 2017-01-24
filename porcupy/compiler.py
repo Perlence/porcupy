@@ -80,19 +80,30 @@ class NodeConverter:
     def visit_Assign(self, node):
         # TODO: Reassign lists to list pointers without allocating more memory:
         # 'x = [11, 22]; x = [11, 22]' -> 'p1z 11 p2z 22 p4z 1 p1z 11 p2z 22'
-        src_slot = None
+        src_slots = {}
         for target in node.targets:
-            if isinstance(target, (ast.Tuple, ast.List)):
-                # TODO: Implement iterable unpacking
-                raise NotImplementedError('iterable unpacking is not implemented yet')
-            if self.is_black_hole(target):
-                continue
-            if src_slot is None:
-                src_slot = self.visit(node.value)
-            dest_slot = self.store_value(target, src_slot)
-            if dest_slot is None:
-                continue
-            self.append_to_body(Assign(dest_slot, src_slot))
+            if isinstance(target, ast.List):
+                raise NotImplementedError('list unpacking is not supported')
+            targets, values = self.unpack_tuples(target, node.value)
+            for target, value in zip(targets, values):
+                if self.is_black_hole(target):
+                    continue
+                src_slot = src_slots.get(value)
+                if src_slot is None:
+                    src_slot = src_slots[value] = self.visit(value)
+                dest_slot = self.store_value(target, src_slot)
+                if dest_slot is None:
+                    continue
+                self.append_to_body(Assign(dest_slot, src_slot))
+
+    def unpack_tuples(self, target, value):
+        targets = target.elts if isinstance(target, ast.Tuple) else [target]
+        values = value.elts if isinstance(value, ast.Tuple) else [value]
+        if len(targets) < len(values):
+            raise ValueError('too many values to unpack (expected {})'.format(len(targets)))
+        elif len(targets) > len(values):
+            raise ValueError('not enough values to unpack (expected {}, got {})'.format(len(targets), len(values)))
+        return targets, values
 
     def visit_AugAssign(self, node):
         src_slot = self.visit(node.value)
@@ -108,7 +119,7 @@ class NodeConverter:
         elif isinstance(target, ast.Name):
             if self.is_target_const(target):
                 if not self.is_source_const(src_slot):
-                    raise TypeError("cannot define a constant '{}'".format(target.id))
+                    raise TypeError("cannot define a constant '{}' with value '{}'".format(target.id, src_slot))
                 elif isinstance(src_slot.type, Slice):
                     raise TypeError('slice cannot be constant')
                 elif target.id in self.scope.names:
@@ -271,7 +282,6 @@ class NodeConverter:
         frac = Fraction(str(node.n))
         if frac.denominator == 1:
             return Const(frac.numerator, FloatType())
-        # TODO: Check when defining a floating point constant
         return self.visit(ast.BinOp(Const(frac.numerator), ast.Div(), Const(frac.denominator)))
 
     def visit_Str(self, node):

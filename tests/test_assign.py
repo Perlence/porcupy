@@ -205,6 +205,31 @@ def test_multiple_assign():
     assert compile_('x = y = [1, 2]') == 'p1z 1 p2z 2 p3z 1 p4z 1'
 
 
+def test_tuple_unpacking():
+    assert compile_('x, y = 11, 22') == 'p1z 11 p2z 22'
+    assert compile_('x, _ = 11, 22') == 'p1z 11'
+    assert compile_('x, _ = 11, 22') == 'p1z 11'
+    assert compile_('x, y = a, b = 11, 22') == 'p1z 11 p2z 22 p3z 11 p4z 22'
+
+    too_many = [
+        'x, y = 11, 22, 33',
+        'x = 11, 22',
+    ]
+    for source in too_many:
+        with pytest.raises(ValueError) as exc_info:
+            compile_('x, y = 11, 22, 33')
+        assert 'too many values to unpack' in str(exc_info)
+
+    not_enough = [
+        'x, y, z = 11, 22',
+        'x, y = 11',
+    ]
+    for source in not_enough:
+        with pytest.raises(ValueError) as exc_info:
+            compile_('x, y, z = 11, 22')
+        assert 'not enough values to unpack' in str(exc_info)
+
+
 def test_game_objects():
     assert compile_('x = yozhiks[0].frags') == 'p1z e1f'
     assert compile_('x = 1; y = yozhiks[x].frags') == 'p1z 1 p3z p1z+1 p2z e^3f'
