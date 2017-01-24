@@ -10,8 +10,7 @@ from .functions import CallableType
 from .gameobjs import (Yozhik, Timer, Point, Bot, System, Button, Door,
                        Viewport, GameMode, DoorState)
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
-                    GameObjectList, GameObjectMethod, ListPointer, Slice,
-                    Range)
+                    ListPointer, Slice)
 
 
 def compile(source, filename='<unknown>', separate_stmts=False):
@@ -533,13 +532,15 @@ class Scope:
         self.populate_system_functions()
 
     def populate_builtins(self):
+        from .types import Range, Reversed
         from .functions import length, capacity
-
         self.names['cap'] = Const(None, CallableType.from_function(capacity))
         self.names['len'] = Const(None, CallableType.from_function(length))
         self.names['range'] = Const(None, Range())
+        self.names['reversed'] = Const(None, Reversed())
 
     def populate_game_objects(self):
+        from .types import GameObjectList
         self.names['bots'] = Const(None, GameObjectList(Bot(), 1, 10))
         self.names['buttons'] = Const(None, GameObjectList(Button(), 1, 50))
         self.names['doors'] = Const(None, GameObjectList(Door(), 1, 50))
@@ -564,6 +565,8 @@ class Scope:
         self.names['GM_HOT_SEAT_SPLIT'] = Const(int(GameMode.hot_seat_split), IntType())
 
     def populate_system_functions(self):
+        from .types import GameObjectMethod
+
         system = System()
         for method in (system.print, system.print_at, system.set_color, system.load_map):
             name = method.__name__

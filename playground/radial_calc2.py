@@ -9,7 +9,7 @@ DIV = 13
 OPERATION = 13
 
 PUSH = 14
-RESET = 15
+RESET = 15 
 
 NOP = 16
 
@@ -104,10 +104,8 @@ while value != NOP:
         # Convert digits to a number
         number = 0
         exponent = 1
-        # for digit in reversed(digits):
-        for i in range(len(digits)-1, -1, -1):
-            digit = digits[i]
-            number += digits[i] * exponent
+        for digit in reversed(digits):
+            number += digit * exponent
             exponent *= BASE
 
     elif value <= OPERATION or value == PUSH:

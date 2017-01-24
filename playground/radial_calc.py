@@ -28,15 +28,15 @@ if timers[0].value == 1:
 PLAYER.health = 100
 
 # Display controls
-x = points[0].pos_x; y = points[0].pos_y; print_at(x, y, 1, '-1')
-x = points[1].pos_x; y = points[1].pos_y; print_at(x, y, 1, '0')
-x = points[2].pos_x; y = points[2].pos_y; print_at(x, y, 1, 'R')
-x = points[3].pos_x; y = points[3].pos_y; print_at(x, y, 1, '1')
-x = points[4].pos_x; y = points[4].pos_y; print_at(x, y, 1, 'P')
-x = points[5].pos_x; y = points[5].pos_y; print_at(x, y, 1, '+')
-x = points[6].pos_x; y = points[6].pos_y; print_at(x, y, 1, '-')
-x = points[7].pos_x; y = points[7].pos_y; print_at(x, y, 1, '*')
-x = points[8].pos_x; y = points[8].pos_y; print_at(x, y, 1, '/')
+print_at(points[0].pos_x, points[0].pos_y, 1, '-1')
+print_at(points[1].pos_x, points[1].pos_y, 1, '0')
+print_at(points[2].pos_x, points[2].pos_y, 1, 'R')
+print_at(points[3].pos_x, points[3].pos_y, 1, '1')
+print_at(points[4].pos_x, points[4].pos_y, 1, 'P')
+print_at(points[5].pos_x, points[5].pos_y, 1, '+')
+print_at(points[6].pos_x, points[6].pos_y, 1, '-')
+print_at(points[7].pos_x, points[7].pos_y, 1, '*')
+print_at(points[8].pos_x, points[8].pos_y, 1, '/')
 
 # LED
 x = points[9].pos_x
@@ -88,10 +88,8 @@ while value != NOP:
             # Convert ternary digits to a number
             number = 0
             exponent = 1
-            # for digit in reversed(digits):
-            for i in range(len(digits)-1, -1, -1):
-                digit = digits[i]
-                number += digits[i] * exponent
+            for digit in reversed(digits):
+                number += digit * exponent
                 exponent *= 3
 
             stack.append(number)
@@ -137,8 +135,8 @@ while value != NOP:
                 reversed_digits.append(0)
 
             digits = digits[:0]
-            for i in range(len(reversed_digits)-1, -1, -1):
-                digits.append(reversed_digits[i])
+            for digit in reversed(reversed_digits):
+                digits.append(digit)
 
             clear_display_on_next_number = True
 

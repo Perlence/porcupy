@@ -144,7 +144,6 @@ def test_enumerate():
     assert 'exactly 2 receiver variables required' in str(exc_info.value)
 
 
-@pytest.mark.skip('Not implemented yet')
 def test_reversed():
     assert (compile_('items = [11, 22, 33]\n'
                      'for item in reversed(items):\n'
@@ -152,7 +151,17 @@ def test_reversed():
             'p1z 11 p2z 22 p3z 33 p4z 1 '
             'p6z -1 '
             ':1 p6z p6z+1 # p6z >= 3 ( g2z ) '
-            'p7z p4z+p6z p8z p^7z p5z p8z '
+            'p7z 2 p9z p7z-p6z p8z p4z+p9z p10z p^8z p5z p10z '
+            'ym ^5 '
+            'g1z '
+            ':2')
+    assert (compile_('items = [11, 22, 33][:]\n'
+                     'for item in reversed(items):\n'
+                     '    print(item)') ==
+            'p1z 11 p2z 22 p3z 33 p4z 16771 '
+            'p6z -1 p7z p4z{128 '
+            ':1 p6z p6z+1 # p6z >= p7z}128 ( g2z ) '
+            'p8z p4z{128 p9z p8z}128 p10z p9z-1 p12z p4z{16384 p13z p10z-p6z p11z p12z+p13z p14z p^11z p5z p14z '
             'ym ^5 '
             'g1z '
             ':2')

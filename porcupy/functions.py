@@ -19,9 +19,9 @@ class CallableType:
         return callable_type
 
 
-def length(converter, container):
-    return container.type.len(converter, container)
+def length(converter, sequence):
+    return sequence.type.len(converter, sequence)
 
 
-def capacity(converter, container):
-    return container.type.cap(converter, container)
+def capacity(converter, sequence):
+    return sequence.type.cap(converter, sequence)

@@ -232,7 +232,31 @@ class Range:
         return Const(None, self, metadata=metadata)
 
 
-# TODO: Implement 'reversed' type
+@attr.s
+class Reversed:
+    def call(self, converter, func, sequence):
+        metadata = {
+            'sequence': sequence,
+        }
+        return Const(None, self, metadata=metadata)
+
+    def get_pointer(self, converter, slot):
+        sequence = slot.metadata['sequence']
+        return sequence.type.get_pointer(converter, sequence)
+
+    def len(self, converter, slot):
+        sequence = slot.metadata['sequence']
+        return sequence.type.len(converter, sequence)
+
+    def cap(self, converter, slot):
+        sequence = slot.metadata['sequence']
+        return sequence.type.cap(converter, sequence)
+
+    def getitem(self, converter, slot, slice_slot):
+        sequence = slot.metadata['sequence']
+        length = self.len(converter, slot)
+        reversed_index = converter.visit(ast.BinOp(ast.BinOp(length, ast.Sub(), Const(1)), ast.Sub(), slice_slot))
+        return sequence.type.getitem(converter, sequence, reversed_index)
 
 
 @attr.s(init=False)
