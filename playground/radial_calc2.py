@@ -130,7 +130,7 @@ while value != NOP:
             elif value == MUL:
                 number = op1 * op2
             elif value == DIV:
-                number = op1 // op2
+                number = op1 / op2
 
             if len(stack) == cap(stack):
                 break
