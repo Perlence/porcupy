@@ -24,6 +24,9 @@ def test_optimized_if():
                     'else:\n'
                     '    x = 12') == 'p1z 12'
 
+    assert compile_('X = True\n'
+                    'if X: y = 11') == 'p1z 11'
+
     # assert compile_('x = 11\nif 5 + 7 and True: y = 22') == 'p1z 11 p2z 22'
 
 

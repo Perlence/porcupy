@@ -183,7 +183,8 @@ class NodeConverter:
         # If(expr test, stmt* body, stmt* orelse)
         if self.is_body_empty(node.body) and self.is_body_empty(node.orelse):
             return
-        if isinstance(node.test, (ast.Num, ast.Str, ast.NameConstant, ast.List)):
+        if (isinstance(node.test, (ast.Num, ast.Str, ast.NameConstant, ast.List)) or
+                isinstance(node.test, ast.Name) and self.is_target_const(node.test)):
             self.optimized_if(node.test, node.body)
             if node.orelse:
                 self.optimized_if(node.test, node.orelse, negate_test=True)
