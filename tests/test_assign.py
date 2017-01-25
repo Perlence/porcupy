@@ -65,6 +65,9 @@ def test_binary_op():
     assert compile_('x = 1; y = 1-x*5/2') == 'p1z 1 p3z p1z*5 p4z 1 p5z p3z/2 p2z p4z-p5z'
     assert compile_('x = 1; y = 1-5*x/2') == 'p1z 1 p3z p1z*5 p4z 1 p5z p3z/2 p2z p4z-p5z'
 
+    assert compile_('x = 4; z = x-(-1)') == 'p1z 4 p2z p1z+1'
+    assert compile_('x = 4; Y = -1; z = x-Y') == 'p1z 4 p2z p1z+1'
+
 
 def test_compare():
     # assert compile_('x = 3 < 5') == 'p1z 1'

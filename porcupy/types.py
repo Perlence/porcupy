@@ -5,7 +5,7 @@ import _string
 
 import attr
 
-from .ast import Const, Slot, AssociatedSlot, BinOp, Sub, Div, FloorDiv, Mod, Assign, Call
+from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Div, FloorDiv, Mod, Assign, Call
 from .functions import CallableType
 
 
@@ -17,6 +17,18 @@ class NumberType:
             return Const(value)
 
         temp = []
+        left, right = self._move_const_to_right(converter, left, op, right, temp)
+        op, right = self._change_right_sign(op, right)
+        left = self._store_temporary(converter, left, temp)
+        right = self._store_temporary(converter, right, temp)
+        converter.recycle_later(*temp)
+        return BinOp(left, op, right)
+
+    def _move_const_to_right(self, converter, left, op, right, temp):
+        # 1 - x -> _tmp = 1; _tmp - x
+        # 1 / x -> _tmp = 1; _tmp / x
+        # 1 + x -> x + 1
+        # 1 * x -> x * 1
         if isinstance(left, Const):
             if isinstance(op, (Sub, Div, FloorDiv, Mod)):
                 left_slot = converter.scope.get_temporary(left.type)
@@ -25,21 +37,28 @@ class NumberType:
                 left = left_slot
             else:
                 left, right = right, left
+        return left, right
 
-        if not isinstance(left, (Const, Slot, AssociatedSlot)):
-            left_slot = converter.scope.get_temporary(left.type)
-            converter.append_to_body(Assign(left_slot, left))
-            temp.append(left_slot)
-            left = left_slot
-        if not isinstance(right, (Const, Slot, AssociatedSlot)):
-            right_slot = converter.scope.get_temporary(right.type)
-            converter.append_to_body(Assign(right_slot, right))
-            temp.append(right_slot)
-            right = right_slot
+    def _change_right_sign(self, op, right):
+        # x - (-5) -> x + 5
+        # x + (-5) -> x - 5
+        if isinstance(right, Const):
+            if right.value < 0:
+                if isinstance(op, Sub):
+                    right.value = -right.value
+                    op = Add()
+                elif isinstance(op, Add):
+                    right.value = -right.value
+                    op = Sub()
+        return op, right
 
-        converter.recycle_later(*temp)
-
-        return BinOp(left, op, right)
+    def _store_temporary(self, converter, value, temp):
+        if not isinstance(value, (Const, Slot, AssociatedSlot)):
+            value_slot = converter.scope.get_temporary(value.type)
+            converter.append_to_body(Assign(value_slot, value))
+            temp.append(value_slot)
+            value = value_slot
+        return value
 
     def unary_op(self, converter, op, operand):
         if isinstance(op, ast.UAdd):
