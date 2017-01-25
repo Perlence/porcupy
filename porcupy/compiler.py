@@ -593,6 +593,12 @@ class Scope:
         self.names['FL_100'] = Const(int(FragLimit.one_hundred), int_type)
         self.names['FL_200'] = Const(int(FragLimit.two_hundred), int_type)
 
+        self.names['BL_VERY_EASY'] = Const(int(BotLevel.very_easy), int_type)
+        self.names['BL_EASY'] = Const(int(BotLevel.easy), int_type)
+        self.names['BL_NORMAL'] = Const(int(BotLevel.normal), int_type)
+        self.names['BL_HARD'] = Const(int(BotLevel.hard), int_type)
+        self.names['BL_IMPOSSIBLE'] = Const(int(BotLevel.impossible), int_type)
+
         self.names['GM_MULTI_LAN'] = Const(int(GameMode.multi_lan), int_type)
         self.names['GM_MULTI_DUEL'] = Const(int(GameMode.multi_duel), int_type)
         self.names['GM_HOT_SEAT'] = Const(int(GameMode.hot_seat), int_type)

@@ -92,6 +92,14 @@ class Point(GameObject):
     metadata = {'abbrev': 'c'}
 
 
+class BotLevel(enum.IntEnum):
+    very_easy = 1
+    easy = 2
+    normal = 3
+    hard = 4
+    impossible = 5
+
+
 @attr.s(init=False)
 class Bot(GameObject):
     ai = attr.ib(metadata={'abbrev': 'i', 'type': bool_type})

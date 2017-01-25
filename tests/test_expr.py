@@ -49,7 +49,7 @@ def test_format():
     assert compile_('print("Health: {[0].health}".format(yozhiks))') == 'p1z e1p ym Health:_^1'
 
 
-def test_raise_if_returns():
+def test_unused_result():
     unused = [
         'slice(int, 0, 1)',
         'x = slice(int, 0, 5); len(x)',

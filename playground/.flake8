@@ -5,4 +5,5 @@ builtins = timers, system, yozhiks, bots, points, buttons, doors, viewport,
            W_GRENADE_LAUNCHER, W_ROCKET_LAUNCHER, W_HYPERBLASTER, W_RAILGUN,
            DS_CLOSED, DS_OPEN, DS_OPENING, DS_CLOSING,
            FL_10, FL_20, FL_30, FL_50, FL_100, FL_200,
+           BL_VERY_EASY, BL_EASY, BL_NORMAL, BL_HARD, BL_IMPOSSIBLE,
            GM_MULTI_LAN, GM_MULTI_DUEL, GM_HOT_SEAT, GM_MENU, GM_SINGLE, GM_SHEEP, GM_HOT_SEAT_SPLIT
