@@ -45,6 +45,9 @@ def test_format():
     assert compile_('n = 2; print("Yozhiks in Quake {}".format(n))') == 'p1z 2 ym Yozhiks_in_Quake_^1'
     assert compile_('print("{2}{1}{0}".format("a", "b", "c"))') == 'ym cba'
     assert compile_('print("Health: {}".format(yozhiks[0].health))') == 'p1z e1p ym Health:_^1'
+    assert compile_('print("Health: {0.health}".format(yozhiks[0]))') == 'p1z e1p ym Health:_^1'
+    assert compile_('print("Health: {.health}".format(yozhiks[0]))') == 'p1z e1p ym Health:_^1'
+    assert compile_('print("Health: {[0].health}".format(yozhiks))') == 'p1z e1p ym Health:_^1'
 
     with pytest.raises(ValueError) as exc_info:
         compile_('fmt = "Hello {}"; print(fmt.format("World"))')

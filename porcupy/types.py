@@ -1,6 +1,7 @@
 import ast
 from inspect import signature
 import string
+import _string
 
 import attr
 
@@ -90,25 +91,58 @@ class StringType:
     def format(self, converter, slot, *args):
         if not isinstance(slot, Const):
             raise ValueError('cannot format a variable string')
-
-        result = []
+        formatter = Formatter(converter)
         fmt_string = slot.value
-        formatter = string.Formatter()
+        result = formatter.format(fmt_string, *args)
+        return Const(result, self)
+
+
+@attr.s
+class Formatter(string.Formatter):
+    converter = attr.ib()
+
+    def vformat(self, fmt_string, args, kwargs):
+        result = []
         tmp_slots = []
-        for i, (literal_text, field_name, format_spec, conversion) in enumerate(formatter.parse(fmt_string)):
+        for literal_text, field_name, _, _ in self.parse(fmt_string):
+            result.append(literal_text)
+            arg, _ = self.get_field(field_name, args, kwargs)
+            short_arg = shorten_slot(self.converter, arg, tmp_slots)
+            result.append(short_arg)
+        self.converter.recycle_later(*tmp_slots)
+        return result
+
+    def parse(self, fmt_string):
+        for i, (literal_text, field_name, format_spec, conversion) in enumerate(super().parse(fmt_string)):
             if format_spec:
                 raise NotImplementedError('format specification is not implemented yet')
             if conversion:
                 raise NotImplementedError('conversion is not implemented yet')
 
-            result.append(literal_text)
-            arg = args[int(field_name)] if field_name else args[i]
-            short_arg = shorten_slot(converter, arg, tmp_slots)
-            result.append(short_arg)
+            if not self._arg_index_is_present(field_name):
+                field_name = str(i) + field_name
 
-        converter.recycle_later(*tmp_slots)
+            yield literal_text, field_name, format_spec, conversion
 
-        return Const(result, self)
+    def _arg_index_is_present(self, field_name):
+        return field_name and field_name[0].isdigit()
+
+    def get_field(self, field_name, args, kwargs):
+        first, rest = _string.formatter_field_name_split(field_name)
+
+        obj = self.get_value(first, args, kwargs)
+
+        # loop through the rest of the field_name, doing
+        # getattr or getitem as needed
+        for is_attr, i in rest:
+            if is_attr:
+                # obj = getattr(obj, i)
+                obj = self.converter.visit(ast.Attribute(obj, i, ast.Load()))
+            else:
+                # obj = obj[i]
+                obj = self.converter.visit(ast.Subscript(obj, ast.Index(ast.Num(i)), ast.Load()))
+
+        return obj, first
 
 
 @attr.s
