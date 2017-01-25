@@ -47,3 +47,18 @@ def test_format():
     assert compile_('print("Health: {0.health}".format(yozhiks[0]))') == 'p1z e1p ym Health:_^1'
     assert compile_('print("Health: {.health}".format(yozhiks[0]))') == 'p1z e1p ym Health:_^1'
     assert compile_('print("Health: {[0].health}".format(yozhiks))') == 'p1z e1p ym Health:_^1'
+
+
+def test_raise_if_returns():
+    unused = [
+        'slice(int, 0, 1)',
+        'x = slice(int, 0, 5); len(x)',
+        'x = slice(int, 0, 5); cap(x)',
+        'randint(0, 5)',
+        'range(5)',
+        'x = slice(int, 5); reversed(x)',
+    ]
+    for source in unused:
+        with pytest.raises(ValueError) as exc_info:
+            compile_(source)
+        assert 'function return value is unused' in str(exc_info)

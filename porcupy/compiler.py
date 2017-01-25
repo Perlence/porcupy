@@ -5,7 +5,8 @@ from fractions import Fraction
 import attr
 
 from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
-                  operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare, Label)
+                  operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare, Label,
+                  Call)
 from .functions import CallableType
 from .gameobjs import (Yozhik, Timer, Point, Bot, System, Button, Door,
                        Viewport)
@@ -270,7 +271,7 @@ class NodeConverter:
 
     def visit_Expr(self, node):
         if isinstance(node.value, ast.Call):
-            expr = self.visit(node.value)
+            expr = self.visit_Call(node.value, raise_if_returns=True)
             if expr is not None:
                 self.append_to_body(expr)
         else:
@@ -460,14 +461,20 @@ class NodeConverter:
         operand = self.visit(node.operand)
         return operand.type.unary_op(self, node.op, operand)
 
-    def visit_Call(self, node):
+    def visit_Call(self, node, raise_if_returns=False):
         if node.keywords:
             raise NotImplementedError('function keywords are not implemented yet')
         func = self.visit(node.func)
         args = [self.visit(arg) for arg in node.args]
         if not hasattr(func.type, 'call'):
             raise NotImplementedError("calling function '{}' is not implemented yet".format(func))
-        return func.type.call(self, func, *args)
+        result = func.type.call(self, func, *args)
+
+        if raise_if_returns:
+            if result is not None and not isinstance(result, Call):
+                raise ValueError('function return value is unused')
+
+        return result
 
     def type_of_objects(self, objects):
         type_set = set()
@@ -533,20 +540,20 @@ class Scope:
         self.populate_system_functions()
 
     def populate_builtins(self):
-        from .types import Range, Reversed
         from .functions import capacity, length, randint, slice
+        from .types import Range, Reversed
 
         self.names['bool'] = Const(None, BoolType())
         self.names['float'] = Const(None, FloatType())
         self.names['int'] = Const(None, IntType())
 
+        self.names['range'] = Const(None, Range())
+        self.names['reversed'] = Const(None, Reversed())
+
         self.names['cap'] = Const(None, CallableType.from_function(capacity))
         self.names['len'] = Const(None, CallableType.from_function(length))
         self.names['randint'] = Const(None, CallableType.from_function(randint))
         self.names['slice'] = Const(None, CallableType.from_function(slice))
-
-        self.names['range'] = Const(None, Range())
-        self.names['reversed'] = Const(None, Reversed())
 
     def populate_game_objects(self):
         from .types import GameObjectList
