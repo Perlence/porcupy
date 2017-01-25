@@ -567,7 +567,7 @@ class Scope:
         self.names['viewport'] = Slot(Viewport.metadata['abbrev'], None, None, Viewport())
 
     def populate_consts(self):
-        from .gameobjs import Weapon, GameMode, DoorState
+        from .gameobjs import Weapon, FragLimit, GameMode, DoorState
         int_type = IntType()
 
         self.names['W_BFG10K'] = Const(int(Weapon.bfg10k), int_type)
@@ -585,6 +585,13 @@ class Scope:
         self.names['DS_OPEN'] = Const(int(DoorState.open), int_type)
         self.names['DS_OPENING'] = Const(int(DoorState.opening), int_type)
         self.names['DS_CLOSING'] = Const(int(DoorState.closing), int_type)
+
+        self.names['FL_10'] = Const(int(FragLimit.ten), int_type)
+        self.names['FL_20'] = Const(int(FragLimit.twenty), int_type)
+        self.names['FL_30'] = Const(int(FragLimit.thirty), int_type)
+        self.names['FL_50'] = Const(int(FragLimit.fifty), int_type)
+        self.names['FL_100'] = Const(int(FragLimit.one_hundred), int_type)
+        self.names['FL_200'] = Const(int(FragLimit.two_hundred), int_type)
 
         self.names['GM_MULTI_LAN'] = Const(int(GameMode.multi_lan), int_type)
         self.names['GM_MULTI_DUEL'] = Const(int(GameMode.multi_duel), int_type)

@@ -11,6 +11,8 @@ bool_type = BoolType()
 float_type = FloatType()
 str_type = StringType()
 
+# TODO: Use enumerations in attribute metadata
+
 
 @attr.s(init=False)
 class Timer(GameObject):
@@ -28,6 +30,15 @@ class Timer(GameObject):
         pass
 
     stop.metadata = {'abbrev': 's'}
+
+
+class FragLimit(enum.IntEnum):
+    ten = 1
+    twenty = 2
+    thirty = 3
+    fifty = 4
+    one_hundred = 5
+    two_hundred = 6
 
 
 class GameMode(enum.IntEnum):
