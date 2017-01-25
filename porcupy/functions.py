@@ -3,7 +3,7 @@ import types
 
 import attr
 
-from .ast import Const
+from .ast import Const, Random, Assign
 
 
 @attr.s
@@ -50,3 +50,21 @@ def slice(converter, type_slot, length, capacity=None):
 
     return converter.visit(ast.Subscript(ast.List([item] * capacity.value, ast.Load()),
                                          ast.Slice(None, length, None), ast.Load()))
+
+
+def randint(converter, a, b):
+    from .types import IntType
+
+    if not isinstance(a, Const) or not isinstance(b, Const):
+        raise ValueError('arguments must be constant')
+
+    if a.value > b.value:
+        raise ValueError('left random boundary must not be greater than right')
+
+    if a.value == 0:
+        return Random(b.value + 1)
+    else:
+        tmp = converter.scope.get_temporary(IntType())
+        converter.recycle_later(tmp)
+        converter.append_to_body(Assign(tmp, Random(abs(b.value - a.value) + 1)))
+        return converter.visit(ast.BinOp(tmp, ast.Add(), a))

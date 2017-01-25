@@ -141,6 +141,21 @@ class AssociatedSlot(AST):
 
 
 @attr.s
+class Random(AST):
+    value = attr.ib()
+
+    type = attr.ib(init=False)
+    metadata = attr.ib(default=attr.Factory(dict))
+
+    def __attrs_post_init__(self):
+        from .types import IntType
+        self.type = IntType()
+
+    def __str__(self):
+        return '~{}'.format(self.value)
+
+
+@attr.s
 class BoolOp(AST):
     op = attr.ib()
     values = attr.ib()
@@ -149,7 +164,8 @@ class BoolOp(AST):
     metadata = attr.ib(default=attr.Factory(dict))
 
     def __attrs_post_init__(self):
-        self.type = bool
+        from .types import BoolType
+        self.type = BoolType()
 
     def __str__(self):
         result = []

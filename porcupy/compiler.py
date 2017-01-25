@@ -534,7 +534,7 @@ class Scope:
 
     def populate_builtins(self):
         from .types import Range, Reversed
-        from .functions import length, capacity, slice
+        from .functions import capacity, length, randint, slice
 
         self.names['bool'] = Const(None, BoolType())
         self.names['float'] = Const(None, FloatType())
@@ -542,6 +542,7 @@ class Scope:
 
         self.names['cap'] = Const(None, CallableType.from_function(capacity))
         self.names['len'] = Const(None, CallableType.from_function(length))
+        self.names['randint'] = Const(None, CallableType.from_function(randint))
         self.names['slice'] = Const(None, CallableType.from_function(slice))
 
         self.names['range'] = Const(None, Range())

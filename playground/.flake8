@@ -1,6 +1,6 @@
 [flake8]
 builtins = timers, system, yozhiks, bots, points, buttons, doors, viewport,
-           print_at, set_color, load_map, cap,
+           print_at, set_color, load_map, cap, randint,
            W_BFG10K, W_BLASTER, W_SHOTGUN, W_SUPER_SHOTGUN, W_MACHINE_GUN, W_CHAIN_GUN,
            W_GRENADE_LAUNCHER, W_ROCKET_LAUNCHER, W_HYPERBLASTER, W_RAILGUN,
            DS_CLOSED, DS_OPEN, DS_OPENING, DS_CLOSING,

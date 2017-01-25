@@ -301,3 +301,15 @@ def test_static_type():
         with pytest.raises(TypeError) as exc_info:
             compile_('x = 1; x = "s"')
         assert 'cannot assign value of type' in str(exc_info.value)
+
+
+def test_random():
+    assert compile_('x = randint(0, 4)') == 'p1z ~5'
+    assert compile_('x = randint(0, 0)') == 'p1z ~1'
+
+    assert compile_('x = randint(10, 14)') == 'p2z ~5 p1z p2z+10'
+    assert compile_('x = randint(-14, -10)') == 'p2z ~5 p1z p2z-14'
+
+    with pytest.raises(ValueError) as exc_info:
+        compile_('x = randint(-10, -14)')
+    assert 'left random boundary must not be greater' in str(exc_info.value)
