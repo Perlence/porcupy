@@ -29,7 +29,6 @@ def test_print():
     assert compile_('print("Hey")') == 'ym Hey'
 
     assert compile_('x = 2; print(x)') == 'p1z 2 ym ^1'
-    assert compile_('s = "Hello World"; print(s)') == 's0z Hello_World ym $0'
     assert compile_('print(yozhiks[0].health)') == 'p1z e1p ym ^1'
 
 
@@ -41,14 +40,10 @@ def test_set_color():
 
 
 def test_format():
-    assert compile_('subject = "World"; print("Hello {}".format(subject))') == 's0z World ym Hello_$0'
+    assert compile_('print("Hello {}".format("World"))') == 'ym Hello_World'
     assert compile_('n = 2; print("Yozhiks in Quake {}".format(n))') == 'p1z 2 ym Yozhiks_in_Quake_^1'
     assert compile_('print("{2}{1}{0}".format("a", "b", "c"))') == 'ym cba'
     assert compile_('print("Health: {}".format(yozhiks[0].health))') == 'p1z e1p ym Health:_^1'
     assert compile_('print("Health: {0.health}".format(yozhiks[0]))') == 'p1z e1p ym Health:_^1'
     assert compile_('print("Health: {.health}".format(yozhiks[0]))') == 'p1z e1p ym Health:_^1'
     assert compile_('print("Health: {[0].health}".format(yozhiks))') == 'p1z e1p ym Health:_^1'
-
-    with pytest.raises(ValueError) as exc_info:
-        compile_('fmt = "Hello {}"; print(fmt.format("World"))')
-    assert 'cannot format a variable string' in str(exc_info.value)

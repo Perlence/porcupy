@@ -146,7 +146,7 @@ class Formatter(string.Formatter):
 
 
 @attr.s
-class ListPointer(NumberType):
+class ListPointer(IntType):
     item_type = attr.ib()
     capacity = attr.ib()
 
@@ -154,11 +154,14 @@ class ListPointer(NumberType):
         return slot
 
     def getitem(self, converter, slot, slice_slot):
-        if isinstance(slice_slot, Const) and slice_slot.value >= self.capacity:
-            raise IndexError('list index out of range')
-        # TODO: Check list bounds in run-time
-        if isinstance(slot, Const) and isinstance(slice_slot, Const):
-            return converter.scope.get_by_index(slot.value + slice_slot.value, self.item_type)
+        if isinstance(slice_slot, Const):
+            if slice_slot.value >= self.capacity:
+                raise IndexError('list index out of range')
+            if isinstance(slot, Const):
+                return converter.scope.get_by_index(slot.value + slice_slot.value, self.item_type)
+        else:
+            # TODO: Check list bounds in run-time
+            pass
 
         return get_slot_via_offset(converter, slot, slice_slot, self.item_type)
 

@@ -645,11 +645,10 @@ class Scope:
 
     def allocate(self, type):
         if isinstance(type, NumberType):
+            # TODO: Allocate numeric variables on string slots, when all
+            # numeric slots are already taken
             index = self.numeric_slots.allocate()
             return Slot('p', index, 'z', type)
-        elif isinstance(type, StringType):
-            index = self.string_slots.allocate()
-            return Slot('s', index, 'z', type)
         else:
             raise TypeError("cannot allocate slot of type '{}'".format(type))
 
@@ -710,9 +709,6 @@ class Slots:
 
     def is_reserved(self, addr):
         return self.slots[addr-self.start] is RESERVED
-
-    def count_reserved(self):
-        return len(slot for slot in self.slots if slot is RESERVED)
 
 
 RESERVED = object()

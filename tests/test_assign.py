@@ -11,7 +11,6 @@ def test_tuple_assign():
 def test_consts():
     assert compile_('X = 4') == ''
     assert compile_('X = 4; y = X') == 'p1z 4'
-    assert compile_('X = "HELLO"; y = X') == 's0z HELLO'
 
     assert compile_('X = 4; Y = X; z = Y') == 'p1z 4'
 
@@ -39,7 +38,9 @@ def test_other_names():
 
 
 def test_strings():
-    assert compile_('s = "Hello World"') == 's0z Hello_World'
+    with pytest.raises(TypeError) as exc_info:
+        compile_('s = "Hello World"')
+    assert 'cannot allocate slot of type' in str(exc_info)
 
 
 def test_bools():
@@ -142,9 +143,6 @@ def test_lists():
 
     assert compile_('x = [1, 2]') == 'p1z 1 p2z 2 p3z 1'
     assert compile_('x = 1; y = [2, 3]') == 'p1z 1 p2z 2 p3z 3 p4z 2'
-
-    assert compile_('x = 1; y = ["1", "2"]') == 'p1z 1 s0z 1 s1z 2 p2z 0'
-    assert compile_('x = 1; y = ["Hello World", "beep boop"]') == 'p1z 1 s0z Hello_World s1z beep_boop p2z 0'
 
     assert compile_('x = [1, 2, 3]; y = x') == 'p1z 1 p2z 2 p3z 3 p4z 1 p5z p4z'
 
