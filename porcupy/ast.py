@@ -52,7 +52,7 @@ class Const(AST):
 
         if isinstance(self.value, Number):
             self.type = NumberType()
-        elif isinstance(self.value, str):
+        elif isinstance(self.value, (str, list)):
             self.type = StringType()
         else:
             raise TypeError("unable to use consts of type '{}'".format(type(self.value)))
@@ -66,7 +66,10 @@ class Const(AST):
             else:
                 return str(self.value)
         elif isinstance(self.type, StringType):
-            return self.value.replace(' ', '_')
+            value = self.value
+            if isinstance(self.value, list):
+                value = ''.join(map(str, self.value))
+            return value.replace(' ', '_')
         else:
             raise TypeError("cannot format '{}' const".format(self.type))
 

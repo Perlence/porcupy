@@ -1,5 +1,6 @@
 import ast
 from inspect import signature
+import string
 
 import attr
 
@@ -78,13 +79,40 @@ class BoolType(IntType):
 
 @attr.s
 class StringType:
-    pass
+    slot_methods = {'format'}
+
+    def getattr(self, converter, slot, attr_name):
+        attrib = getattr(self, attr_name)
+        if attr_name in self.slot_methods:
+            return Const(None, CallableType.from_function(attrib, slot))
+        raise AttributeError("type object '{}' has no attribute '{}'".format(self, attr_name))
+
+    def format(self, converter, slot, *args):
+        if not isinstance(slot, Const):
+            raise ValueError('cannot format a variable string')
+
+        result = []
+        fmt_string = slot.value
+        formatter = string.Formatter()
+        tmp_slots = []
+        for i, (literal_text, field_name, format_spec, conversion) in enumerate(formatter.parse(fmt_string)):
+            if format_spec:
+                raise NotImplementedError('format specification is not implemented yet')
+            if conversion:
+                raise NotImplementedError('conversion is not implemented yet')
+
+            result.append(literal_text)
+            arg = args[int(field_name)] if field_name else args[i]
+            short_arg = shorten_slot(converter, arg, tmp_slots)
+            result.append(short_arg)
+
+        converter.recycle_later(*tmp_slots)
+
+        return Const(result, self)
 
 
 @attr.s
 class ListPointer(NumberType):
-    # TODO: Initialize lists, e.g. 'x = [0] * 3'
-
     item_type = attr.ib()
     capacity = attr.ib()
 
@@ -334,16 +362,18 @@ class GameObjectMethod:
         return Call(func, args)
 
     def _shorten_args(self, converter, args):
-        short_args = []
         tmp_slots = []
-        for arg in args:
-            if isinstance(arg, (Slot, AssociatedSlot)):
-                if not arg.is_variable():
-                    tmp_slot = converter.scope.get_temporary(arg.type)
-                    tmp_slots.append(tmp_slot)
-                    converter.append_to_body(Assign(tmp_slot, arg))
-                    arg = tmp_slot
-                arg = AssociatedSlot(arg, short_form=True)
-            short_args.append(arg)
+        short_args = [shorten_slot(converter, arg, tmp_slots) for arg in args]
         converter.recycle_later(*tmp_slots)
         return short_args
+
+
+def shorten_slot(converter, slot, tmp_slots):
+    if isinstance(slot, (Slot, AssociatedSlot)):
+        if not slot.is_variable():
+            tmp_slot = converter.scope.get_temporary(slot.type)
+            tmp_slots.append(tmp_slot)
+            converter.append_to_body(Assign(tmp_slot, slot))
+            slot = tmp_slot
+        slot = AssociatedSlot(slot, short_form=True)
+    return slot

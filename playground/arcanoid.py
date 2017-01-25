@@ -2,6 +2,8 @@ PLAYER = yozhiks[0]
 BALL = yozhiks[1]
 BALL_BOT = bots[1]
 
+GAME_TIMER = timers[1]
+
 FLOOR = points[0].pos_y
 CEIL = points[1].pos_y
 
@@ -25,30 +27,15 @@ if timers[0].value == 1 or PLAYER.ammo < 30 and BALL.health == 0:
     green_armor = yellow_armor = red_armor = 0
     ball_damage = 0
 
+    GAME_TIMER.value = 1
+    GAME_TIMER.start()
+
 PLAYER.health = 100
 
 if PLAYER.ammo < 30:
     launch_x = PLAYER.pos_x
     launch_y = PLAYER.pos_y
     PLAYER.ammo = 30
-
-# End screen
-if -BALL.pos_y < -FLOOR:
-    game_duration = timers[0].value / 50
-    timers[0].stop()
-
-    BALL.health = 0
-
-    print_at(280, 200, 1, 'Game_Over!')
-
-    print_at(280, 230, 1, 'Your score: {score}')
-    print_at(280, 245, 1, 'Green: {green_armor}')
-    print_at(280, 260, 1, 'Yellow: {yellow_armor}')
-    print_at(280, 275, 1, 'Red: {red_armor}')
-    print_at(280, 290, 1, 'Game duration: {game_duration}')
-    print_at(280, 305, 1, 'Ball damage: {ball_damage}')
-
-    print_at(280, 335, 1, 'Shoot to restart')
 
 # Scoring
 if BALL.armor > 0:
@@ -62,8 +49,35 @@ if BALL.armor > 0:
 
 score = green_armor*100 + yellow_armor*150 + red_armor*200
 
+# End screen
+if -BALL.pos_y < -FLOOR:
+    game_duration = GAME_TIMER.value / 50
+    GAME_TIMER.stop()
+
+    BALL.health = 0
+
+    X, y = 250, 150
+
+    print_at(X, y, 1, 'Game_Over!')
+    y += 30
+
+    print_at(X, y, 1, 'Your score: {}'.format(score))
+    y += 15
+    print_at(X, y, 1, 'Green: {}'.format(green_armor))
+    y += 15
+    print_at(X, y, 1, 'Yellow: {}'.format(yellow_armor))
+    y += 15
+    print_at(X, y, 1, 'Red: {}'.format(red_armor))
+    y += 15
+    print_at(X, y, 1, 'Game duration: {}'.format(game_duration))
+    y += 15
+    print_at(X, y, 1, 'Ball damage: {}'.format(ball_damage))
+    y += 30
+
+    print_at(X, y, 1, 'Shoot to restart')
+
 if BALL.health > 0:
-    print_at(30, 30, 1, 'Your score: {score}')
+    print_at(30, 30, 1, 'Your score: {}'.format(score))
 
 # Ball movement
 if BALL.speed_y > 0:
