@@ -48,8 +48,7 @@ Built-in functions
 .. class:: range(stop) -> range object
 .. class:: range(start, stop[, step]) -> range object
 
-   Return an object that produces a sequence of integers from start (inclusive)
-   to stop (exclusive) by step.
+   Return an object that produces a sequence of integers from start (inclusive) to stop (exclusive) by step.
 
 .. class:: reversed(sequence) -> reversed object
 
@@ -86,11 +85,22 @@ Porcupy provides access to many built-in objects to interact with the game.
 
 .. class:: Button
 
+   :param bool is_pressed: (*read-only*).
+
+   .. method:: press()
+
+
 .. data:: doors
 
    A list of 50 :class:`Door` instances.
 
 .. class:: Door
+
+   :param int state: (*read-only*).
+
+   .. method:: open()
+   .. method:: close()
+
 
 .. data:: points
 
@@ -98,22 +108,37 @@ Porcupy provides access to many built-in objects to interact with the game.
 
 .. class:: Point
 
+   Points are set in the map editor, and they are primarily used to tell a bot where to go.
+   They can also be used to easily mark a location on map to serve like a trigger, or to display a message with
+   :func:`print_at`.
+
+   :param int pos_x: *x* coordinate of the point.
+   :param int pos_y: *y* coordinate of the point.
+
+
 .. data:: system
 
    A single :class:`System` instance.
 
 .. class:: System
 
-   A system object.
-
    :param int bots: number of bots.
    :param int color: color of :meth:`print_at` messages.
    :param int frag_limit:
    :param int game_mode: current game mode (*read-only*).
 
+
 .. data:: timers
 
    A list of 100 :class:`Timer` instances.
+   First timer ``timers[0]`` is always started with the game, so if it's necessary to set initial variables and game
+   state, use this approach:
+
+   .. code-block:: python
+
+      if timers[0].value == 1:
+          # Initialize here
+          pass
 
 .. class:: Timer
 
@@ -125,18 +150,20 @@ Porcupy provides access to many built-in objects to interact with the game.
    :param bool enabled: is the timer going.
 
    .. method:: start()
-
-      Start the timer.
-
    .. method:: stop()
 
-      Stop the timer.
 
 .. data:: viewport
 
    A single :class:`Viewport` instance.
 
 .. class:: Viewport
+
+   Viewport object holds the location of top-left game screen corner in relation to top-left map corner.
+
+   :param int pos_x: *x* coordinate of top-left screen corner.
+   :param int pos_y: *y* coordinate of top-left screen corner.
+
 
 .. data:: yozhiks
 
@@ -151,15 +178,12 @@ Porcupy provides access to many built-in objects to interact with the game.
    :param float speed_y: *y* coordinate of yozhik's speed vector.
    :param int health: health points.
    :param int armor: armor points.
-   :param bool has_weapon: setting :attr:`has_weapon` to ``True`` makes
-       yozhik switch to the weapon, last set to :attr:`weapon`
-       attribute.
-   :param int weapon: setting value to this attribute give yozhik a
-       weapon.
+   :param bool has_weapon: setting :attr:`has_weapon` to ``True`` makes yozhik switch to the weapon, last set to
+      :attr:`weapon` attribute.
+   :param int weapon: setting value to this attribute give yozhik a weapon.
    :param int ammo: amount of ammo for current weapon.
-   :param int view_angle: a value in range *[0, 127]*, when yozhik
-       looks up it's 0, when he looks straight to the right or left
-       it's 64, when he looks down it's 127.
+   :param int view_angle: a value in range *[0, 127]*, when yozhik looks up it's 0, when he looks straight to the right
+      or left it's 64, when he looks down it's 127.
    :param int team: number of team.
 
    .. method:: spawn(point: int)

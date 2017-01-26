@@ -87,69 +87,77 @@ Numbers
 
 Sequences
 
-   Lists
-      The items of a list are of the same type and the number of items is constant and known at compile-time:
+  Immutable sequences
 
-      .. code-block:: python
+     Range
 
-         x = [0, 1, 2, 3, 4]
+     Reversed
 
-      No original list methods are implemented in Porcupy lists, it can only be used to store a sequence of numbers, get
-      and set them by index:
+  Mutable sequences
 
-      .. code-block:: python
+     Lists
+        The items of a list are of the same type and the number of items is constant and known at compile-time:
 
-         x[0] = 10
-         print(x[0])
-         print(len(x))
+        .. code-block:: python
 
-      .. important::
+           x = [0, 1, 2, 3, 4]
 
-         Negative indices are not supported.
+        No original list methods are implemented in Porcupy lists, it can only be used to store a sequence of numbers, get
+        and set them by index:
 
-   Slices
-      Slice is a variable-length sequence with defined maximum capacity, backed by a list.
-      Essentially, slice is a triple of values: address of first element, length of slice, capacity of slice.
+        .. code-block:: python
 
-      .. code-block:: python
+           x[0] = 10
+           print(x[0])
+           print(len(x))
 
-         x = [0, 0, 0, 0, 0]  # a list of length 5
-         s = x[:]  # a slice of list *x*, length 5, capacity 5
-         s = x[1:]  # a slice of list *x*, length 4, capacity 4
-         s = x[:0]  # a slice of list *x*, length 0, capacity 5
-         s = x[1:3]  # a slice of list *x*, length 3, capacity 4
+        .. important::
 
-      .. important::
+           Negative indices are not supported.
 
-         Slice step is not supported.
+     Slices
+        Slice is a variable-length sequence with defined maximum capacity, backed by a list.
+        Essentially, slice is a triple of values: address of first element, length of slice, capacity of slice.
 
-      There's a shorthand notation:
+        .. code-block:: python
 
-      .. code-block:: python
+           x = [0, 0, 0, 0, 0]  # a list of length 5
+           s = x[:]  # a slice of list *x*, length 5, capacity 5
+           s = x[1:]  # a slice of list *x*, length 4, capacity 4
+           s = x[:0]  # a slice of list *x*, length 0, capacity 5
+           s = x[1:3]  # a slice of list *x*, length 3, capacity 4
 
-         x = slice(int, 5)  # equivalent to [0, 0, 0, 0, 0][:]
-         x = slice(int, 1, 5)  # equivalent to [0, 0, 0, 0, 0][:1]
-         y = slice(bool, 3)  # equivalent to [False, False, False][:]
-         z = slice(float, 5)  # equivalent to [.0, .0, .0, .0, .0][:]
+        .. important::
 
-      It's possible to slice other slices:
+           Slice step is not supported.
 
-      .. code-block:: python
+        There's a shorthand notation:
 
-         x = slice(int, 5)
-         y = x[:3]
+        .. code-block:: python
 
-      Slices can be appended to:
+           x = slice(int, 5)  # equivalent to [0, 0, 0, 0, 0][:]
+           x = slice(int, 1, 5)  # equivalent to [0, 0, 0, 0, 0][:1]
+           y = slice(bool, 3)  # equivalent to [False, False, False][:]
+           z = slice(float, 5)  # equivalent to [.0, .0, .0, .0, .0][:]
 
-      .. code-block:: python
+        It's possible to slice other slices:
 
-         x = slice(int, 0, 5)
-         x.append(4)
+        .. code-block:: python
 
-      .. warning::
+           x = slice(int, 5)
+           y = x[:3]
 
-         There's currently no mechanism to prevent user from appending an item to a "full" slice, so be sure to check
-         length and capacity of slice before appending yourself.
+        Slices can be appended to:
+
+        .. code-block:: python
+
+           x = slice(int, 0, 5)
+           x.append(4)
+
+        .. warning::
+
+           There's currently no mechanism to prevent user from appending an item to a "full" slice, so be sure to check
+           length and capacity of slice before appending yourself.
 
 
 Compound statements
