@@ -567,7 +567,7 @@ class Scope:
         self.names['viewport'] = Slot(Viewport.metadata['abbrev'], None, None, Viewport())
 
     def populate_consts(self):
-        from .gameobjs import Weapon, FragLimit, GameMode, DoorState
+        from .gameobjs import Weapon, FragLimit, GameMode, DoorState, BotLevel
         int_type = IntType()
 
         self.names['W_BFG10K'] = Const(int(Weapon.bfg10k), int_type)
