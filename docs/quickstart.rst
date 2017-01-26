@@ -52,7 +52,7 @@ It looks a lot like the original example, but you can notice new words like ``g1
 statement and *goto* label respectively.
 
 Now, the scenario on it's own is useless unless it's bundled with a map.
-Go to directory where you installed Yozhiks in Quake II and map editor.
+Go to directory where you installed Yozhiks in Quake II and the map editor.
 Start ``red_egiks.exe``, open file ``MAPS/ArenaDM.egm``, change the name of map in *Info* dialog, and save it to
 ``MAPS/ArenaDM2.egm``.
 

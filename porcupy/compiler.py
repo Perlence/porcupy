@@ -558,6 +558,7 @@ class Scope:
 
     def populate_game_objects(self):
         from .types import GameObjectList
+        # TODO: Add Sheep object
         self.names['bots'] = Const(None, GameObjectList(Bot(), 1, 10))
         self.names['buttons'] = Const(None, GameObjectList(Button(), 1, 50))
         self.names['doors'] = Const(None, GameObjectList(Door(), 1, 50))

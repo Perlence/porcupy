@@ -4,8 +4,9 @@ Language reference
 Porcupy compiler uses Python's `ast <https://docs.python.org/3/library/ast.html>`_ module to parse Porcupy scenarios.
 But it's not possible to implement each and every one of Python language features in Porcupy.
 
-Unsupported language features
------------------------------
+
+Unsupported features
+--------------------
 
 First and foremost, here's a list of Python language features not supported in Porcupy:
 
@@ -46,7 +47,7 @@ Identifiers and assignment
 
 Unlike Python, Porcupy introduces a distinction between variables and constants.
 Constants are not assigned to in-game variables, like ``p1z``, the value of constant is stored only in compiler's memory.
-To define a constant, write it's name in upper case:
+To define a constant, write its name in upper case:
 
 .. code-block:: python
 
@@ -63,7 +64,7 @@ All other names are considered variable names:
 
    number = 0
 
-Chained assignment and tuple unpacking is supported:
+Chained assignment and tuple unpacking are supported:
 
 .. code-block:: python
 
@@ -126,11 +127,10 @@ Sequences
 
       .. code-block:: python
 
-         x = slice(int, 5)  # equivalent to ``[0, 0, 0, 0, 0][:]``
-         x = slice(int, 1, 5)  # equivalent to ``[0, 0, 0, 0, 0][:1]``
-
-         y = slice(bool, 5)
-         z = slice(float, 5)
+         x = slice(int, 5)  # equivalent to [0, 0, 0, 0, 0][:]
+         x = slice(int, 1, 5)  # equivalent to [0, 0, 0, 0, 0][:1]
+         y = slice(bool, 3)  # equivalent to [False, False, False][:]
+         z = slice(float, 5)  # equivalent to [.0, .0, .0, .0, .0][:]
 
       It's possible to slice other slices:
 

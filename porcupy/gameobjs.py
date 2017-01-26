@@ -61,6 +61,8 @@ class System(GameObject):
     metadata = {'abbrev': 'y'}
 
     def print(self, converter, s: str_type) -> None:
+        # TODO: Allow to pass variable number of arguments and join them
+        # with ' '.
         pass
 
     print.metadata = {'abbrev': 'm'}
