@@ -1,15 +1,19 @@
-.. porcupy documentation master file, created by
-   sphinx-quickstart on Thu Jan 26 11:59:53 2017.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Welcome to Porcupy
+==================
 
-Welcome to porcupy's documentation!
-===================================
+Welcome to Porcupy's documentation.
+*Porcupy* let's you compile a subset of Python to `Yozhiks in Quake II <http://gegames.org>`_ scenarios.
+
+Check :doc:`intro` to find out about *Yozhiks in Quake II* and its scenarios.
+Go to :doc:`quickstart` to learn how to write your first scenario in Python.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
+   intro
+   quickstart
+   language
+   library
 
 
 Indices and tables
