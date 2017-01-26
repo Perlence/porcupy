@@ -80,6 +80,7 @@ class NodeConverter:
     def visit_Assign(self, node):
         # TODO: Reassign lists to list pointers without allocating more memory:
         # 'x = [11, 22]; x = [11, 22]' -> 'p1z 11 p2z 22 p4z 1 p1z 11 p2z 22'
+        # TODO: Store values in temporary variables during tuple unpacking: a, b = b, a
         src_slots = {}
         for target in node.targets:
             if isinstance(target, ast.List):

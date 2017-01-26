@@ -24,6 +24,8 @@ def test_call():
         compile_('spawn = yozhiks[1].spawn; spawn(1)')
     assert "cannot allocate slot of type 'GameObjectMethod" in str(exc_info.value)
 
+    assert compile_('x = 1; yozhiks[0].spawn(x+1)') == 'p1z 1 p2z p1z+1 e1b ^2'
+
 
 def test_print():
     assert compile_('print("Hey")') == 'ym Hey'

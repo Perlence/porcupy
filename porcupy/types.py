@@ -425,11 +425,11 @@ class GameObjectMethod:
 
 
 def shorten_slot(converter, slot, tmp_slots):
-    if isinstance(slot, (Slot, AssociatedSlot)):
-        if not slot.is_variable():
-            tmp_slot = converter.scope.get_temporary(slot.type)
-            tmp_slots.append(tmp_slot)
-            converter.append_to_body(Assign(tmp_slot, slot))
-            slot = tmp_slot
-        slot = AssociatedSlot(slot, short_form=True)
-    return slot
+    if isinstance(slot, Const):
+        return slot
+    elif not isinstance(slot, (Slot, AssociatedSlot)) or not slot.is_variable():
+        tmp_slot = converter.scope.get_temporary(slot.type)
+        tmp_slots.append(tmp_slot)
+        converter.append_to_body(Assign(tmp_slot, slot))
+        slot = tmp_slot
+    return AssociatedSlot(slot, short_form=True)
