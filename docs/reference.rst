@@ -432,9 +432,9 @@ Porcupy provides access to many built-in objects to interact with the game.
 
       (*int*) -- number of frags.
 
-   .. attribute:: has_weapon
+   .. attribute:: is_weapon_in_inventory
 
-      (*bool*) -- setting :attr:`has_weapon` to ``True`` places current weapon in yozhik's inventory.
+      (*bool*) -- setting :attr:`is_weapon_in_inventory` to ``True`` places current weapon in yozhik's inventory.
 
    .. attribute:: health
 
@@ -469,7 +469,7 @@ Porcupy provides access to many built-in objects to interact with the game.
 
       (*int*) -- current weapon, see :ref:`list of weapon constants <weapons>`.
       Setting value to this attribute makes yozhik switch to the weapon, but does not place it in his inventory.
-      If he didn't have it before and switches back, the weapon will be gone, unless :attr:`~Yozhik.has_weapon` was set.
+      If he didn't have it before and switches back, the weapon will be gone, unless :attr:`~Yozhik.is_weapon_in_inventory` was set.
 
    .. method:: spawn(point: int)
 

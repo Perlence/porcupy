@@ -15,7 +15,7 @@ if timers[0].value == 1:
 
     PLAYER.spawn(2)
     PLAYER.weapon = W_ROCKET_LAUNCHER
-    PLAYER.has_weapon = True
+    PLAYER.is_weapon_in_inventory = True
     PLAYER.ammo = 30
 
 # Restart game after player shoots

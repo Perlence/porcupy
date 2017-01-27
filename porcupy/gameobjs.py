@@ -145,7 +145,7 @@ class Yozhik(GameObject):
     speed_y = attr.ib(metadata={'abbrev': 'v', 'type': float_type})
     health = attr.ib(metadata={'abbrev': 'p', 'type': int_type})
     armor = attr.ib(metadata={'abbrev': 'n', 'type': int_type})
-    has_weapon = attr.ib(metadata={'abbrev': 'e', 'type': bool_type})
+    is_weapon_in_inventory = attr.ib(metadata={'abbrev': 'e', 'type': bool_type})
     weapon = attr.ib(metadata={'abbrev': 'w', 'type': int_type})
     ammo = attr.ib(metadata={'abbrev': 's', 'type': int_type})
     view_angle = attr.ib(metadata={'abbrev': 'a', 'type': float_type})

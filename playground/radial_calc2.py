@@ -22,7 +22,7 @@ if timers[0].value == 1:
 
     PLAYER.spawn(1)
     PLAYER.weapon = W_MACHINE_GUN
-    PLAYER.has_weapon = 1
+    PLAYER.is_weapon_in_inventory = True
     PLAYER.ammo = 1
 
 PLAYER.health = 100
