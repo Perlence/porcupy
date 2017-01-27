@@ -88,72 +88,80 @@ Numbers
    Floating point numbers
 
 Sequences
-  All sequences provide a way to get/set an item by index, query the length and capacity.
+   All sequences provide a way to get/set an item by index, query the length and capacity.
 
-  Immutable sequences
-     Range
-       See the :class:`range` built-in.
+   Immutable sequences
+      Strings
+         Can only be used in constants and as :func:`print`, :func:`print_at`, and :func:`load_map` arguments.
+         Method ``format`` is supported:
 
-     Reversed
-       See the :class:`reversed` built-in.
+         .. code-block:: python
 
-  Mutable sequences
-     Lists
-        The items of a list are of the same type and the number of items is constant and known at compile-time:
+            print('{} {}'.format(yegiks[0].health, yegiks[0].armor)
 
-        .. code-block:: python
+      Range
+         See the :class:`range` built-in.
 
-           x = [0, 1, 2, 3, 4]
+      Reversed
+         See the :class:`reversed` built-in.
 
-        No original list methods are implemented in Porcupy lists, it can only be used to store a sequence of numbers, get
-        and set them by index:
+   Mutable sequences
+      Lists
+         The items of a list are of the same type and the number of items is constant and known at compile-time:
 
-        .. code-block:: python
+         .. code-block:: python
 
-           x[0] = 10
-           print(x[0])
-           print(len(x))
+            x = [0, 1, 2, 3, 4]
 
-        .. note::
+         No original list methods are implemented in Porcupy lists, it can only be used to store a sequence of numbers, get
+         and set them by index:
 
-           Negative indices are not supported.
+         .. code-block:: python
 
-     Slices
-        Slice is a variable-length sequence with defined maximum capacity, backed by a list.
-        Essentially, slice is a triple of values: address of first element, length of slice, capacity of slice.
+            x[0] = 10
+            print(x[0])
+            print(len(x))
 
-        .. code-block:: python
+         .. note::
 
-           x = [0, 0, 0, 0, 0]  # a list of length 5
-           s = x[:]  # a slice of list *x*, length 5, capacity 5
-           s = x[1:]  # a slice of list *x*, length 4, capacity 4
-           s = x[:0]  # a slice of list *x*, length 0, capacity 5
-           s = x[1:3]  # a slice of list *x*, length 3, capacity 4
+            Negative indices are not supported.
 
-        .. note::
+      Slices
+         Slice is a variable-length sequence with defined maximum capacity, backed by a list.
+         Essentially, slice is a triple of values: address of first element, length of slice, capacity of slice.
 
-           Slice step is not supported.
+         .. code-block:: python
 
-        There's a very useful shorthand notation with :func:`slice`.
+            x = [0, 0, 0, 0, 0]  # a list of length 5
+            s = x[:]  # a slice of list *x*, length 5, capacity 5
+            s = x[1:]  # a slice of list *x*, length 4, capacity 4
+            s = x[:0]  # a slice of list *x*, length 0, capacity 5
+            s = x[1:3]  # a slice of list *x*, length 3, capacity 4
 
-        It's possible to slice other slices:
+         .. note::
 
-        .. code-block:: python
+            Slice step is not supported.
 
-           x = slice(int, 5)
-           y = x[:3]
+         There's a very useful shorthand notation with :func:`slice`.
 
-        Slices can be appended to:
+         It's possible to slice other slices:
 
-        .. code-block:: python
+         .. code-block:: python
 
-           x = slice(int, 0, 5)
-           x.append(4)
+            x = slice(int, 5)
+            y = x[:3]
 
-        .. warning::
+         Slices can be appended to:
 
-           There's currently no mechanism to prevent user from appending an item to a "full" slice, so be sure to check
-           length and capacity of slice before appending yourself.
+         .. code-block:: python
+
+            x = slice(int, 0, 5)
+            x.append(4)
+
+         .. warning::
+
+            There's currently no mechanism to prevent user from appending an item to a "full" slice, so be sure to check
+            length and capacity of slice before appending yourself.
 
 
 Compound statements
@@ -168,7 +176,7 @@ Only the following compound statements from Python are supported:
 Each of them supports optional ``else`` clause.
 
 The ``for`` statement differs a bit from the original.
-It can be used to iterate lists, slices and ranges:
+It can be used to iterate sequences:
 
 .. code-block:: python
 
@@ -182,7 +190,7 @@ But it's also possible to access item's index without the ``enumerate`` function
 
    items = [10, 20, 30, 40]
    for i, item in items:
-      print('{} {}'.format(i, item))  # prints '0 10', '1 20', and so on
+      print(i, item)  # prints '0 10', '1 20', and so on
 
 
 Built-in functions
@@ -259,7 +267,7 @@ Built-in functions
 
 .. function:: spawn_sheep(start, finish)
 
-   Spawn a sheep in point *start* and tell it to go point *finish*.
+   Spawn a sheep in point *start* and tell it to go to point *finish*.
 
    :param Point start: point where sheeps spawns.
    :param Point finish: point where sheep is supposed to go.
