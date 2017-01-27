@@ -158,7 +158,7 @@ class NodeConverter:
         self.append_to_body(Assign(index, Const(-1)))
 
         iter_slot = self.visit(node.iter)
-        iter_len = iter_slot.type.len(self, iter_slot)
+        iter_len = iter_slot.type._len(self, iter_slot)
 
         test = Compare(index, ast.Lt(), iter_len)
 
@@ -218,7 +218,7 @@ class NodeConverter:
             test = self.visit(node.test)
 
         if not isinstance(test, Compare):
-            test = Compare(test.type.truthy(self, test), ast.NotEq(), Const(False))
+            test = Compare(test.type._truthy(self, test), ast.NotEq(), Const(False))
 
         not_test = self.negate_bool(test)
 
@@ -314,9 +314,9 @@ class NodeConverter:
 
     def visit_Attribute(self, node):
         value_slot = self.visit(node.value)
-        if not hasattr(value_slot.type, 'getattr'):
+        if not hasattr(value_slot.type, '_getattr'):
             raise NotImplementedError("getting attribute of object of type '{}' is not implemented yet".format(value_slot.type))
-        return value_slot.type.getattr(self, value_slot, node.attr)
+        return value_slot.type._getattr(self, value_slot, node.attr)
 
     def visit_Subscript(self, node):
         value_slot = self.visit(node.value)
@@ -328,18 +328,18 @@ class NodeConverter:
 
     def load_index_subscript(self, value_slot, slice_slot, ctx):
         if isinstance(ctx, ast.Load):
-            if not hasattr(value_slot.type, 'getitem'):
+            if not hasattr(value_slot.type, '_getitem'):
                 raise NotImplementedError("getting item of collection of type '{}' is not implemented yet".format(value_slot.type))
-            return value_slot.type.getitem(self, value_slot, slice_slot)
+            return value_slot.type._getitem(self, value_slot, slice_slot)
 
         elif isinstance(ctx, ast.Store):
-            if not hasattr(value_slot.type, 'setitem'):
+            if not hasattr(value_slot.type, '_setitem'):
                 raise NotImplementedError("setting item of collection of type '{}' is not implemented yet".format(value_slot.type))
-            return value_slot.type.setitem(self, value_slot, slice_slot)
+            return value_slot.type._setitem(self, value_slot, slice_slot)
 
     def load_slice_subscript(self, value_slot, slice_slot):
-        list_ptr = value_slot.type.get_pointer(self, value_slot)
-        src_capacity = value_slot.type.cap(self, value_slot)
+        list_ptr = value_slot.type._getptr(self, value_slot)
+        src_capacity = value_slot.type._cap(self, value_slot)
 
         lower = slice_slot.start
         upper = slice_slot.stop
@@ -354,7 +354,7 @@ class NodeConverter:
         cap_value = self.visit(ast.BinOp(src_capacity, ast.Sub(), lower))
 
         slice_type = Slice(value_slot.type.item_type)
-        slice_value = slice_type.new(self, ptr_value, len_value, cap_value)
+        slice_value = slice_type._new(self, ptr_value, len_value, cap_value)
 
         return slice_value
 
@@ -402,10 +402,10 @@ class NodeConverter:
                 value = self.visit_Compare(bool_op_value, wrap_in_if_stmt=False)
                 if isinstance(value, BoolOp):
                     bool_slot = self.wrap_in_if_stmt(value, initial=const_false)
-                    value = Compare(bool_slot.type.truthy(self, bool_slot), ast.NotEq(), Const(False))
+                    value = Compare(bool_slot.type._truthy(self, bool_slot), ast.NotEq(), Const(False))
             else:
                 slot = self.visit(bool_op_value)
-                value = Compare(slot.type.truthy(self, slot), ast.NotEq(), Const(False))
+                value = Compare(slot.type._truthy(self, slot), ast.NotEq(), Const(False))
             values.append(value)
 
         op = node.op
@@ -430,7 +430,7 @@ class NodeConverter:
         left = self.visit(node.left)
         op = self.convert_bin_operator(node.op)
         right = self.visit(node.right)
-        return left.type.bin_op(self, left, op, right)
+        return left.type._bin_op(self, left, op, right)
 
     def convert_bin_operator(self, value):
         if isinstance(value, operator):
@@ -461,16 +461,16 @@ class NodeConverter:
                 return self.visit_BoolOp(node.operand, initial=True)
 
         operand = self.visit(node.operand)
-        return operand.type.unary_op(self, node.op, operand)
+        return operand.type._unary_op(self, node.op, operand)
 
     def visit_Call(self, node, raise_if_returns=False):
         if node.keywords:
             raise NotImplementedError('function keywords are not implemented yet')
         func = self.visit(node.func)
         args = [self.visit(arg) for arg in node.args]
-        if not hasattr(func.type, 'call'):
+        if not hasattr(func.type, '_call'):
             raise NotImplementedError("calling function '{}' is not implemented yet".format(func))
-        result = func.type.call(self, func, *args)
+        result = func.type._call(self, func, *args)
 
         if raise_if_returns:
             if result is not None and not isinstance(result, Call):

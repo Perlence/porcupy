@@ -5,11 +5,11 @@ from .types import IntType, FloatType, BoolType, Sequence
 
 
 def length(converter, sequence: Sequence):
-    return sequence.type.len(converter, sequence)
+    return sequence.type._len(converter, sequence)
 
 
 def capacity(converter, sequence: Sequence):
-    return sequence.type.cap(converter, sequence)
+    return sequence.type._cap(converter, sequence)
 
 
 def slice(converter, type_slot, length: IntType, capacity: IntType = None):

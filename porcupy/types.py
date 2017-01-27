@@ -11,8 +11,17 @@ from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Div, FloorDiv, Mo
 
 
 @attr.s
-class NumberType:
-    def bin_op(self, converter, left, op, right):
+class Type:
+    def _getattr(self, converter, slot, attr_name):
+        attrib = getattr(self, attr_name)
+        if callable(attrib):
+            return Const(None, CallableType.from_function(attrib, slot))
+        raise AttributeError("type object '{}' has no attribute '{}'".format(self, attr_name))
+
+
+@attr.s
+class NumberType(Type):
+    def _bin_op(self, converter, left, op, right):
         if isinstance(left, Const) and isinstance(right, Const) and not isinstance(op, Div):
             value = op(left.value, right.value)
             return Const(value)
@@ -61,7 +70,7 @@ class NumberType:
             value = value_slot
         return value
 
-    def unary_op(self, converter, op, operand):
+    def _unary_op(self, converter, op, operand):
         if isinstance(op, ast.UAdd):
             return operand
         elif isinstance(op, ast.USub):
@@ -75,11 +84,11 @@ class NumberType:
         elif isinstance(op, ast.Not):
             if isinstance(operand, Const):
                 return attr.assoc(operand, value=(not operand.value), type=BoolType())
-            return converter.visit(ast.Compare(operand.type.truthy(converter, operand), [ast.Eq()], [Const(0)]))
+            return converter.visit(ast.Compare(operand.type._truthy(converter, operand), [ast.Eq()], [Const(0)]))
         else:
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(op))
 
-    def truthy(self, converter, slot):
+    def _truthy(self, converter, slot):
         return slot
 
 
@@ -99,15 +108,7 @@ class BoolType(IntType):
 
 
 @attr.s
-class StringType:
-    slot_methods = {'format'}
-
-    def getattr(self, converter, slot, attr_name):
-        attrib = getattr(self, attr_name)
-        if attr_name in self.slot_methods:
-            return Const(None, CallableType.from_function(attrib, slot))
-        raise AttributeError("type object '{}' has no attribute '{}'".format(self, attr_name))
-
+class StringType(Type):
     def format(self, converter, slot, *args):
         if not isinstance(slot, Const):
             raise ValueError('cannot format a variable string')
@@ -167,19 +168,19 @@ class Formatter(string.Formatter):
 
 class Sequence(metaclass=ABCMeta):
     @abstractmethod
-    def get_pointer(self, converter, slot):
+    def _getptr(self, converter, slot):
         pass
 
     @abstractmethod
-    def getitem(self, converter, slot, slice_slot):
+    def _getitem(self, converter, slot, slice_slot):
         pass
 
     @abstractmethod
-    def len(self, converter, slot):
+    def _len(self, converter, slot):
         pass
 
     @abstractmethod
-    def cap(self, converter, slot):
+    def _cap(self, converter, slot):
         pass
 
 
@@ -189,10 +190,10 @@ class ListPointer(IntType):
     item_type = attr.ib()
     capacity = attr.ib()
 
-    def get_pointer(self, converter, slot):
+    def _getptr(self, converter, slot):
         return slot
 
-    def getitem(self, converter, slot, slice_slot):
+    def _getitem(self, converter, slot, slice_slot):
         if isinstance(slice_slot, Const):
             if slice_slot.value >= self.capacity:
                 raise IndexError('list index out of range')
@@ -204,8 +205,8 @@ class ListPointer(IntType):
 
         return get_slot_via_offset(converter, slot, slice_slot, self.item_type)
 
-    def setitem(self, converter, slot, slice_slot):
-        capacity_slot = self.cap(converter, slot)
+    def _setitem(self, converter, slot, slice_slot):
+        capacity_slot = self._cap(converter, slot)
         if isinstance(slice_slot, Const) and isinstance(capacity_slot, Const):
             if slice_slot.value >= capacity_slot.value:
                 raise IndexError('list index out of range')
@@ -220,13 +221,13 @@ class ListPointer(IntType):
             converter.recycle_later(pointer_math_slot)
             return AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
 
-    def len(self, converter, slot):
+    def _len(self, converter, slot):
         return Const(self.capacity)
 
-    def cap(self, converter, slot):
+    def _cap(self, converter, slot):
         return Const(self.capacity)
 
-    def truthy(self, converter, slot):
+    def _truthy(self, converter, slot):
         # Empty lists are not allowed, so each ListPointer instance is True
         return Const(True)
 
@@ -257,7 +258,7 @@ class Slice(IntType):
 
     slot_methods = {'append'}
 
-    def new(self, converter, pointer, length, capacity):
+    def _new(self, converter, pointer, length, capacity):
         # pointer * 16384 + length * 128 + capacity
         result = converter.visit(
             ast.BinOp(ast.BinOp(pointer, ast.Mult(), Const(16384)), ast.Add(),
@@ -266,40 +267,34 @@ class Slice(IntType):
         result.type = self
         return result
 
-    def get_pointer(self, converter, slot):
+    def _getptr(self, converter, slot):
         # slot // 16384
         return converter.visit(ast.BinOp(slot, ast.FloorDiv(), Const(16384)))
 
-    def len(self, converter, slot):
+    def _len(self, converter, slot):
         # slot // 128 % 128
         return converter.visit(ast.BinOp(ast.BinOp(slot, ast.FloorDiv(), Const(128)), ast.Mod(), Const(128)))
 
-    def cap(self, converter, slot):
+    def _cap(self, converter, slot):
         # slot % 128
         return converter.visit(ast.BinOp(slot, ast.Mod(), Const(128)))
 
-    def getitem(self, converter, slot, slice_slot):
-        ptr_slot = self.get_pointer(converter, slot)
+    def _getitem(self, converter, slot, slice_slot):
+        ptr_slot = self._getptr(converter, slot)
         return get_slot_via_offset(converter, ptr_slot, slice_slot, self.item_type)
 
-    def setitem(self, converter, slot, slice_slot):
-        ptr_slot = self.get_pointer(converter, slot)
-        return ListPointer.setitem(self, converter, ptr_slot, slice_slot)
+    def _setitem(self, converter, slot, slice_slot):
+        ptr_slot = self._getptr(converter, slot)
+        return ListPointer._setitem(self, converter, ptr_slot, slice_slot)
 
-    def truthy(self, converter, slot):
-        return self.len(converter, slot)
-
-    def getattr(self, converter, slot, attr_name):
-        attrib = getattr(self, attr_name)
-        if attr_name in self.slot_methods:
-            return Const(None, CallableType.from_function(attrib, slot))
-        raise AttributeError("type object '{}' has no attribute '{}'".format(self, attr_name))
+    def _truthy(self, converter, slot):
+        return self._len(converter, slot)
 
     def append(self, converter, slot, value):
         # TODO: Check type of *value*.
-        pointer = self.get_pointer(converter, slot)
-        length = self.len(converter, slot)
-        # capacity = self.cap(converter, slot)
+        pointer = self._getptr(converter, slot)
+        length = self._len(converter, slot)
+        # capacity = self._cap(converter, slot)
 
         # TODO: Raise an error if length equals capacity
 
@@ -317,21 +312,21 @@ class Slice(IntType):
 
 @attr.s
 @Sequence.register
-class Range:
+class Range(Type):
     # TODO: Pack range object into one slot
-    def len(self, converter, slot):
+    def _len(self, converter, slot):
         start = slot.metadata['start']
         stop = slot.metadata['stop']
         step = slot.metadata['step']
         return converter.visit(ast.BinOp(ast.BinOp(stop, ast.Sub(), start), ast.FloorDiv(), step))
 
-    def getitem(self, converter, slot, slice_slot):
+    def _getitem(self, converter, slot, slice_slot):
         # TODO: Raise error if index is greater than range length
         start = slot.metadata['start']
         step = slot.metadata['step']
         return converter.visit(ast.BinOp(start, ast.Add(), ast.BinOp(step, ast.Mult(), slice_slot)))
 
-    def call(self, converter, func, *args):
+    def _call(self, converter, func, *args):
         start_value, step_value = Const(0), Const(1)
         if len(args) == 1:
             stop_value = args[0]
@@ -350,34 +345,34 @@ class Range:
 
 @attr.s
 @Sequence.register
-class Reversed:
-    def call(self, converter, func, sequence):
+class Reversed(Type):
+    def _call(self, converter, func, sequence):
         metadata = {
             'sequence': sequence,
         }
         return Const(None, self, metadata=metadata)
 
-    def get_pointer(self, converter, slot):
+    def _getptr(self, converter, slot):
         sequence = slot.metadata['sequence']
-        return sequence.type.get_pointer(converter, sequence)
+        return sequence.type._getptr(converter, sequence)
 
-    def len(self, converter, slot):
+    def _len(self, converter, slot):
         sequence = slot.metadata['sequence']
-        return sequence.type.len(converter, sequence)
+        return sequence.type._len(converter, sequence)
 
-    def cap(self, converter, slot):
+    def _cap(self, converter, slot):
         sequence = slot.metadata['sequence']
-        return sequence.type.cap(converter, sequence)
+        return sequence.type._cap(converter, sequence)
 
-    def getitem(self, converter, slot, slice_slot):
+    def _getitem(self, converter, slot, slice_slot):
         sequence = slot.metadata['sequence']
-        length = self.len(converter, slot)
+        length = self._len(converter, slot)
         reversed_index = converter.visit(ast.BinOp(ast.BinOp(length, ast.Sub(), Const(1)), ast.Sub(), slice_slot))
-        return sequence.type.getitem(converter, sequence, reversed_index)
+        return sequence.type._getitem(converter, sequence, reversed_index)
 
 
 @attr.s(init=False)
-class GameObjectList:
+class GameObjectList(Type):
     type = attr.ib()
     start = attr.ib()
     stop = attr.ib()
@@ -391,10 +386,10 @@ class GameObjectList:
         elif len(args) == 2:
             self.start, self.stop = args
 
-    def len(self, converter, slot):
+    def _len(self, converter, slot):
         return Const(self.stop - self.start)
 
-    def getitem(self, converter, value_slot, slice_slot):
+    def _getitem(self, converter, value_slot, slice_slot):
         register = self.type.metadata['abbrev']
         if isinstance(slice_slot, Const):
             return Slot(register, slice_slot.value + self.start, None, self.type)
@@ -408,7 +403,7 @@ class GameObjectList:
 
 @attr.s
 class GameObject(IntType):
-    def getattr(self, converter, slot, attr_name):
+    def _getattr(self, converter, slot, attr_name):
         register = self.metadata['abbrev']
         attrib = getattr(self, attr_name)
         if callable(attrib):
@@ -430,27 +425,27 @@ class GameObject(IntType):
 
 
 @attr.s
-class CallableType:
+class CallableType(Type):
     @classmethod
     def from_function(cls, func, instance=None):
         sig = signature(func)
         if instance is None:
-            def call(self, converter, fn, *args):
+            def _call(self, converter, fn, *args):
                 check_func_args(converter, sig, args)
                 return func(converter, *args)
         else:
-            def call(self, converter, fn, *args):
+            def _call(self, converter, fn, *args):
                 args_with_instance = (instance, *args)
                 check_func_args(converter, sig, args_with_instance)
                 return func(converter, instance, *args)
 
         callable_type = cls()
-        callable_type.call = types.MethodType(call, callable_type)
+        callable_type._call = types.MethodType(_call, callable_type)
         return callable_type
 
 
 @attr.s
-class GameObjectMethod:
+class GameObjectMethod(Type):
     fn = attr.ib()
 
     signature = attr.ib(init=False)
@@ -458,7 +453,7 @@ class GameObjectMethod:
     def __attrs_post_init__(self):
         self.signature = signature(self.fn)
 
-    def call(self, converter, func, *args):
+    def _call(self, converter, func, *args):
         check_func_args(converter, self.signature, args)
         args = shorten_func_args(converter, args)
         result = self.fn(converter, *args)
