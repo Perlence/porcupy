@@ -61,23 +61,23 @@ if -BALL.pos_y < -FLOOR:
     print_at(X, y, 1, 'Game_Over!')
     y += 30
 
-    print_at(X, y, 1, 'Your score: {}'.format(score))
+    print_at(X, y, 1, 'Your score:', score)
     y += 15
-    print_at(X, y, 1, 'Green: {}'.format(green_armor))
+    print_at(X, y, 1, 'Green:', green_armor)
     y += 15
-    print_at(X, y, 1, 'Yellow: {}'.format(yellow_armor))
+    print_at(X, y, 1, 'Yellow:', yellow_armor)
     y += 15
-    print_at(X, y, 1, 'Red: {}'.format(red_armor))
+    print_at(X, y, 1, 'Red:', red_armor)
     y += 15
-    print_at(X, y, 1, 'Game duration: {}'.format(game_duration))
+    print_at(X, y, 1, 'Game duration:', game_duration)
     y += 15
-    print_at(X, y, 1, 'Ball damage: {}'.format(ball_damage))
+    print_at(X, y, 1, 'Ball damage:', ball_damage)
     y += 30
 
     print_at(X, y, 1, 'Shoot to restart')
 
 if BALL.health > 0:
-    print_at(30, 30, 1, 'Your score: {}'.format(score))
+    print_at(30, 30, 1, 'Your score:', score)
 
 # Ball movement
 if BALL.speed_y > 0:

@@ -3,7 +3,7 @@ import enum
 
 import attr
 
-from .ast import Const, Slot, Assign
+from .ast import Const, Slot, Assign, Call
 from .types import IntType, FloatType, BoolType, StringType, GameObject
 
 int_type = IntType()
@@ -21,12 +21,12 @@ class Timer(GameObject):
 
     metadata = {'abbrev': 't'}
 
-    def start(self, converter) -> None:
+    def start(self, converter):
         pass
 
     start.metadata = {'abbrev': 'g'}
 
-    def stop(self, converter) -> None:
+    def stop(self, converter):
         pass
 
     stop.metadata = {'abbrev': 's'}
@@ -60,19 +60,21 @@ class System(GameObject):
 
     metadata = {'abbrev': 'y'}
 
-    def print(self, converter, s: str_type) -> None:
-        # TODO: Allow to pass variable number of arguments and join them
-        # with ' '.
-        pass
+    def print(self, converter, *values):
+        slot = Slot('y', None, 'm', None)
+        interspaced = self._interspace(values)
+        return Call(slot, [Const(interspaced)])
 
     print.metadata = {'abbrev': 'm'}
 
-    def print_at(self, converter, x: float_type, y: float_type, dur: float_type, s: str_type) -> None:
-        pass
+    def print_at(self, converter, x: float_type, y: float_type, dur: float_type, *values):
+        slot = Slot('y', None, 'y', None)
+        interspaced = self._interspace(values)
+        return Call(slot, [x, y, dur, Const(interspaced)])
 
     print_at.metadata = {'abbrev': 'y'}
 
-    def set_color(self, converter, r: int_type, g: int_type, b: int_type) -> None:
+    def set_color(self, converter, r: int_type, g: int_type, b: int_type):
         # system.color = r + g * 256 + b * 65536
         color = converter.visit(ast.BinOp(ast.BinOp(r, ast.Add(),
                                                     ast.BinOp(g, ast.Mult(), Const(256))), ast.Add(),
@@ -80,10 +82,17 @@ class System(GameObject):
         sys_slot = Slot(self.metadata['abbrev'], None, self.color.metadata['abbrev'], self.color.metadata['type'])
         converter.append_to_body(Assign(sys_slot, color))
 
-    def load_map(self, converter, name: str_type) -> None:
+    def load_map(self, converter, name: str_type):
         pass
 
     load_map.metadata = {'abbrev': 'l'}
+
+    def _interspace(self, seq):
+        result = [seq[0]]
+        for item in seq[1:]:
+            result.append(' ')
+            result.append(item)
+        return result
 
 
 @attr.s(init=False)
@@ -144,7 +153,7 @@ class Yozhik(GameObject):
 
     metadata = {'abbrev': 'e'}
 
-    def spawn(self, converter, point: int_type) -> None:
+    def spawn(self, converter, point: int_type):
         pass
 
     spawn.metadata = {'abbrev': 'b'}
@@ -152,7 +161,7 @@ class Yozhik(GameObject):
 
 @attr.s(init=False)
 class Sheep(GameObject):
-    def spawn(self, converter, point: int_type) -> None:
+    def spawn(self, converter, point: int_type):
         pass
 
     spawn.metadata = {'abbrev': 'b'}
@@ -171,12 +180,12 @@ class Door(GameObject):
 
     metadata = {'abbrev': 'd'}
 
-    def open(self, converter) -> None:
+    def open(self, converter):
         pass
 
     open.metadata = {'abbrev': 'o'}
 
-    def close(self, converter) -> None:
+    def close(self, converter):
         pass
 
     close.metadata = {'abbrev': 'c'}
@@ -188,7 +197,7 @@ class Button(GameObject):
 
     metadata = {'abbrev': 'b'}
 
-    def press(self, converter) -> None:
+    def press(self, converter):
         pass
 
     press.metadata = {'abbrev': 'd'}

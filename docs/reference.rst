@@ -208,18 +208,18 @@ Built-in functions
 
       This function works only in Yozhiks in Quake II v1.07.
 
-.. function:: print(value)
+.. function:: print(*values)
 
-   Print the value as a message in the top-left corner of the screen.
+   Print *values* as a message in the top-left corner of the screen, separated by a single space.
 
-.. function:: print_at(x, y, duration, value)
+.. function:: print_at(x, y, duration, *values)
 
-   Print the value in given point on screen for *duration* game ticks.
+   Print *values* in given point on screen for *duration* game ticks, separated by a single space.
 
    :param int x: *x* coordinate of message.
    :param int y: *y* coordinate of message.
    :param int duration: number of game ticks the message will be visible.
-   :param value: message to be printed.
+   :param values: parts of message to be printed.
 
    .. note::
 

@@ -33,6 +33,9 @@ def test_print():
     assert compile_('x = 2; print(x)') == 'p1z 2 ym ^1'
     assert compile_('print(yozhiks[0].health)') == 'p1z e1p ym ^1'
 
+    assert compile_('print("Hello", "World")') == 'ym Hello_World'
+    assert compile_('x = 500; print_at(10, 10, 1, "Score:", x)') == 'p1z 500 yy 10 10 1 Score:_^1'
+
 
 def test_set_color():
     assert compile_('set_color(188, 0, 0)') == 'yc 188'

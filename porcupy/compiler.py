@@ -46,6 +46,8 @@ def visit_with_exc_wrapping(converter, node, filename):
 
 @attr.s
 class NodeConverter:
+    # TODO: Implement IfExp
+
     scope = attr.ib(default=attr.Factory(lambda: Scope()))
     body = attr.ib(default=attr.Factory(list))
     last_label = attr.ib(default=0)

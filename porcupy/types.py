@@ -405,17 +405,23 @@ class GameObject(IntType):
                               metadata=metadata)
 
 
-@attr.s(init=False)
+@attr.s
 class GameObjectMethod:
-    signature = attr.ib()
+    fn = attr.ib()
 
-    def __init__(self, fn):
-        self.signature = signature(fn)
+    signature = attr.ib(init=False)
+
+    def __attrs_post_init__(self):
+        self.signature = signature(self.fn)
 
     def call(self, converter, func, *args):
-        self.signature.bind(self, *args)
+        self.signature.bind(converter, *args)
         args = self._shorten_args(converter, args)
-        return Call(func, args)
+        result = self.fn(converter, *args)
+        if result is None:
+            return Call(func, args)
+        else:
+            return result
 
     def _shorten_args(self, converter, args):
         tmp_slots = []
