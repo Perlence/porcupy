@@ -62,4 +62,4 @@ Now we can compile and attach the Porcupy scenario to the map:
 
    porcupy -i handicap_spawn.py -a ArenaDM2.egm
 
-Check if scenario works properly by loading the map in Yozhiks in Quake II and proceed to :doc:`language`.
+Check if scenario works properly by loading the map in Yozhiks in Quake II and proceed to :doc:`reference`.

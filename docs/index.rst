@@ -12,8 +12,7 @@ Go to :doc:`quickstart` to learn how to write your first scenario in Porcupy.
 
    intro
    quickstart
-   language
-   library
+   reference
 
 
 Indices and tables
