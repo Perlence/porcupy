@@ -315,29 +315,29 @@ Porcupy provides access to many built-in objects to interact with the game.
       (*bool*) -- should bot function on its own.
 
    .. attribute:: can_see_target
-   
+
       (*bool*, *read-only*).
 
    .. attribute:: goto
-   
+
       (:class:`Point`) -- make bot go to given :class:`Point`.
 
    .. attribute:: level
-   
+
       (*int*) -- a level of the bot, see :ref:`list of bot level constants <bot-levels>` for possible values.
 
    .. attribute:: point
-   
+
       (:class:`Point`, *read-only*) -- a :class:`Point` where bot is now.
 
    .. attribute:: target
-   
+
       (:class:`Yozhik`) -- attack target of the bot.
 
 .. class:: Button
 
    .. attribute:: is_pressed
-   
+
       (*bool*, *read-only*).
 
    .. method:: press()
@@ -346,7 +346,7 @@ Porcupy provides access to many built-in objects to interact with the game.
 
 
    .. attribute:: state
-   
+
       (*int*, *read-only*) -- see :ref:`list of door state constants <door-states>` for possible values.
 
    .. method:: open()
@@ -359,21 +359,21 @@ Porcupy provides access to many built-in objects to interact with the game.
    :func:`print_at`.
 
    .. attribute:: pos_x
-   
+
       (*int*) -- *x* coordinate of the point.
 
    .. attribute:: pos_y
-   
+
       (*int*) -- *y* coordinate of the point.
 
 .. class:: System
 
    .. attribute:: bots
-   
+
       (*int*) -- number of bots.
 
    .. attribute:: color
-   
+
       (*int*) -- color of :func:`print_at` messages.
 
       It's a triple of 8-bit integers packed in one: ``blue*65536 + green*256 + red``.
@@ -382,11 +382,11 @@ Porcupy provides access to many built-in objects to interact with the game.
       Default color is ``48128``, or ``rgb(0, 188, 0)``.
 
    .. attribute:: frag_limit
-   
+
       (*int*) -- see :ref:`list of frag limit constants <frag-limits>` for possible values.
 
    .. attribute:: game_mode
-   
+
       (*int*, *read-only*) -- current game mode, see :ref:`list of games modes <game-modes>` for possible values.
 
 .. class:: Timer
@@ -396,11 +396,11 @@ Porcupy provides access to many built-in objects to interact with the game.
    One game tick is roughly *1/50* of a second.
 
    .. attribute:: enabled
-   
+
       (*bool*) -- is the timer ticking.
 
    .. attribute:: value
-   
+
       (*int*) -- how much ticks did the timer count.
 
    .. method:: start()
@@ -411,65 +411,65 @@ Porcupy provides access to many built-in objects to interact with the game.
    Viewport object holds the location of top-left game screen corner in relation to top-left map corner.
 
    .. attribute:: pos_x
-   
+
       (*int*) -- *x* coordinate of top-left screen corner.
 
    .. attribute:: pos_y
-   
+
       (*int*) -- *y* coordinate of top-left screen corner.
 
 .. class:: Yozhik
 
    .. attribute:: ammo
-   
+
       (*int*) -- amount of ammo for current weapon.
 
    .. attribute:: armor
-   
+
       (*int*) -- armor points.
 
    .. attribute:: frags
-   
+
       (*int*) -- number of frags.
 
    .. attribute:: has_weapon
-   
-      (*bool*) -- setting :attr:`has_weapon` to ``True`` makes yozhik switch to the weapon, last set to
-      :attr:`weapon` attribute.
+
+      (*bool*) -- setting :attr:`has_weapon` to ``True`` places current weapon in yozhik's inventory.
 
    .. attribute:: health
-   
+
       (*int*) -- health points.
 
    .. attribute:: pos_x
-   
+
       (*float*) -- *x* coordinate of yozhik's position.
 
    .. attribute:: pos_y
-   
+
       (*float*) -- *y* coordinate of yozhik's position.
 
    .. attribute:: speed_x
-   
+
       (*float*) -- *x* coordinate of yozhik's speed vector.
 
    .. attribute:: speed_y
-   
+
       (*float*) -- *y* coordinate of yozhik's speed vector.
 
    .. attribute:: team
-   
+
       (*int*) -- number of team.
 
    .. attribute:: view_angle
-   
+
       (*int*) -- a value in range ``[0, 127]``, when yozhik looks up it's 0, when he looks straight to the right
       or left it's 64, when he looks down it's 127.
 
    .. attribute:: weapon
-   
-      (*int*) -- setting value to this attribute gives yozhik a weapon, see :ref:`list of weapon constants
-      <weapons>`.
+
+      (*int*) -- current weapon, see :ref:`list of weapon constants <weapons>`.
+      Setting value to this attribute makes yozhik switch to the weapon, but does not place it in his inventory.
+      If he didn't have it before and switches back, the weapon will be gone, unless :attr:`~Yozhik.has_weapon` was set.
 
    .. method:: spawn(point: int)
 
