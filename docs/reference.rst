@@ -475,8 +475,9 @@ Porcupy provides access to many built-in objects to interact with the game.
 
      Spawn yozhik in the given spawn-point.
 
-     Spawn points are enumerated starting at 1, from top-left to
-     bottom-right.
+     Spawn points are enumerated starting at 1, from top to bottom, left to right:
+
+     .. image:: images/spawn-points.png
 
 
 Constants
