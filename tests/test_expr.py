@@ -26,6 +26,8 @@ def test_call():
 
     assert compile_('x = 1; yozhiks[0].spawn(x+1)') == 'p1z 1 p2z p1z+1 e1b ^2'
 
+    assert compile_('spawn_sheep(1, 2)') == 'hb 1 2'
+
 
 def test_print():
     assert compile_('print("Hey")') == 'ym Hey'

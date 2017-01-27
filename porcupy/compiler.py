@@ -9,7 +9,7 @@ from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   Call)
 from .functions import CallableType
 from .gameobjs import (Yozhik, Timer, Point, Bot, System, Button, Door,
-                       Viewport)
+                       Viewport, Sheep)
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
                     ListPointer, Slice)
 
@@ -560,7 +560,6 @@ class Scope:
 
     def populate_game_objects(self):
         from .types import GameObjectList
-        # TODO: Add Sheep object
         self.names['bots'] = Const(None, GameObjectList(Bot(), 1, 10))
         self.names['buttons'] = Const(None, GameObjectList(Button(), 1, 50))
         self.names['doors'] = Const(None, GameObjectList(Door(), 1, 50))
@@ -615,15 +614,23 @@ class Scope:
         from .types import GameObjectMethod
 
         system = System()
-        for method in (system.print, system.print_at, system.set_color, system.load_map):
-            name = method.__name__
+        sheep = Sheep()
+        methods = [
+            (system, 'print', 'print'),
+            (system, 'print_at', 'print_at'),
+            (system, 'set_color', 'set_color'),
+            (system, 'load_map', 'load_map'),
+            (sheep, 'spawn', 'spawn_sheep'),
+        ]
+        for type, attrname, name in methods:
+            method = getattr(type, attrname)
             try:
                 metadata = method.metadata
                 method_abbrev = metadata['abbrev']
             except (AttributeError, KeyError):
                 self.names[name] = Const(None, CallableType.from_function(method))
             else:
-                self.names[name] = Slot(system.metadata['abbrev'],
+                self.names[name] = Slot(type.metadata['abbrev'],
                                         None,
                                         method_abbrev,
                                         GameObjectMethod(method))

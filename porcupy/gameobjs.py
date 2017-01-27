@@ -161,7 +161,9 @@ class Yozhik(GameObject):
 
 @attr.s(init=False)
 class Sheep(GameObject):
-    def spawn(self, converter, point: int_type):
+    metadata = {'abbrev': 'h'}
+
+    def spawn(self, converter, start: Point, finish: Point):
         pass
 
     spawn.metadata = {'abbrev': 'b'}

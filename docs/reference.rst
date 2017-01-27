@@ -257,6 +257,16 @@ Built-in functions
       y = slice(bool, 3)  # equivalent to [False, False, False][:]
       z = slice(float, 5)  # equivalent to [.0, .0, .0, .0, .0][:]
 
+.. function:: spawn_sheep(start, finish)
+
+   Spawn a sheep in point *start* and tell it to go point *finish*.
+
+   :param Point start: point where sheeps spawns.
+   :param Point finish: point where sheep is supposed to go.
+
+   .. note::
+
+      Although point *finish* is required, only green sheeps will go there, other sheeps will always follow player.
 
 Game objects
 ------------
