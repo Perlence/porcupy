@@ -1,12 +1,13 @@
+from abc import ABCMeta, abstractmethod
 import ast
 from inspect import signature
 import string
 import _string
+import types
 
 import attr
 
 from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Div, FloorDiv, Mod, Assign, Call
-from .functions import CallableType
 
 
 @attr.s
@@ -164,7 +165,26 @@ class Formatter(string.Formatter):
         return obj, first
 
 
+class Sequence(metaclass=ABCMeta):
+    @abstractmethod
+    def get_pointer(self, converter, slot):
+        pass
+
+    @abstractmethod
+    def getitem(self, converter, slot, slice_slot):
+        pass
+
+    @abstractmethod
+    def len(self, converter, slot):
+        pass
+
+    @abstractmethod
+    def cap(self, converter, slot):
+        pass
+
+
 @attr.s
+@Sequence.register
 class ListPointer(IntType):
     item_type = attr.ib()
     capacity = attr.ib()
@@ -231,6 +251,7 @@ def item_addr(converter, pointer, offset):
 
 
 @attr.s
+@Sequence.register
 class Slice(IntType):
     item_type = attr.ib()
 
@@ -275,6 +296,7 @@ class Slice(IntType):
         raise AttributeError("type object '{}' has no attribute '{}'".format(self, attr_name))
 
     def append(self, converter, slot, value):
+        # TODO: Check type of *value*.
         pointer = self.get_pointer(converter, slot)
         length = self.len(converter, slot)
         # capacity = self.cap(converter, slot)
@@ -294,6 +316,7 @@ class Slice(IntType):
 
 
 @attr.s
+@Sequence.register
 class Range:
     # TODO: Pack range object into one slot
     def len(self, converter, slot):
@@ -326,6 +349,7 @@ class Range:
 
 
 @attr.s
+@Sequence.register
 class Reversed:
     def call(self, converter, func, sequence):
         metadata = {
@@ -406,6 +430,26 @@ class GameObject(IntType):
 
 
 @attr.s
+class CallableType:
+    @classmethod
+    def from_function(cls, func, instance=None):
+        sig = signature(func)
+        if instance is None:
+            def call(self, converter, fn, *args):
+                check_func_args(converter, sig, args)
+                return func(converter, *args)
+        else:
+            def call(self, converter, fn, *args):
+                args_with_instance = (instance, *args)
+                check_func_args(converter, sig, args_with_instance)
+                return func(converter, instance, *args)
+
+        callable_type = cls()
+        callable_type.call = types.MethodType(call, callable_type)
+        return callable_type
+
+
+@attr.s
 class GameObjectMethod:
     fn = attr.ib()
 
@@ -415,19 +459,35 @@ class GameObjectMethod:
         self.signature = signature(self.fn)
 
     def call(self, converter, func, *args):
-        self.signature.bind(converter, *args)
-        args = self._shorten_args(converter, args)
+        check_func_args(converter, self.signature, args)
+        args = shorten_func_args(converter, args)
         result = self.fn(converter, *args)
         if result is None:
             return Call(func, args)
         else:
             return result
 
-    def _shorten_args(self, converter, args):
-        tmp_slots = []
-        short_args = [shorten_slot(converter, arg, tmp_slots) for arg in args]
-        converter.recycle_later(*tmp_slots)
-        return short_args
+
+def check_func_args(converter, signature, args):
+    bound = signature.bind(converter, *args)
+    for name, value in list(bound.arguments.items())[1:]:
+        param = signature.parameters[name]
+        if param.annotation is param.empty:
+            continue
+        if not are_types_related(value.type, param.annotation):
+            raise TypeError('argument of type {} expected, got {}'.format(param.annotation, value))
+
+
+def are_types_related(type_obj_1, type_2):
+    type_1 = type(type_obj_1)
+    return isinstance(type_obj_1, type_2) or issubclass(type_2, type_1)
+
+
+def shorten_func_args(converter, args):
+    tmp_slots = []
+    short_args = [shorten_slot(converter, arg, tmp_slots) for arg in args]
+    converter.recycle_later(*tmp_slots)
+    return short_args
 
 
 def shorten_slot(converter, slot, tmp_slots):

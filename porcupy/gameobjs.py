@@ -67,14 +67,14 @@ class System(GameObject):
 
     print.metadata = {'abbrev': 'm'}
 
-    def print_at(self, converter, x: float_type, y: float_type, dur: float_type, *values):
+    def print_at(self, converter, x: FloatType, y: FloatType, dur: FloatType, *values):
         slot = Slot('y', None, 'y', None)
         interspaced = self._interspace(values)
         return Call(slot, [x, y, dur, Const(interspaced)])
 
     print_at.metadata = {'abbrev': 'y'}
 
-    def set_color(self, converter, r: int_type, g: int_type, b: int_type):
+    def set_color(self, converter, r: IntType, g: IntType, b: IntType):
         # system.color = r + g * 256 + b * 65536
         color = converter.visit(ast.BinOp(ast.BinOp(r, ast.Add(),
                                                     ast.BinOp(g, ast.Mult(), Const(256))), ast.Add(),
@@ -82,7 +82,7 @@ class System(GameObject):
         sys_slot = Slot(self.metadata['abbrev'], None, self.color.metadata['abbrev'], self.color.metadata['type'])
         converter.append_to_body(Assign(sys_slot, color))
 
-    def load_map(self, converter, name: str_type):
+    def load_map(self, converter, name: StringType):
         pass
 
     load_map.metadata = {'abbrev': 'l'}
@@ -101,26 +101,6 @@ class Point(GameObject):
     pos_y = attr.ib(metadata={'abbrev': 'y', 'type': float_type})
 
     metadata = {'abbrev': 'c'}
-
-
-class BotLevel(enum.IntEnum):
-    very_easy = 1
-    easy = 2
-    normal = 3
-    hard = 4
-    impossible = 5
-
-
-@attr.s(init=False)
-class Bot(GameObject):
-    ai = attr.ib(metadata={'abbrev': 'i', 'type': bool_type})
-    target = attr.ib(metadata={'abbrev': 't', 'type': int_type})
-    level = attr.ib(metadata={'abbrev': 'l', 'type': int_type})
-    point = attr.ib(metadata={'abbrev': 'p', 'type': int_type, 'readonly': True})
-    goto = attr.ib(metadata={'abbrev': 'g', 'type': Point})
-    can_see_target = attr.ib(metadata={'abbrev': 's', 'type': bool_type, 'readonly': True})
-
-    metadata = {'abbrev': 'a'}
 
 
 class Weapon(enum.IntEnum):
@@ -153,10 +133,30 @@ class Yozhik(GameObject):
 
     metadata = {'abbrev': 'e'}
 
-    def spawn(self, converter, point: int_type):
+    def spawn(self, converter, point: IntType):
         pass
 
     spawn.metadata = {'abbrev': 'b'}
+
+
+class BotLevel(enum.IntEnum):
+    very_easy = 1
+    easy = 2
+    normal = 3
+    hard = 4
+    impossible = 5
+
+
+@attr.s(init=False)
+class Bot(GameObject):
+    ai = attr.ib(metadata={'abbrev': 'i', 'type': bool_type})
+    target = attr.ib(metadata={'abbrev': 't', 'type': Yozhik()})
+    level = attr.ib(metadata={'abbrev': 'l', 'type': int_type})
+    point = attr.ib(metadata={'abbrev': 'p', 'type': int_type, 'readonly': True})
+    goto = attr.ib(metadata={'abbrev': 'g', 'type': Point()})
+    can_see_target = attr.ib(metadata={'abbrev': 's', 'type': bool_type, 'readonly': True})
+
+    metadata = {'abbrev': 'a'}
 
 
 @attr.s(init=False)

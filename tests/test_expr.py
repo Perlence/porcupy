@@ -26,7 +26,7 @@ def test_call():
 
     assert compile_('x = 1; yozhiks[0].spawn(x+1)') == 'p1z 1 p2z p1z+1 e1b ^2'
 
-    assert compile_('spawn_sheep(1, 2)') == 'hb 1 2'
+    assert compile_('X = points[0]; Y = points[1]; spawn_sheep(X, Y)') == 'p1z 1 p2z 2 hb ^1 ^2'
 
 
 def test_print():
@@ -69,3 +69,14 @@ def test_unused_result():
         with pytest.raises(ValueError) as exc_info:
             compile_(source)
         assert 'function return value is unused' in str(exc_info)
+
+
+def test_type_check():
+    wrong_types = [
+        'slice(int, "4")',
+        'randint(3, "5")',
+    ]
+    for source in wrong_types:
+        with pytest.raises(TypeError) as exc_info:
+            compile_(source)
+        assert 'argument of type' in str(exc_info)

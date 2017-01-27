@@ -1,38 +1,18 @@
 import ast
-import types
-
-import attr
 
 from .ast import Const, Random, Assign
+from .types import IntType, FloatType, BoolType, Sequence
 
 
-@attr.s
-class CallableType:
-    @classmethod
-    def from_function(cls, func, instance=None):
-        if instance is None:
-            def call(self, converter, fn, *args):
-                return func(converter, *args)
-        else:
-            def call(self, converter, fn, *args):
-                return func(converter, instance, *args)
-
-        callable_type = cls()
-        callable_type.call = types.MethodType(call, callable_type)
-        return callable_type
-
-
-def length(converter, sequence):
+def length(converter, sequence: Sequence):
     return sequence.type.len(converter, sequence)
 
 
-def capacity(converter, sequence):
+def capacity(converter, sequence: Sequence):
     return sequence.type.cap(converter, sequence)
 
 
-def slice(converter, type_slot, length, capacity=None):
-    from .types import IntType, FloatType, BoolType
-
+def slice(converter, type_slot, length: IntType, capacity: IntType = None):
     if capacity is None:
         capacity = length
 
@@ -52,9 +32,7 @@ def slice(converter, type_slot, length, capacity=None):
                                          ast.Slice(None, length, None), ast.Load()))
 
 
-def randint(converter, a, b):
-    from .types import IntType
-
+def randint(converter, a: IntType, b: IntType):
     if not isinstance(a, Const) or not isinstance(b, Const):
         raise ValueError('arguments must be constant')
 

@@ -7,11 +7,10 @@ import attr
 from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
                   operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare, Label,
                   Call)
-from .functions import CallableType
 from .gameobjs import (Yozhik, Timer, Point, Bot, System, Button, Door,
                        Viewport, Sheep)
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
-                    ListPointer, Slice)
+                    ListPointer, Slice, CallableType, are_types_related)
 
 
 def compile(source, filename='<unknown>', separate_stmts=False):
@@ -656,9 +655,8 @@ class Scope:
         src_type_obj = src_slot.type
         src_type = type(src_type_obj)
 
-        are_not_related = not isinstance(src_type_obj, dest_type) and not isinstance(dest_type_obj, src_type)
         have_different_fields = attr.fields(src_type) and src_type_obj != dest_type_obj
-        if are_not_related or have_different_fields:
+        if not are_types_related(src_type_obj, dest_type) or have_different_fields:
             raise TypeError("cannot assign value of type '{!r}' to variable of type '{!r}'".format(src_type_obj, dest_type_obj))
 
     def get_by_index(self, index, type):
