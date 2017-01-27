@@ -28,13 +28,13 @@ Let's consider rewriting an :ref:`example <spawn-scenario>` from :doc:`intro` in
        PLAYER.spawn(randint(1, 5))
        PLAYER.health = 125
 
-List *yozhiks* is a zero-indexed list of all yozhiks in the game and each of them has attributes like *health* and
-*weapon*, and methods like *spawn*.
+List :data:`yozhiks` is a zero-indexed list of all yozhiks in the game and each of them has attributes like
+:attr:`~Yozhik.health` and :attr:`~Yozhik.weapon`, and methods like :meth:`~Yozhik.spawn`.
 
 Names written in upper case are considered constants, so, roughly speaking, each next occurrence of ``PLAYER`` after first
 line will be replaced by ``yozhiks[0]``.
 
-New built-in function ``randint(a, b)`` returns random integer in range ``[a, b]``, including both end points.
+New built-in function :func:`randint` returns random integer in range ``[a, b]``, including both end points.
 
 Let's save the scenario in a file, e.g. ``handicap_spawn.py``, and see what Porcupy compiler will produce:
 

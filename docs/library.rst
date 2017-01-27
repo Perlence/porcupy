@@ -20,24 +20,24 @@ Built-in functions
 
    Load the given map.
 
-   .. important::
+   .. note::
 
       This function works only in Yozhiks in Quake II v1.07.
 
 .. function:: print(value)
 
-   Print the value as a message.
+   Print the value as a message in the top-left corner of the screen.
 
-.. function:: print_at(x, y, dur, value)
+.. function:: print_at(x, y, duration, value)
 
-   Print the value in given point on screen for *dur* game ticks.
+   Print the value in given point on screen for *duration* game ticks.
 
    :param int x: *x* coordinate of message.
    :param int y: *y* coordinate of message.
-   :param int dur: number of game ticks the message will be visible.
+   :param int duration: number of game ticks the message will be visible.
    :param value: message to be printed.
 
-   .. important::
+   .. note::
 
       Only 20 such messages can be shown at a given time.
 
@@ -83,65 +83,21 @@ Porcupy provides access to many built-in objects to interact with the game.
 
    A list of 10 :class:`Bot` instances.
 
-.. class:: Bot
-
-   :param bool ai: should bot function on its own.
-   :param Yozhik target: attack target of the bot.
-   :param int level: a level of the bot, see :ref:`list of bot level constants <bot-levels>` for possible values.
-   :param Point point: a :class:`Point` where bot is now (*read-only*).
-   :param Point goto: make bot go to given :class:`Point`.
-   :param bool can_see_target: (*read-only*)
-
-
 .. data:: buttons
 
    A list of 50 :class:`Button` instances.
-
-.. class:: Button
-
-   :param bool is_pressed: (*read-only*).
-
-   .. method:: press()
-
 
 .. data:: doors
 
    A list of 50 :class:`Door` instances.
 
-.. class:: Door
-
-   :param int state: see :ref:`list of door state constants <door-states>` for possible values (*read-only*).
-
-   .. method:: open()
-   .. method:: close()
-
-
 .. data:: points
 
    A list of 100 :class:`Point` instances.
 
-.. class:: Point
-
-   Points are set in the map editor, and they are primarily used to tell a bot where to go.
-   They can also be used to easily mark a location on map to serve like a trigger, or to display a message with
-   :func:`print_at`.
-
-   :param int pos_x: *x* coordinate of the point.
-   :param int pos_y: *y* coordinate of the point.
-
-
 .. data:: system
 
    A single :class:`System` instance.
-
-.. class:: System
-
-   :param int bots: number of bots.
-   :param int color: color of :meth:`print_at` messages.
-   :param int frag_limit: see :ref:`list of frag limit constants <frag-limits>` for possible values.
-   :param int game_mode: current game mode, see :ref:`list of games modes <game-modes>` for possible values
-      (*read-only*).
-
 
 .. data:: timers
 
@@ -155,56 +111,185 @@ Porcupy provides access to many built-in objects to interact with the game.
           # Initialize here
           pass
 
+.. data:: viewport
+
+   A single :class:`Viewport` instance.
+
+.. data:: yozhiks
+
+   A list of 10 :class:`Yozhik` instances.
+   First yozhik ``yozhiks[0]`` is player himself.
+
+.. note::
+
+   All classes below cannot be instantiated in scenario, and, in fact, they're not in the scope.
+
+.. class:: Bot
+
+   .. attribute:: ai
+
+      (*bool*) -- should bot function on its own.
+
+   .. attribute:: can_see_target
+   
+      (*bool*, *read-only*).
+
+   .. attribute:: goto
+   
+      (:class:`Point`) -- make bot go to given :class:`Point`.
+
+   .. attribute:: level
+   
+      (*int*) -- a level of the bot, see :ref:`list of bot level constants <bot-levels>` for possible values.
+
+   .. attribute:: point
+   
+      (:class:`Point`, *read-only*) -- a :class:`Point` where bot is now.
+
+   .. attribute:: target
+   
+      (:class:`Yozhik`) -- attack target of the bot.
+
+.. class:: Button
+
+   .. attribute:: is_pressed
+   
+      (*bool*, *read-only*).
+
+   .. method:: press()
+
+.. class:: Door
+
+
+   .. attribute:: state
+   
+      (*int*, *read-only*) -- see :ref:`list of door state constants <door-states>` for possible values.
+
+   .. method:: open()
+   .. method:: close()
+
+.. class:: Point
+
+   Points are set in the map editor, and they are primarily used to tell a bot where to go.
+   They can also be used to easily mark a location on map to serve as a trigger, or to display a message with
+   :func:`print_at`.
+
+   .. attribute:: pos_x
+   
+      (*int*) -- *x* coordinate of the point.
+
+   .. attribute:: pos_y
+   
+      (*int*) -- *y* coordinate of the point.
+
+.. class:: System
+
+   .. attribute:: bots
+   
+      (*int*) -- number of bots.
+
+   .. attribute:: color
+   
+      (*int*) -- color of :func:`print_at` messages.
+
+      It's a triple of 8-bit integers packed in one: ``blue*65536 + green*256 + red``.
+      It's easier to use :func:`set_color` instead of setting color value to this attribute.
+
+      Default color is ``48128``, or ``rgb(0, 188, 0)``.
+
+   .. attribute:: frag_limit
+   
+      (*int*) -- see :ref:`list of frag limit constants <frag-limits>` for possible values.
+
+   .. attribute:: game_mode
+   
+      (*int*, *read-only*) -- current game mode, see :ref:`list of games modes <game-modes>` for possible values.
+
 .. class:: Timer
 
    A timer object that counts game ticks.
 
    One game tick is roughly *1/50* of a second.
 
-   :param int value: how much ticks did the timer count.
-   :param bool enabled: is the timer going.
+   .. attribute:: enabled
+   
+      (*bool*) -- is the timer ticking.
+
+   .. attribute:: value
+   
+      (*int*) -- how much ticks did the timer count.
 
    .. method:: start()
    .. method:: stop()
-
-
-.. data:: viewport
-
-   A single :class:`Viewport` instance.
 
 .. class:: Viewport
 
    Viewport object holds the location of top-left game screen corner in relation to top-left map corner.
 
-   :param int pos_x: *x* coordinate of top-left screen corner.
-   :param int pos_y: *y* coordinate of top-left screen corner.
+   .. attribute:: pos_x
+   
+      (*int*) -- *x* coordinate of top-left screen corner.
 
-
-.. data:: yozhiks
-
-   A list of 10 :class:`Yozhik` instances.
+   .. attribute:: pos_y
+   
+      (*int*) -- *y* coordinate of top-left screen corner.
 
 .. class:: Yozhik
 
-   :param int frags: number of frags.
-   :param float pos_x: *x* coordinate of yozhik's position.
-   :param float pos_y: *y* coordinate of yozhik's position.
-   :param float speed_x: *x* coordinate of yozhik's speed vector.
-   :param float speed_y: *y* coordinate of yozhik's speed vector.
-   :param int health: health points.
-   :param int armor: armor points.
-   :param bool has_weapon: setting :attr:`has_weapon` to ``True`` makes yozhik switch to the weapon, last set to
+   .. attribute:: ammo
+   
+      (*int*) -- amount of ammo for current weapon.
+
+   .. attribute:: armor
+   
+      (*int*) -- armor points.
+
+   .. attribute:: frags
+   
+      (*int*) -- number of frags.
+
+   .. attribute:: has_weapon
+   
+      (*bool*) -- setting :attr:`has_weapon` to ``True`` makes yozhik switch to the weapon, last set to
       :attr:`weapon` attribute.
-   :param int weapon: setting value to this attribute gives yozhik a weapon, see :ref:`list of weapon constants
-      <weapons>`.
-   :param int ammo: amount of ammo for current weapon.
-   :param int view_angle: a value in range *[0, 127]*, when yozhik looks up it's 0, when he looks straight to the right
+
+   .. attribute:: health
+   
+      (*int*) -- health points.
+
+   .. attribute:: pos_x
+   
+      (*float*) -- *x* coordinate of yozhik's position.
+
+   .. attribute:: pos_y
+   
+      (*float*) -- *y* coordinate of yozhik's position.
+
+   .. attribute:: speed_x
+   
+      (*float*) -- *x* coordinate of yozhik's speed vector.
+
+   .. attribute:: speed_y
+   
+      (*float*) -- *y* coordinate of yozhik's speed vector.
+
+   .. attribute:: team
+   
+      (*int*) -- number of team.
+
+   .. attribute:: view_angle
+   
+      (*int*) -- a value in range ``[0, 127]``, when yozhik looks up it's 0, when he looks straight to the right
       or left it's 64, when he looks down it's 127.
-   :param int team: number of team.
+
+   .. attribute:: weapon
+   
+      (*int*) -- setting value to this attribute gives yozhik a weapon, see :ref:`list of weapon constants
+      <weapons>`.
 
    .. method:: spawn(point: int)
 
-     Spawn yozkik given spawn-point.
+     Spawn yozkik in the given spawn-point.
 
      Spawn points are enumerated starting at 1, from top-left to
      bottom-right.
@@ -216,7 +301,6 @@ Constants
 .. _weapons:
 
 Weapons:
-
    .. data:: W_BFG10K(0)
    .. data:: W_BLASTER(1)
    .. data:: W_SHOTGUN(2)
@@ -231,7 +315,6 @@ Weapons:
 .. _door-states:
 
 Door states:
-
    .. data:: DS_CLOSED(0)
    .. data:: DS_OPEN(1)
    .. data:: DS_OPENING(2)
@@ -240,7 +323,6 @@ Door states:
 .. _frag-limits:
 
 Frag limits:
-
    .. data:: FL_10(0)
    .. data:: FL_20(1)
    .. data:: FL_30(2)
@@ -251,7 +333,6 @@ Frag limits:
 .. _bot-levels:
 
 Bot levels:
-
    .. data:: BL_VERY_EASY(0)
    .. data:: BL_EASY(1)
    .. data:: BL_NORMAL(2)
@@ -261,7 +342,6 @@ Bot levels:
 .. _game-modes:
 
 Game modes:
-
    .. data:: GM_MULTI_LAN(0)
    .. data:: GM_MULTI_DUEL(1)
    .. data:: GM_HOT_SEAT(2)

@@ -2,13 +2,10 @@ Language reference
 ==================
 
 Porcupy compiler uses Python's `ast <https://docs.python.org/3/library/ast.html>`_ module to parse Porcupy scenarios.
-But it's not possible to implement each and every one of Python language features in Porcupy.
+Porcupy aims to resemble Python as close, as possible, with some cues taken from Go.
+But it's not feasible to implement each and every one of Python language features.
 
-
-Unsupported features
---------------------
-
-First and foremost, here's a list of Python language features not supported in Porcupy:
+Here's a list of Python language features not supported in Porcupy:
 
 - The import system
 
@@ -20,6 +17,7 @@ First and foremost, here's a list of Python language features not supported in P
   - Binary bitwise operations
   - Conditional expressions
   - Lambdas
+  - Keywords in function calls
   - ``list``, ``set``, ``dict``, and generator comprehensions
 
 - Simple statements:
@@ -53,7 +51,7 @@ To define a constant, write its name in upper case:
 
    PUNCH_VELOCITY = 15
 
-.. important::
+.. note::
 
    Because of the way the game parses floating point numbers, and because of the way Porcupy tries to alleviate it,
    defining floating point constants is not allowed.
@@ -71,6 +69,11 @@ Chained assignment and tuple unpacking are supported:
    x = y = 0
    a, b = 1, 2
 
+.. note::
+
+   Although present in game, string variables are broken, and it's not possible to set a string to a variable.
+   At the same time, it's still possible to define a string constant.
+
 
 Data types
 ----------
@@ -78,7 +81,6 @@ Data types
 Porcupy supports the following data types:
 
 Numbers
-
    Integers
 
    Booleans
@@ -86,15 +88,16 @@ Numbers
    Floating point numbers
 
 Sequences
+  All sequences provide a way to get/set an item by index, query the length and capacity.
 
   Immutable sequences
-
      Range
+       See the :class:`range` built-in.
 
      Reversed
+       See the :class:`reversed` built-in.
 
   Mutable sequences
-
      Lists
         The items of a list are of the same type and the number of items is constant and known at compile-time:
 
@@ -111,7 +114,7 @@ Sequences
            print(x[0])
            print(len(x))
 
-        .. important::
+        .. note::
 
            Negative indices are not supported.
 
@@ -127,18 +130,11 @@ Sequences
            s = x[:0]  # a slice of list *x*, length 0, capacity 5
            s = x[1:3]  # a slice of list *x*, length 3, capacity 4
 
-        .. important::
+        .. note::
 
            Slice step is not supported.
 
-        There's a shorthand notation:
-
-        .. code-block:: python
-
-           x = slice(int, 5)  # equivalent to [0, 0, 0, 0, 0][:]
-           x = slice(int, 1, 5)  # equivalent to [0, 0, 0, 0, 0][:1]
-           y = slice(bool, 3)  # equivalent to [False, False, False][:]
-           z = slice(float, 5)  # equivalent to [.0, .0, .0, .0, .0][:]
+        There's a very useful shorthand notation with :func:`slice`.
 
         It's possible to slice other slices:
 
@@ -169,9 +165,10 @@ Only the following compound statements from Python are supported:
 - The ``while`` statement
 - The ``for`` statement
 
-Each of them supports optional *else* clause.
+Each of them supports optional ``else`` clause.
 
-The *for* statement differs a bit from original. It can be used to iterate lists, slices and ranges:
+The ``for`` statement differs a bit from original.
+It can be used to iterate lists, slices and ranges:
 
 .. code-block:: python
 
