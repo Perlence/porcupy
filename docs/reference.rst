@@ -430,11 +430,11 @@ Porcupy provides access to many built-in objects to interact with the game.
 
    .. attribute:: pos_x
 
-      (*int*) -- *x* coordinate of top-left screen corner.
+      (*int*, *read-only*) -- *x* coordinate of top-left screen corner.
 
    .. attribute:: pos_y
 
-      (*int*) -- *y* coordinate of top-left screen corner.
+      (*int*, *read-only*) -- *y* coordinate of top-left screen corner.
 
 .. class:: Yozhik
 
