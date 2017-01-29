@@ -251,6 +251,7 @@ def test_game_objects():
 
     assert compile_('x = [yozhiks[7], yozhiks[8]]; x[0].frags = 55') == 'p1z 8 p2z 9 p3z 1 p4z p3z+0 p5z p^4z e^5f 55'
 
+def test_read_only_attrs():
     read_only_attrs = [
         'timers[0].enabled',
         'system.game_mode',
@@ -258,6 +259,8 @@ def test_game_objects():
         'bots[0].can_see_target',
         'doors[0].state',
         'buttons[0].is_pressed',
+        'viewport.pos_x',
+        'viewport.pos_y',
     ]
     for read_only_attr in read_only_attrs:
         with pytest.raises(TypeError) as exc_info:

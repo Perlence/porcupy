@@ -207,7 +207,7 @@ class Button(GameObject):
 
 @attr.s(init=False)
 class Viewport(GameObject):
-    pos_x = attr.ib(metadata={'abbrev': 'x', 'type': int_type})
-    pos_y = attr.ib(metadata={'abbrev': 'y', 'type': int_type})
+    pos_x = attr.ib(metadata={'abbrev': 'x', 'type': int_type, 'readonly': True})
+    pos_y = attr.ib(metadata={'abbrev': 'y', 'type': int_type, 'readonly': True})
 
     metadata = {'abbrev': 'w'}
