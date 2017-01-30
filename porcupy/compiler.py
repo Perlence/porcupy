@@ -79,12 +79,13 @@ class NodeConverter:
     def visit_Assign(self, node):
         # TODO: Reassign lists to list pointers without allocating more memory:
         # 'x = [11, 22]; x = [11, 22]' -> 'p1z 11 p2z 22 p4z 1 p1z 11 p2z 22'
-        # TODO: Store values in temporary variables during tuple unpacking: a, b = b, a
         src_slots = {}
         for target in node.targets:
             if isinstance(target, ast.List):
                 raise NotImplementedError('list unpacking is not supported')
+
             targets, values = self.unpack_tuples(target, node.value)
+            dest_src_slots = []
             for target, value in zip(targets, values):
                 if self.is_black_hole(target):
                     continue
@@ -100,6 +101,15 @@ class NodeConverter:
                 if dest_slot is None:
                     continue
 
+                if len(values) > 1 and not isinstance(src_slot, Const):
+                    temp = self.scope.get_temporary(src_slot.type)
+                    self.recycle_later(temp)
+                    self.append_to_body(Assign(temp, src_slot))
+                    src_slot = temp
+
+                dest_src_slots.append((dest_slot, src_slot))
+
+            for dest_slot, src_slot in dest_src_slots:
                 self.append_to_body(Assign(dest_slot, src_slot))
 
     def unpack_tuples(self, target, value):

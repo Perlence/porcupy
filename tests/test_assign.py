@@ -212,6 +212,10 @@ def test_tuple_unpacking():
     assert compile_('x, _ = 11, 22') == 'p1z 11'
     assert compile_('x, y = a, b = 11, 22') == 'p1z 11 p2z 22 p3z 11 p4z 22'
 
+    assert compile_('x, y = 11, 22; x, y = y, x') == 'p1z 11 p2z 22 p3z p2z p4z p1z p1z p3z p2z p4z'
+    assert compile_('x, y = 11, 22; x, y = 4, x') == 'p1z 11 p2z 22 p3z p1z p1z 4 p2z p3z'
+    assert compile_('x, y = 11, 22; x, _ = 4, x') == 'p1z 11 p2z 22 p1z 4'
+
     too_many = [
         'x, y = 11, 22, 33',
         'x = 11, 22',
