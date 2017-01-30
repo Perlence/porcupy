@@ -45,8 +45,6 @@ def visit_with_exc_wrapping(converter, node, filename):
 
 @attr.s
 class NodeConverter:
-    # TODO: Implement IfExp
-
     scope = attr.ib(default=attr.Factory(lambda: Scope()))
     body = attr.ib(default=attr.Factory(list))
     last_label = attr.ib(default=0)
@@ -90,12 +88,18 @@ class NodeConverter:
             for target, value in zip(targets, values):
                 if self.is_black_hole(target):
                     continue
-                src_slot = src_slots.get(value)
-                if src_slot is None:
-                    src_slot = src_slots[value] = self.visit(value)
+
+                if isinstance(value, AST):
+                    src_slot = value
+                else:
+                    src_slot = src_slots.get(value)
+                    if src_slot is None:
+                        src_slot = src_slots[value] = self.visit(value)
+
                 dest_slot = self.store_value(target, src_slot)
                 if dest_slot is None:
                     continue
+
                 self.append_to_body(Assign(dest_slot, src_slot))
 
     def unpack_tuples(self, target, value):
@@ -309,6 +313,15 @@ class NodeConverter:
         first_item = item_slots[0]
         return Const(first_item.index, ListPointer(item_type, capacity))
 
+    def type_of_objects(self, objects):
+        type_set = set()
+        for obj in objects:
+            type_set.add(obj.type)
+            if len(type_set) > 1:
+                return
+        if type_set:
+            return next(iter(type_set))
+
     def visit_Name(self, node):
         return self.scope.get(node.id)
 
@@ -478,14 +491,16 @@ class NodeConverter:
 
         return result
 
-    def type_of_objects(self, objects):
-        type_set = set()
-        for obj in objects:
-            type_set.add(obj.type)
-            if len(type_set) > 1:
-                return
-        if type_set:
-            return next(iter(type_set))
+    def visit_IfExp(self, node):
+        body = self.visit(node.body)
+        tmp = self.scope.get_temporary(body.type)
+        self.visit(ast.If(node.test, [
+            ast.Assign([tmp], body)
+        ], [
+            ast.Assign([tmp], node.orelse)
+        ]))
+        self.recycle_later(tmp)
+        return tmp
 
     def negate_bool(self, expr):
         if isinstance(expr, Const):

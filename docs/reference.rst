@@ -15,7 +15,6 @@ Here's a list of Python language features not supported in Porcupy:
   - Power operator
   - Shifting operations
   - Binary bitwise operations
-  - Conditional expressions
   - Lambdas
   - Keywords in function calls
   - ``list``, ``set``, ``dict``, and generator comprehensions

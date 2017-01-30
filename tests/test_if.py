@@ -212,3 +212,11 @@ def test_else():
             'p2z 23 '
             ':3 '
             ':1')
+
+
+def test_if_expr():
+    assert (compile_('a = 5; b = 1 if a >= 0 else 0; c = 99') ==
+            'p1z 5 # p1z < 0 ( g2z ) p4z 1 g1z :2 p4z 0 :1 p2z p4z p3z 99')
+
+    assert (compile_('b = 1 if True else 0') ==
+            'p2z 1 p1z p2z')
