@@ -121,6 +121,9 @@ class NodeConverter:
             raise ValueError('not enough values to unpack (expected {}, got {})'.format(len(targets), len(values)))
         return targets, values
 
+    def is_black_hole(self, target):
+        return isinstance(target, ast.Name) and target.id == '_'
+
     def visit_AugAssign(self, node):
         src_slot = self.visit(node.value)
         dest_slot = self.visit(node.target)
@@ -152,6 +155,10 @@ class NodeConverter:
         elif dest_slot.metadata.get('readonly'):
             raise TypeError("cannot assign value to a read-only slot '{}'".format(dest_slot))
         return dest_slot
+
+    def is_source_const(self, src_slot):
+        return (isinstance(src_slot, Const) or
+                isinstance(src_slot, (Slot, AssociatedSlot)) and not src_slot.is_variable())
 
     def visit_For(self, node):
         # For(expr target, expr iter, stmt* body, stmt* orelse)
@@ -546,13 +553,6 @@ class NodeConverter:
 
     def is_target_const(self, target):
         return target.id is not None and target.id.isupper()
-
-    def is_source_const(self, src_slot):
-        return (isinstance(src_slot, Const) or
-                isinstance(src_slot, (Slot, AssociatedSlot)) and not src_slot.is_variable())
-
-    def is_black_hole(self, target):
-        return isinstance(target, ast.Name) and target.id == '_'
 
 
 @attr.s

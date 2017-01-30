@@ -81,7 +81,7 @@ class Slot(AST):
     attrib = attr.ib()
     type = attr.ib()
     metadata = attr.ib(default=attr.Factory(dict))
-    ref = attr.ib(default=None)
+    ref = attr.ib(default=False)
     short_form = attr.ib(default=False)
 
     def is_variable(self):
@@ -94,15 +94,10 @@ class Slot(AST):
             prefix = '^' if self.register == 'p' else '$'
             return '{}{}'.format(prefix, self.index)
         elif self.attrib is not None:
-            index = self.index
-            if self.ref is not None:
-                index = self.ref.index
-            if index is None:
-                index = ''
             return '{register}{ref}{index}{attrib}'.format(
                 register=self.register,
-                ref='^' if self.ref is not None else '',
-                index=index,
+                ref=('^' if self.ref else ''),
+                index=(self.index if self.index is not None else ''),
                 attrib=self.attrib)
         else:
             return str(self.index)

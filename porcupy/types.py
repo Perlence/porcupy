@@ -219,7 +219,7 @@ class ListPointer(IntType):
         else:
             pointer_math_slot = item_addr(converter, slot, slice_slot)
             converter.recycle_later(pointer_math_slot)
-            return AssociatedSlot(pointer_math_slot, type=self.item_type, ref=pointer_math_slot)
+            return AssociatedSlot(pointer_math_slot, type=self.item_type, ref=True)
 
     def _len(self, converter, slot):
         return Const(self.capacity)
@@ -234,7 +234,7 @@ class ListPointer(IntType):
 
 def get_slot_via_offset(converter, pointer, offset, type):
     pointer_math_slot = item_addr(converter, pointer, offset)
-    reference = AssociatedSlot(pointer_math_slot, type=type, ref=pointer_math_slot)
+    reference = AssociatedSlot(pointer_math_slot, type=type, ref=True)
 
     item_slot = converter.scope.get_temporary(type)
     converter.append_assign(item_slot, reference)
@@ -304,7 +304,7 @@ class Slice(IntType):
         new_item_ptr.type = pointer.type
         converter.append_assign(tmp, new_item_ptr)
 
-        reference = AssociatedSlot(tmp, type=self.item_type, ref=tmp)
+        reference = AssociatedSlot(tmp, type=self.item_type, ref=True)
         converter.append_assign(reference, value)
         converter.scope.recycle_temporary(tmp)
 
@@ -412,10 +412,7 @@ class GameObject(IntType):
             attrib.metadata['type'] = GameObjectMethod(attrib)
 
         if slot.is_variable():
-            ref = slot
-            if slot.ref is not None:
-                ref = slot.ref
-            slot = AssociatedSlot(slot, register=register, ref=ref)
+            slot = AssociatedSlot(slot, register=register, ref=True)
 
         metadata_stub = {**attrib.metadata}
         attrib_type = metadata_stub.pop('type')
