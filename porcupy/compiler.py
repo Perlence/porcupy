@@ -189,7 +189,7 @@ class NodeConverter:
     def visit_While(self, node, before_test=None):
         # While(expr test, stmt* body, stmt* orelse)
         label_start = self.new_label()
-        self.append_to_body(label_start)
+        self.append_node(label_start)
         if before_test is not None:
             self.visit(before_test)
         self.generic_if(node, label_start)
@@ -244,26 +244,26 @@ class NodeConverter:
         if not self.is_body_empty(node.orelse):
             label_else = self.new_label()
             goto_else = Slot('g', label_else.index, 'z', None)
-            self.append_to_body(If(not_test, [goto_else]))
+            self.append_node(If(not_test, [goto_else]))
         else:
-            self.append_to_body(If(not_test, [goto_end]))
+            self.append_node(If(not_test, [goto_end]))
 
         for stmt in node.body:
             self.visit(stmt)
 
         if is_loop:
             goto_start = Slot('g', label_start.index, 'z', None)
-            self.append_to_body(goto_start)
+            self.append_node(goto_start)
 
         if label_else is not None:
             if not is_loop:
-                self.append_to_body(goto_end)
-            self.append_to_body(label_else)
+                self.append_node(goto_end)
+            self.append_node(label_else)
 
             for stmt in node.orelse:
                 self.visit(stmt)
 
-        self.append_to_body(label_end)
+        self.append_node(label_end)
 
     def new_label(self):
         self.last_label += 1
@@ -274,12 +274,12 @@ class NodeConverter:
     def visit_Continue(self, node):
         label_start, _ = self.loop_labels[-1]
         goto_start = Slot('g', label_start.index, 'z', None)
-        self.append_to_body(goto_start)
+        self.append_node(goto_start)
 
     def visit_Break(self, node):
         _, label_end = self.loop_labels[-1]
         goto_end = Slot('g', label_end.index, 'z', None)
-        self.append_to_body(goto_end)
+        self.append_node(goto_end)
 
     def visit_Pass(self, node):
         pass
@@ -288,7 +288,7 @@ class NodeConverter:
         if isinstance(node.value, ast.Call):
             expr = self.visit_Call(node.value, raise_if_returns=True)
             if expr is not None:
-                self.append_to_body(expr)
+                self.append_node(expr)
         else:
             raise NotImplementedError('plain expressions are not supported')
 
@@ -444,7 +444,7 @@ class NodeConverter:
         bool_slot = self.scope.get_temporary(BoolType())
         self.append_assign(bool_slot, initial)
         assign = Assign(bool_slot, self.negate_bool(initial))
-        self.append_to_body(If(expr, [assign]))
+        self.append_node(If(expr, [assign]))
         self.recycle_later(bool_slot)
         return bool_slot
 
@@ -533,9 +533,9 @@ class NodeConverter:
 
     def append_assign(self, dest, src):
         check_type(dest, src)
-        self.append_to_body(Assign(dest, src))
+        self.append_node(Assign(dest, src))
 
-    def append_to_body(self, stmt):
+    def append_node(self, stmt):
         self.body.append(stmt)
 
     def recycle_later(self, *slots):
