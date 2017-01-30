@@ -56,9 +56,9 @@ def test_iterate_lists():
 
 def test_iterate_game_objs():
     assert (compile_('for bot in bots:\n'
-                     '    bot.goto = 0') ==
+                     '    bot.goto = points[0]') ==
             'p2z -1 '
-            ':1 p2z p2z+1 # p2z >= 9 ( g2z ) p3z p2z+1 p1z p3z a^1g 0 g1z :2')
+            ':1 p2z p2z+1 # p2z >= 9 ( g2z ) p3z p2z+1 p1z p3z a^1g 1 g1z :2')
 
 
 def test_break():

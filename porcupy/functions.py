@@ -1,6 +1,6 @@
 import ast
 
-from .ast import Const, Random, Assign
+from .ast import Const, Random
 from .types import IntType, FloatType, BoolType, Sequence
 
 
@@ -44,5 +44,5 @@ def randint(converter, a: IntType, b: IntType):
     else:
         tmp = converter.scope.get_temporary(IntType())
         converter.recycle_later(tmp)
-        converter.append_to_body(Assign(tmp, Random(abs(b.value - a.value) + 1)))
+        converter.append_assign(tmp, Random(abs(b.value - a.value) + 1))
         return converter.visit(ast.BinOp(tmp, ast.Add(), a))

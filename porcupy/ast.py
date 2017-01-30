@@ -196,7 +196,7 @@ class BinOp(AST):
     metadata = attr.ib(default=attr.Factory(dict))
 
     def __attrs_post_init__(self):
-        from .types import NumberType, FloatType, IntType
+        from .types import NumberType, FloatType
 
         left_type = self.left.type
         right_type = self.right.type
@@ -206,7 +206,7 @@ class BinOp(AST):
         if isinstance(left_type, FloatType) or isinstance(right_type, FloatType) or isinstance(self.op, Div):
             self.type = FloatType()
         else:
-            self.type = IntType()
+            self.type = left_type
 
     def __str__(self):
         return '{}{}{}'.format(self.left, self.op, self.right)

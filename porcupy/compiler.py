@@ -10,7 +10,7 @@ from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
 from .gameobjs import (Yozhik, Timer, Point, Bot, System, Button, Door,
                        Viewport, Sheep)
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
-                    ListPointer, Slice, CallableType, are_types_related)
+                    ListPointer, Slice, CallableType, check_type)
 
 
 def compile(source, filename='<unknown>', separate_stmts=False):
@@ -104,13 +104,13 @@ class NodeConverter:
                 if len(values) > 1 and not isinstance(src_slot, Const):
                     temp = self.scope.get_temporary(src_slot.type)
                     self.recycle_later(temp)
-                    self.append_to_body(Assign(temp, src_slot))
+                    self.append_assign(temp, src_slot)
                     src_slot = temp
 
                 dest_src_slots.append((dest_slot, src_slot))
 
             for dest_slot, src_slot in dest_src_slots:
-                self.append_to_body(Assign(dest_slot, src_slot))
+                self.append_assign(dest_slot, src_slot)
 
     def unpack_tuples(self, target, value):
         targets = target.elts if isinstance(target, ast.Tuple) else [target]
@@ -125,8 +125,7 @@ class NodeConverter:
         src_slot = self.visit(node.value)
         dest_slot = self.visit(node.target)
         bin_op = self.visit(ast.BinOp(dest_slot, node.op, src_slot))
-        self.scope.check_type(dest_slot, bin_op)
-        self.append_to_body(Assign(dest_slot, bin_op))
+        self.append_assign(dest_slot, bin_op)
 
     def store_value(self, target, src_slot):
         dest_slot = None
@@ -169,7 +168,7 @@ class NodeConverter:
             index = temp_index = self.scope.get_temporary(IntType())
             target = node.target
 
-        self.append_to_body(Assign(index, Const(-1)))
+        self.append_assign(index, Const(-1))
 
         iter_slot = self.visit(node.iter)
         iter_len = iter_slot.type._len(self, iter_slot)
@@ -319,7 +318,7 @@ class NodeConverter:
         capacity = len(node.elts)
         item_slots = self.scope.allocate_many(item_type, capacity)
         for dest_slot, item in zip(item_slots, loaded_items):
-            self.append_to_body(Assign(dest_slot, item))
+            self.append_assign(dest_slot, item)
         first_item = item_slots[0]
         return Const(first_item.index, ListPointer(item_type, capacity))
 
@@ -443,7 +442,7 @@ class NodeConverter:
 
     def wrap_in_if_stmt(self, expr, initial):
         bool_slot = self.scope.get_temporary(BoolType())
-        self.append_to_body(Assign(bool_slot, initial))
+        self.append_assign(bool_slot, initial)
         assign = Assign(bool_slot, self.negate_bool(initial))
         self.append_to_body(If(expr, [assign]))
         self.recycle_later(bool_slot)
@@ -531,6 +530,10 @@ class NodeConverter:
                 return attr.assoc(expr, op=ast.Lt())
         else:
             raise NotImplementedError("cannot negate expression '{}'".format(expr))
+
+    def append_assign(self, dest, src):
+        check_type(dest, src)
+        self.append_to_body(Assign(dest, src))
 
     def append_to_body(self, stmt):
         self.body.append(stmt)
@@ -665,7 +668,6 @@ class Scope:
     def assign(self, name, src_slot):
         slot = self.names.get(name)
         if slot is not None:
-            self.check_type(slot, src_slot)
             return slot
 
         slot = self.allocate(src_slot.type)
@@ -673,16 +675,6 @@ class Scope:
         slot.metadata = src_slot.metadata
         self.names[name] = slot
         return slot
-
-    def check_type(self, dest_slot, src_slot):
-        dest_type_obj = dest_slot.type
-        dest_type = type(dest_type_obj)
-        src_type_obj = src_slot.type
-        src_type = type(src_type_obj)
-
-        have_different_fields = attr.fields(src_type) and src_type_obj != dest_type_obj
-        if not are_types_related(src_type_obj, dest_type) or have_different_fields:
-            raise TypeError("cannot assign value of type '{!r}' to variable of type '{!r}'".format(src_type_obj, dest_type_obj))
 
     def get_by_index(self, index, type):
         if isinstance(type, NumberType):

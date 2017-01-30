@@ -7,7 +7,7 @@ import types
 
 import attr
 
-from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Div, FloorDiv, Mod, Assign, Call
+from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Div, FloorDiv, Mod, Call
 
 
 @attr.s
@@ -42,7 +42,7 @@ class NumberType(Type):
         if isinstance(left, Const):
             if isinstance(op, (Sub, Div, FloorDiv, Mod)):
                 left_slot = converter.scope.get_temporary(left.type)
-                converter.append_to_body(Assign(left_slot, left))
+                converter.append_assign(left_slot, left)
                 temp.append(left_slot)
                 left = left_slot
             else:
@@ -65,7 +65,7 @@ class NumberType(Type):
     def _store_temporary(self, converter, value, temp):
         if not isinstance(value, (Const, Slot, AssociatedSlot)):
             value_slot = converter.scope.get_temporary(value.type)
-            converter.append_to_body(Assign(value_slot, value))
+            converter.append_assign(value_slot, value)
             temp.append(value_slot)
             value = value_slot
         return value
@@ -213,13 +213,13 @@ class ListPointer(IntType):
 
         if isinstance(self.item_type, GameObject):
             item_slot = converter.scope.get_temporary(self.item_type)
-            converter.append_to_body(Assign(item_slot, slot))
+            converter.append_assign(item_slot, slot)
             converter.recycle_later(item_slot)
             return item_slot
         else:
             pointer_math_slot = item_addr(converter, slot, slice_slot)
             converter.recycle_later(pointer_math_slot)
-            return AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
+            return AssociatedSlot(pointer_math_slot, type=self.item_type, ref=pointer_math_slot)
 
     def _len(self, converter, slot):
         return Const(self.capacity)
@@ -234,10 +234,10 @@ class ListPointer(IntType):
 
 def get_slot_via_offset(converter, pointer, offset, type):
     pointer_math_slot = item_addr(converter, pointer, offset)
-    reference = AssociatedSlot(pointer_math_slot, ref=pointer_math_slot)
+    reference = AssociatedSlot(pointer_math_slot, type=type, ref=pointer_math_slot)
 
     item_slot = converter.scope.get_temporary(type)
-    converter.append_to_body(Assign(item_slot, reference))
+    converter.append_assign(item_slot, reference)
     converter.scope.recycle_temporary(pointer_math_slot)
     converter.recycle_later(item_slot)
 
@@ -245,9 +245,10 @@ def get_slot_via_offset(converter, pointer, offset, type):
 
 
 def item_addr(converter, pointer, offset):
-    pointer_math_slot = converter.scope.get_temporary(IntType())
+    pointer_math_slot = converter.scope.get_temporary(pointer.type)
     addition = converter.visit(ast.BinOp(pointer, ast.Add(), offset))
-    converter.append_to_body(Assign(pointer_math_slot, addition))
+    addition.type = pointer.type
+    converter.append_assign(pointer_math_slot, addition)
     return pointer_math_slot
 
 
@@ -298,12 +299,13 @@ class Slice(IntType):
 
         # TODO: Raise an error if length equals capacity
 
-        tmp = converter.scope.get_temporary(IntType())
+        tmp = converter.scope.get_temporary(pointer.type)
         new_item_ptr = converter.visit(ast.BinOp(pointer, ast.Add(), length))
-        converter.append_to_body(Assign(tmp, new_item_ptr))
+        new_item_ptr.type = pointer.type
+        converter.append_assign(tmp, new_item_ptr)
 
-        reference = AssociatedSlot(tmp, ref=tmp)
-        converter.append_to_body(Assign(reference, value))
+        reference = AssociatedSlot(tmp, type=self.item_type, ref=tmp)
+        converter.append_assign(reference, value)
         converter.scope.recycle_temporary(tmp)
 
         # Increment length
@@ -396,7 +398,7 @@ class GameObjectList(Type):
         else:
             temp = converter.scope.get_temporary(IntType())
             offset = converter.visit(ast.BinOp(slice_slot, ast.Add(), Const(self.start)))
-            converter.append_to_body(Assign(temp, offset))
+            converter.append_assign(temp, offset)
             converter.recycle_later(temp)
             return AssociatedSlot(temp, type=self.type)
 
@@ -463,6 +465,17 @@ class GameObjectMethod(Type):
             return result
 
 
+def check_type(dest_slot, src_slot):
+    dest_type_obj = dest_slot.type
+    dest_type = type(dest_type_obj)
+    src_type_obj = src_slot.type
+    src_type = type(src_type_obj)
+
+    have_different_fields = (attr.fields(src_type) or attr.fields(dest_type)) and src_type_obj != dest_type_obj
+    if not are_types_related(src_type_obj, dest_type) or have_different_fields:
+        raise TypeError("cannot assign value of type '{!r}' to variable of type '{!r}'".format(src_type_obj, dest_type_obj))
+
+
 def check_func_args(converter, signature, args):
     bound = signature.bind(converter, *args)
     for name, value in list(bound.arguments.items())[1:]:
@@ -491,6 +504,6 @@ def shorten_slot(converter, slot, tmp_slots):
     elif not isinstance(slot, (Slot, AssociatedSlot)) or not slot.is_variable():
         tmp_slot = converter.scope.get_temporary(slot.type)
         tmp_slots.append(tmp_slot)
-        converter.append_to_body(Assign(tmp_slot, slot))
+        converter.append_assign(tmp_slot, slot)
         slot = tmp_slot
     return AssociatedSlot(slot, short_form=True)

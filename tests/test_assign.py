@@ -222,7 +222,7 @@ def test_tuple_unpacking():
     ]
     for source in too_many:
         with pytest.raises(ValueError) as exc_info:
-            compile_('x, y = 11, 22, 33')
+            compile_(source)
         assert 'too many values to unpack' in str(exc_info)
 
     not_enough = [
@@ -231,7 +231,7 @@ def test_tuple_unpacking():
     ]
     for source in not_enough:
         with pytest.raises(ValueError) as exc_info:
-            compile_('x, y, z = 11, 22')
+            compile_(source)
         assert 'not enough values to unpack' in str(exc_info)
 
 
@@ -254,6 +254,7 @@ def test_game_objects():
     assert compile_('system.color = 256') == 'yc 256'
 
     assert compile_('x = [yozhiks[7], yozhiks[8]]; x[0].frags = 55') == 'p1z 8 p2z 9 p3z 1 p4z p3z+0 p5z p^4z e^5f 55'
+
 
 def test_read_only_attrs():
     read_only_attrs = [
@@ -299,14 +300,13 @@ def test_static_type():
         'x = 1; x = "s"',
         'x = [11, 22, 33]; x = 3',
         'x = [11, 22, 33]; x = [44, 55, 66, 77]',
-        'x = range(4); x = 0',
         'x = [11, 22, 33]; y = x[:]; y = [1]',
-        # 'bots[2].goto = 4',
+        'bots[2].goto = 4',
     ]
 
     for source in sources:
         with pytest.raises(TypeError) as exc_info:
-            compile_('x = 1; x = "s"')
+            compile_(source)
         assert 'cannot assign value of type' in str(exc_info.value)
 
 

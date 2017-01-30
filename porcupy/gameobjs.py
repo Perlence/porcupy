@@ -3,7 +3,7 @@ import enum
 
 import attr
 
-from .ast import Const, Slot, Assign, Call
+from .ast import Const, Slot, Call
 from .types import IntType, FloatType, BoolType, StringType, GameObject
 
 int_type = IntType()
@@ -80,7 +80,7 @@ class System(GameObject):
                                                     ast.BinOp(g, ast.Mult(), Const(256))), ast.Add(),
                                           ast.BinOp(b, ast.Mult(), Const(65536))))
         sys_slot = Slot(self.metadata['abbrev'], None, self.color.metadata['abbrev'], self.color.metadata['type'])
-        converter.append_to_body(Assign(sys_slot, color))
+        converter.append_assign(sys_slot, color)
 
     def load_map(self, converter, name: StringType):
         pass
