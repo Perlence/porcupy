@@ -470,7 +470,8 @@ def check_type(dest_slot, src_slot):
 
     have_different_fields = (attr.fields(src_type) or attr.fields(dest_type)) and src_type_obj != dest_type_obj
     if not are_types_related(src_type_obj, dest_type) or have_different_fields:
-        raise TypeError("cannot assign value of type '{!r}' to variable of type '{!r}'".format(src_type_obj, dest_type_obj))
+        raise TypeError("cannot assign value of type '{!r}' to variable of type '{!r}'"
+                        .format(src_type_obj, dest_type_obj))
 
 
 def check_func_args(converter, signature, args):

@@ -344,7 +344,8 @@ class NodeConverter:
     def visit_Attribute(self, node):
         value_slot = self.visit(node.value)
         if not hasattr(value_slot.type, '_getattr'):
-            raise NotImplementedError("getting attribute of object of type '{}' is not implemented yet".format(value_slot.type))
+            raise NotImplementedError("getting attribute of object of type '{}' is not implemented yet"
+                                      .format(value_slot.type))
         return value_slot.type._getattr(self, value_slot, node.attr)
 
     def visit_Subscript(self, node):
@@ -358,12 +359,14 @@ class NodeConverter:
     def load_index_subscript(self, value_slot, slice_slot, ctx):
         if isinstance(ctx, ast.Load):
             if not hasattr(value_slot.type, '_getitem'):
-                raise NotImplementedError("getting item of collection of type '{}' is not implemented yet".format(value_slot.type))
+                raise NotImplementedError("getting item of collection of type '{}' is not implemented yet"
+                                          .format(value_slot.type))
             return value_slot.type._getitem(self, value_slot, slice_slot)
 
         elif isinstance(ctx, ast.Store):
             if not hasattr(value_slot.type, '_setitem'):
-                raise NotImplementedError("setting item of collection of type '{}' is not implemented yet".format(value_slot.type))
+                raise NotImplementedError("setting item of collection of type '{}' is not implemented yet"
+                                          .format(value_slot.type))
             return value_slot.type._setitem(self, value_slot, slice_slot)
 
     def load_slice_subscript(self, value_slot, slice_slot):
