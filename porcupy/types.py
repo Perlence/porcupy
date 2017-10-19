@@ -7,7 +7,7 @@ import types
 
 import attr
 
-from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Div, FloorDiv, Mod, Call
+from .ast import Const, Slot, EvolvedSlot, BinOp, Add, Sub, Div, FloorDiv, Mod, Call
 
 
 @attr.s(hash=True)
@@ -63,7 +63,7 @@ class NumberType(Type):
         return op, right
 
     def _store_temporary(self, converter, value, temp):
-        if not isinstance(value, (Const, Slot, AssociatedSlot)):
+        if not isinstance(value, (Const, Slot, EvolvedSlot)):
             value_slot = converter.scope.get_temporary(value.type)
             converter.append_assign(value_slot, value)
             temp.append(value_slot)
@@ -75,15 +75,15 @@ class NumberType(Type):
             return operand
         elif isinstance(op, ast.USub):
             if isinstance(operand, Const):
-                return attr.assoc(operand, value=-operand.value)
+                return attr.evolve(operand, value=-operand.value)
             return converter.visit(ast.BinOp(operand, ast.Mult(), Const(-1)))
         elif isinstance(op, ast.Invert):
             if isinstance(operand, Const):
-                return attr.assoc(operand, value=~operand.value)
+                return attr.evolve(operand, value=~operand.value)
             return converter.visit(ast.BinOp(ast.BinOp(operand, ast.Mult(), Const(-1)), ast.Sub(), Const(1)))
         elif isinstance(op, ast.Not):
             if isinstance(operand, Const):
-                return attr.assoc(operand, value=(not operand.value), type=BoolType())
+                return attr.evolve(operand, value=(not operand.value), type=BoolType())
             return converter.visit(ast.Compare(operand.type._truthy(converter, operand), [ast.Eq()], [Const(0)]))
         else:
             raise NotImplementedError("unary operation '{}' is not implemented yet".format(op))
@@ -226,7 +226,7 @@ class ListPointer(IntType):
         else:
             pointer_math_slot = item_addr(converter, slot, slice_slot)
             converter.recycle_later(pointer_math_slot)
-            return AssociatedSlot(pointer_math_slot, type=self.item_type, ref=True)
+            return EvolvedSlot(pointer_math_slot, type=self.item_type, ref=True)
 
     def _len(self, converter, slot):
         return Const(self.capacity)
@@ -241,7 +241,7 @@ class ListPointer(IntType):
 
 def get_slot_via_offset(converter, pointer, offset, type):
     pointer_math_slot = item_addr(converter, pointer, offset)
-    reference = AssociatedSlot(pointer_math_slot, type=type, ref=True)
+    reference = EvolvedSlot(pointer_math_slot, type=type, ref=True)
 
     item_slot = converter.scope.get_temporary(type)
     converter.append_assign(item_slot, reference)
@@ -311,7 +311,7 @@ class Slice(IntType):
         new_item_ptr.type = pointer.type
         converter.append_assign(tmp, new_item_ptr)
 
-        reference = AssociatedSlot(tmp, type=self.item_type, ref=True)
+        reference = EvolvedSlot(tmp, type=self.item_type, ref=True)
         converter.append_assign(reference, value)
         converter.scope.recycle_temporary(tmp)
 
@@ -407,7 +407,7 @@ class GameObjectList(Type):
             offset = converter.visit(ast.BinOp(slice_slot, ast.Add(), Const(self.start)))
             converter.append_assign(temp, offset)
             converter.recycle_later(temp)
-            return AssociatedSlot(temp, type=self.type)
+            return EvolvedSlot(temp, type=self.type)
 
 
 @attr.s(hash=True)
@@ -419,14 +419,14 @@ class GameObject(IntType):
             attrib.metadata['type'] = GameObjectMethod(attrib)
 
         if slot.is_variable():
-            slot = AssociatedSlot(slot, register=register, ref=True)
+            slot = EvolvedSlot(slot, register=register, ref=True)
 
         metadata_stub = {**attrib.metadata}
         attrib_type = metadata_stub.pop('type')
         attrib_abbrev = metadata_stub.pop('abbrev')
         metadata = {**slot.metadata, **metadata_stub}
 
-        return AssociatedSlot(slot, type=attrib_type, attrib=attrib_abbrev,
+        return EvolvedSlot(slot, type=attrib_type, attrib=attrib_abbrev,
                               metadata=metadata)
 
 
@@ -506,9 +506,9 @@ def shorten_func_args(converter, args):
 def shorten_slot(converter, slot, tmp_slots):
     if isinstance(slot, Const):
         return slot
-    elif not isinstance(slot, (Slot, AssociatedSlot)) or not slot.is_variable():
+    elif not isinstance(slot, (Slot, EvolvedSlot)) or not slot.is_variable():
         tmp_slot = converter.scope.get_temporary(slot.type)
         tmp_slots.append(tmp_slot)
         converter.append_assign(tmp_slot, slot)
         slot = tmp_slot
-    return AssociatedSlot(slot, short_form=True)
+    return EvolvedSlot(slot, short_form=True)

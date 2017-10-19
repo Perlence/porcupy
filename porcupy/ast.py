@@ -104,14 +104,14 @@ class Slot(AST):
 
 
 @attr.s(init=False)
-class AssociatedSlot(AST):
+class EvolvedSlot(AST):
     _original = attr.ib()
     _changes = attr.ib()
 
     def __init__(self, inst, **changes):
-        if isinstance(inst, AssociatedSlot):
-            super().__setattr__('_original', super(AssociatedSlot, inst).__getattribute__('_original'))
-            super().__setattr__('_changes', {**super(AssociatedSlot, inst).__getattribute__('_changes'), **changes})
+        if isinstance(inst, EvolvedSlot):
+            super().__setattr__('_original', super(EvolvedSlot, inst).__getattribute__('_original'))
+            super().__setattr__('_changes', {**super(EvolvedSlot, inst).__getattribute__('_changes'), **changes})
         else:
             super().__setattr__('_original', inst)
             super().__setattr__('_changes', changes)
@@ -132,7 +132,7 @@ class AssociatedSlot(AST):
         return str(super().__getattribute__('apply_changes')())
 
     def apply_changes(self):
-        return attr.assoc(super().__getattribute__('_original'), **super().__getattribute__('_changes'))
+        return attr.evolve(super().__getattribute__('_original'), **super().__getattribute__('_changes'))
 
 
 @attr.s

@@ -4,7 +4,7 @@ from fractions import Fraction
 
 import attr
 
-from .ast import (AST, Module, Assign, If, Const, Slot, AssociatedSlot, BoolOp,
+from .ast import (AST, Module, Assign, If, Const, Slot, EvolvedSlot, BoolOp,
                   operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare, Label,
                   Call)
 from .gameobjs import (Yozhik, Timer, Point, Bot, System, Button, Door,
@@ -14,14 +14,14 @@ from .types import (NumberType, IntType, BoolType, FloatType, StringType,
 
 
 def compile(source, filename='<unknown>', separate_stmts=False):
-    top = ast.parse(source, filename)
+    ast_tree = ast.parse(source, filename)
 
     converter = NodeConverter()
-    converted_top = visit_with_exc_wrapping(converter, top, filename)
-    if converted_top is None:
+    converted_tree = visit_with_exc_wrapping(converter, ast_tree, filename)
+    if converted_tree is None:
         return
     converter.scope.allocate_temporary()
-    compiled = str(converted_top)
+    compiled = str(converted_tree)
     if not separate_stmts:
         compiled = ' '.join(compiled.split('  '))
     return compiled
@@ -158,7 +158,7 @@ class NodeConverter:
 
     def is_source_const(self, src_slot):
         return (isinstance(src_slot, Const) or
-                isinstance(src_slot, (Slot, AssociatedSlot)) and not src_slot.is_variable())
+                isinstance(src_slot, (Slot, EvolvedSlot)) and not src_slot.is_variable())
 
     def visit_For(self, node):
         # For(expr target, expr iter, stmt* body, stmt* orelse)
@@ -522,21 +522,21 @@ class NodeConverter:
 
     def negate_bool(self, expr):
         if isinstance(expr, Const):
-            return attr.assoc(expr, value=(not expr.value))
+            return attr.evolve(expr, value=(not expr.value))
         elif isinstance(expr, Compare):
             op = expr.op
             if isinstance(op, ast.Eq):
-                return attr.assoc(expr, op=ast.NotEq())
+                return attr.evolve(expr, op=ast.NotEq())
             elif isinstance(op, ast.NotEq):
-                return attr.assoc(expr, op=ast.Eq())
+                return attr.evolve(expr, op=ast.Eq())
             elif isinstance(op, ast.Lt):
-                return attr.assoc(expr, op=ast.GtE())
+                return attr.evolve(expr, op=ast.GtE())
             elif isinstance(op, ast.LtE):
-                return attr.assoc(expr, op=ast.Gt())
+                return attr.evolve(expr, op=ast.Gt())
             elif isinstance(op, ast.Gt):
-                return attr.assoc(expr, op=ast.LtE())
+                return attr.evolve(expr, op=ast.LtE())
             elif isinstance(op, ast.GtE):
-                return attr.assoc(expr, op=ast.Lt())
+                return attr.evolve(expr, op=ast.Lt())
         else:
             raise NotImplementedError("cannot negate expression '{}'".format(expr))
 
