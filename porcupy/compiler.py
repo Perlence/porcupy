@@ -292,12 +292,11 @@ class NodeConverter:
         pass
 
     def visit_Expr(self, node):
-        if isinstance(node.value, ast.Call):
-            expr = self.visit_Call(node.value, raise_if_returns=True)
-            if expr is not None:
-                self.append_node(expr)
-        else:
-            raise NotImplementedError('plain expressions are not supported')
+        if not isinstance(node.value, ast.Call):
+            return
+        expr = self.visit_Call(node.value, raise_if_returns=True)
+        if expr is not None:
+            self.append_node(expr)
 
     def visit_Num(self, node):
         if not isinstance(node.n, float):
