@@ -20,7 +20,7 @@ setup(
         ],
     },
     install_requires=[
-        'attrs',
+        'attrs>=17.1.0',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

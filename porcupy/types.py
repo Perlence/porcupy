@@ -10,7 +10,7 @@ import attr
 from .ast import Const, Slot, AssociatedSlot, BinOp, Add, Sub, Div, FloorDiv, Mod, Call
 
 
-@attr.s
+@attr.s(hash=True)
 class Type:
     def _getattr(self, converter, slot, attr_name):
         attrib = getattr(self, attr_name)
@@ -19,7 +19,7 @@ class Type:
         raise AttributeError("type object '{}' has no attribute '{}'".format(self, attr_name))
 
 
-@attr.s
+@attr.s(hash=True)
 class NumberType(Type):
     def _bin_op(self, converter, left, op, right):
         if isinstance(left, Const) and isinstance(right, Const) and not isinstance(op, Div):
@@ -92,22 +92,22 @@ class NumberType(Type):
         return slot
 
 
-@attr.s
+@attr.s(hash=True)
 class FloatType(NumberType):
     pass
 
 
-@attr.s
+@attr.s(hash=True)
 class IntType(NumberType):
     pass
 
 
-@attr.s
+@attr.s(hash=True)
 class BoolType(IntType):
     pass
 
 
-@attr.s
+@attr.s(hash=True)
 class StringType(Type):
     def format(self, converter, slot, *args):
         if not isinstance(slot, Const):
@@ -186,7 +186,7 @@ class Sequence(metaclass=ABCMeta):
         pass
 
 
-@attr.s
+@attr.s(hash=True)
 @Sequence.register
 class ListPointer(IntType):
     item_type = attr.ib()
@@ -259,7 +259,7 @@ def item_addr(converter, pointer, offset):
     return pointer_math_slot
 
 
-@attr.s
+@attr.s(hash=True)
 @Sequence.register
 class Slice(IntType):
     item_type = attr.ib()
@@ -319,7 +319,7 @@ class Slice(IntType):
         converter.visit(ast.AugAssign(slot, ast.Add(), ast.Num(1)))
 
 
-@attr.s
+@attr.s(hash=True)
 @Sequence.register
 class Range(Type):
     # TODO: Pack range object into one slot
@@ -352,7 +352,7 @@ class Range(Type):
         return Const(None, self, metadata=metadata)
 
 
-@attr.s
+@attr.s(hash=True)
 @Sequence.register
 class Reversed(Type):
     def _call(self, converter, func, sequence):
@@ -380,7 +380,7 @@ class Reversed(Type):
         return sequence.type._getitem(converter, sequence, reversed_index)
 
 
-@attr.s(init=False)
+@attr.s(init=False, hash=True)
 class GameObjectList(Type):
     type = attr.ib()
     start = attr.ib()
@@ -410,7 +410,7 @@ class GameObjectList(Type):
             return AssociatedSlot(temp, type=self.type)
 
 
-@attr.s
+@attr.s(hash=True)
 class GameObject(IntType):
     def _getattr(self, converter, slot, attr_name):
         register = self.metadata['abbrev']
@@ -430,7 +430,7 @@ class GameObject(IntType):
                               metadata=metadata)
 
 
-@attr.s
+@attr.s(hash=True)
 class CallableType(Type):
     @classmethod
     def from_function(cls, func, instance=None):
@@ -450,7 +450,7 @@ class CallableType(Type):
         return callable_type
 
 
-@attr.s
+@attr.s(hash=True)
 class GameObjectMethod(Type):
     fn = attr.ib()
 
