@@ -127,6 +127,8 @@ class Formatter(string.Formatter):
         tmp_slots = []
         for literal_text, field_name, _, _ in self.parse(fmt_string):
             result.append(literal_text)
+            if field_name is None:
+                continue
             arg, _ = self.get_field(field_name, args, kwargs)
             short_arg = shorten_slot(self.converter, arg, tmp_slots)
             result.append(short_arg)
@@ -140,7 +142,7 @@ class Formatter(string.Formatter):
             if conversion:
                 raise NotImplementedError('conversion is not implemented yet')
 
-            if not self._arg_index_is_present(field_name):
+            if field_name is not None and not self._arg_index_is_present(field_name):
                 field_name = str(i) + field_name
 
             yield literal_text, field_name, format_spec, conversion

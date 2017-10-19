@@ -48,6 +48,8 @@ def test_set_color():
 
 def test_format():
     assert compile_('print("Hello {}".format("World"))') == 'ym Hello_World'
+    assert compile_('print("Hello {}!".format("World"))') == 'ym Hello_World!'
+    assert compile_('N = 2; print("Yozhiks in Quake {}".format(N))') == 'ym Yozhiks_in_Quake_2'
     assert compile_('n = 2; print("Yozhiks in Quake {}".format(n))') == 'p1z 2 ym Yozhiks_in_Quake_^1'
     assert compile_('print("{2}{1}{0}".format("a", "b", "c"))') == 'ym cba'
     assert compile_('print("Health: {}".format(yozhiks[0].health))') == 'p1z e1p ym Health:_^1'
