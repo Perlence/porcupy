@@ -94,20 +94,20 @@ def test_generic_if():
     # Test is slice
     assert (compile_('x = [1, 2, 3][:]\n'
                      'if x: y = 11') ==
-            'p1z 1 p2z 2 p3z 3 p4z 16771 '
-            'p6z p4z{128 # p6z}128 = 0 ( g1z ) '
+            'p1z 1 p2z 2 p3z 3 p4z 10303 '
+            '# p4z}100 = 0 ( g1z ) '
             'p5z 11 '
             ':1')
     assert (compile_('x = [1, 2, 3][:]\n'
                      'if not x: y = 11') ==
-            'p1z 1 p2z 2 p3z 3 p4z 16771 '
-            'p6z p4z{128 p7z 0 # p6z}128 = 0 ( p7z 1 ) # p7z = 0 ( g1z ) '
+            'p1z 1 p2z 2 p3z 3 p4z 10303 '
+            'p6z 0 # p4z}100 = 0 ( p6z 1 ) # p6z = 0 ( g1z ) '
             'p5z 11 '
             ':1')
     assert (compile_('x = [1, 2, 3][:0]\n'
                      'if x: y = 11') ==
-            'p1z 1 p2z 2 p3z 3 p4z 16387 '
-            'p6z p4z{128 # p6z}128 = 0 ( g1z ) '
+            'p1z 1 p2z 2 p3z 3 p4z 10300 '
+            '# p4z}100 = 0 ( g1z ) '
             'p5z 11 '
             ':1')
 

@@ -208,10 +208,15 @@ class ListPointer(IntType):
         return get_slot_via_offset(converter, slot, slice_slot, self.item_type)
 
     def _setitem(self, converter, slot, slice_slot):
-        capacity_slot = self._cap(converter, slot)
-        if isinstance(slice_slot, Const) and isinstance(capacity_slot, Const):
-            if slice_slot.value >= capacity_slot.value:
-                raise IndexError('list index out of range')
+        if isinstance(slice_slot, Const):
+            try:
+                capacity = self.capacity
+            except AttributeError:
+                # TODO: Check sequence bounds in run-time
+                pass
+            else:
+                if slice_slot.value >= capacity:
+                    raise IndexError('list index out of range')
 
         if isinstance(self.item_type, GameObject):
             item_slot = converter.scope.get_temporary(self.item_type)
@@ -262,25 +267,25 @@ class Slice(IntType):
     slot_methods = {'append'}
 
     def _new(self, converter, pointer, length, capacity):
-        # pointer * 16384 + length * 128 + capacity
+        # pointer * 10000 + capacity * 100 + length
         result = converter.visit(
-            ast.BinOp(ast.BinOp(pointer, ast.Mult(), Const(16384)), ast.Add(),
-                      ast.BinOp(ast.BinOp(length, ast.Mult(), Const(128)), ast.Add(),
-                                capacity)))
+            ast.BinOp(ast.BinOp(pointer, ast.Mult(), Const(10000)), ast.Add(),
+                      ast.BinOp(ast.BinOp(capacity, ast.Mult(), Const(100)), ast.Add(),
+                                length)))
         result.type = self
         return result
 
     def _getptr(self, converter, slot):
-        # slot // 16384
-        return converter.visit(ast.BinOp(slot, ast.FloorDiv(), Const(16384)))
-
-    def _len(self, converter, slot):
-        # slot // 128 % 128
-        return converter.visit(ast.BinOp(ast.BinOp(slot, ast.FloorDiv(), Const(128)), ast.Mod(), Const(128)))
+        # slot // 10000
+        return converter.visit(ast.BinOp(slot, ast.FloorDiv(), Const(10000)))
 
     def _cap(self, converter, slot):
-        # slot % 128
-        return converter.visit(ast.BinOp(slot, ast.Mod(), Const(128)))
+        # slot // 100 % 100
+        return converter.visit(ast.BinOp(ast.BinOp(slot, ast.FloorDiv(), Const(100)), ast.Mod(), Const(100)))
+
+    def _len(self, converter, slot):
+        # slot % 100
+        return converter.visit(ast.BinOp(slot, ast.Mod(), Const(100)))
 
     def _getitem(self, converter, slot, slice_slot):
         ptr_slot = self._getptr(converter, slot)
@@ -311,7 +316,7 @@ class Slice(IntType):
         converter.scope.recycle_temporary(tmp)
 
         # Increment length
-        converter.visit(ast.AugAssign(slot, ast.Add(), ast.Num(128)))
+        converter.visit(ast.AugAssign(slot, ast.Add(), ast.Num(1)))
 
 
 @attr.s

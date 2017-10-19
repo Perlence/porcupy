@@ -158,10 +158,10 @@ def test_reversed():
     assert (compile_('items = [11, 22, 33][:]\n'
                      'for item in reversed(items):\n'
                      '    print(item)') ==
-            'p1z 11 p2z 22 p3z 33 p4z 16771 '
-            'p6z -1 p7z p4z{128 '
-            ':1 p6z p6z+1 # p6z >= p7z}128 ( g2z ) '
-            'p8z p4z{128 p9z p8z}128 p10z p9z-1 p12z p4z{16384 p13z p10z-p6z p11z p12z+p13z p14z p^11z p5z p14z '
+            'p1z 11 p2z 22 p3z 33 p4z 10303 '
+            'p6z -1 '
+            ':1 p6z p6z+1 # p6z >= p4z}100 ( g2z ) '
+            'p7z p4z}100 p8z p7z-1 p10z p4z{10000 p11z p8z-p6z p9z p10z+p11z p12z p^9z p5z p12z '
             'ym ^5 '
             'g1z '
             ':2')
