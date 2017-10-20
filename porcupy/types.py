@@ -322,7 +322,6 @@ class Slice(IntType):
 @attr.s(hash=True)
 @Sequence.register
 class Range(Type):
-    # TODO: Pack range object into one slot
     def _len(self, converter, slot):
         start = slot.metadata['start']
         stop = slot.metadata['stop']
