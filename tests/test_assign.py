@@ -3,7 +3,7 @@ import pytest
 from porcupy.compiler import compile as compile_
 
 
-@pytest.mark.skip('Not implemented yet')
+@pytest.mark.xfail
 def test_tuple_assign():
     assert compile_('x, y = 1, 2') == 'p1z 1 p2z 2'
 

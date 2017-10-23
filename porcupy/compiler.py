@@ -69,7 +69,7 @@ class NodeConverter:
         return result
 
     def generic_visit(self, node):
-        raise NotImplementedError("node '{}' is not implemented yet".format(node))
+        raise NotImplementedError("node '{}' is not implemented".format(node))
 
     def visit_Module(self, node):
         for stmt in node.body:
@@ -148,7 +148,7 @@ class NodeConverter:
         elif isinstance(target, (ast.Attribute, ast.Subscript)):
             dest_slot = self.visit(target)
         else:
-            raise NotImplementedError("assigning values to '{}' is not implemented yet".format(target))
+            raise NotImplementedError("assigning values to '{}' is not implemented".format(target))
 
         if dest_slot is None:
             return
@@ -343,7 +343,7 @@ class NodeConverter:
     def visit_Attribute(self, node):
         value_slot = self.visit(node.value)
         if not hasattr(value_slot.type, '_getattr'):
-            raise NotImplementedError("getting attribute of object of type '{}' is not implemented yet"
+            raise NotImplementedError("getting attribute of object of type '{}' is not implemented"
                                       .format(value_slot.type))
         return value_slot.type._getattr(self, value_slot, node.attr)
 
@@ -358,13 +358,13 @@ class NodeConverter:
     def load_index_subscript(self, value_slot, slice_slot, ctx):
         if isinstance(ctx, ast.Load):
             if not hasattr(value_slot.type, '_getitem'):
-                raise NotImplementedError("getting item of collection of type '{}' is not implemented yet"
+                raise NotImplementedError("getting item of collection of type '{}' is not implemented"
                                           .format(value_slot.type))
             return value_slot.type._getitem(self, value_slot, slice_slot)
 
         elif isinstance(ctx, ast.Store):
             if not hasattr(value_slot.type, '_setitem'):
-                raise NotImplementedError("setting item of collection of type '{}' is not implemented yet"
+                raise NotImplementedError("setting item of collection of type '{}' is not implemented"
                                           .format(value_slot.type))
             return value_slot.type._setitem(self, value_slot, slice_slot)
 
@@ -482,7 +482,7 @@ class NodeConverter:
         elif isinstance(value, ast.Mod):
             return Mod()
         else:
-            raise NotImplementedError("operation '{}' is not implemented yet".format(value))
+            raise NotImplementedError("operation '{}' is not implemented".format(value))
 
     def visit_UnaryOp(self, node):
         if isinstance(node.op, ast.Not):
@@ -496,11 +496,11 @@ class NodeConverter:
 
     def visit_Call(self, node, raise_if_returns=False):
         if node.keywords:
-            raise NotImplementedError('function keywords are not implemented yet')
+            raise NotImplementedError('function keywords are not implemented')
         func = self.visit(node.func)
         args = [self.visit(arg) for arg in node.args]
         if not hasattr(func.type, '_call'):
-            raise NotImplementedError("calling function '{}' is not implemented yet".format(func))
+            raise NotImplementedError("calling function '{}' is not implemented".format(func))
         result = func.type._call(self, func, *args)
 
         if raise_if_returns:

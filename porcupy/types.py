@@ -87,7 +87,7 @@ class NumberType(Type):
                 return attr.evolve(operand, value=(not operand.value), type=BoolType())
             return converter.visit(ast.Compare(operand.type._truthy(converter, operand), [ast.Eq()], [Const(0)]))
         else:
-            raise NotImplementedError("unary operation '{}' is not implemented yet".format(op))
+            raise NotImplementedError("unary operation '{}' is not implemented".format(op))
 
     def _truthy(self, converter, slot):
         return slot
@@ -139,9 +139,9 @@ class Formatter(string.Formatter):
     def parse(self, fmt_string):
         for i, (literal_text, field_name, format_spec, conversion) in enumerate(super().parse(fmt_string)):
             if format_spec:
-                raise NotImplementedError('format specification is not implemented yet')
+                raise NotImplementedError('format specification is not implemented')
             if conversion:
-                raise NotImplementedError('conversion is not implemented yet')
+                raise NotImplementedError('conversion is not implemented')
 
             if field_name is not None and not self._arg_index_is_present(field_name):
                 field_name = str(i) + field_name
