@@ -3,11 +3,6 @@ import pytest
 from porcupy.compiler import compile as compile_
 
 
-@pytest.mark.xfail
-def test_tuple_assign():
-    assert compile_('x, y = 1, 2') == 'p1z 1 p2z 2'
-
-
 def test_consts():
     assert compile_('X = 4') == ''
     assert compile_('X = 4; y = X') == 'p1z 4'
