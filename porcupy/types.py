@@ -40,36 +40,41 @@ class NumberType(Type):
         # 1 / x -> _tmp = 1; _tmp / x
         # 1 + x -> x + 1
         # 1 * x -> x * 1
-        if isinstance(left, Const):
-            if isinstance(op, (Sub, Div, FloorDiv, Mod)):
-                left_slot = converter.scope.get_temporary(left.type)
-                converter.append_assign(left_slot, left)
-                temp.append(left_slot)
-                left = left_slot
-            else:
-                left, right = right, left
+        if not isinstance(left, Const):
+            return left, right
+
+        if isinstance(op, (Sub, Div, FloorDiv, Mod)):
+            left_slot = converter.scope.get_temporary(left.type)
+            converter.append_assign(left_slot, left)
+            temp.append(left_slot)
+            left = left_slot
+        else:
+            left, right = right, left
         return left, right
 
     def _change_right_sign(self, op, right):
         # x - (-5) -> x + 5
         # x + (-5) -> x - 5
-        if isinstance(right, Const):
-            if right.value < 0:
-                if isinstance(op, Sub):
-                    right.value = -right.value
-                    op = Add()
-                elif isinstance(op, Add):
-                    right.value = -right.value
-                    op = Sub()
+        if not isinstance(right, Const):
+            return op, right
+
+        if right.value < 0:
+            if isinstance(op, Sub):
+                right.value = -right.value
+                op = Add()
+            elif isinstance(op, Add):
+                right.value = -right.value
+                op = Sub()
         return op, right
 
     def _store_temporary(self, converter, value, temp):
-        if not isinstance(value, (Const, Slot, EvolvedSlot)):
-            value_slot = converter.scope.get_temporary(value.type)
-            converter.append_assign(value_slot, value)
-            temp.append(value_slot)
-            value = value_slot
-        return value
+        if isinstance(value, (Const, Slot, EvolvedSlot)):
+            return value
+
+        value_slot = converter.scope.get_temporary(value.type)
+        converter.append_assign(value_slot, value)
+        temp.append(value_slot)
+        return value_slot
 
     def _unary_op(self, converter, op, operand):
         if isinstance(op, ast.UAdd):
