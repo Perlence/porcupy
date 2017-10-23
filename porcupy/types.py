@@ -224,15 +224,9 @@ class ListPointer(IntType):
                 if slice_slot.value >= capacity:
                     raise IndexError('list index out of range')
 
-        if isinstance(self.item_type, GameObject):
-            item_slot = converter.scope.get_temporary(self.item_type)
-            converter.append_assign(item_slot, slot)
-            converter.recycle_later(item_slot)
-            return item_slot
-        else:
-            pointer_math_slot = item_addr(converter, slot, slice_slot)
-            converter.recycle_later(pointer_math_slot)
-            return EvolvedSlot(pointer_math_slot, type=self.item_type, ref=True)
+        pointer_math_slot = item_addr(converter, slot, slice_slot)
+        converter.recycle_later(pointer_math_slot)
+        return EvolvedSlot(pointer_math_slot, type=self.item_type, ref=True)
 
     def _len(self, converter, slot):
         return Const(self.capacity)

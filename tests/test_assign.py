@@ -249,6 +249,8 @@ def test_game_objects():
     assert compile_('system.color = 256') == 'yc 256'
 
     assert compile_('x = [yozhiks[7], yozhiks[8]]; x[0].frags = 55') == 'p1z 8 p2z 9 p3z 1 p4z p3z+0 p5z p^4z e^5f 55'
+    assert (compile_('x = [yozhiks[7], yozhiks[8]]; x[0] = yozhiks[6]; x[0].frags = 55') ==
+            'p1z 8 p2z 9 p3z 1 p4z p3z+0 p^4z 7 p4z p3z+0 p5z p^4z e^5f 55')
 
 
 def test_read_only_attrs():
