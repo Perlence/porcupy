@@ -14,7 +14,7 @@ str_type = StringType()
 # TODO: Use enumerations in attribute metadata
 
 
-@attr.s(init=False, hash=True)
+@attr.s(init=False, hash=True, repr=False)
 class Timer(GameObject):
     value = attr.ib(metadata={'abbrev': 'i', 'type': int_type})
     enabled = attr.ib(metadata={'abbrev': 'r', 'type': bool_type, 'readonly': True})
@@ -51,7 +51,7 @@ class GameMode(enum.IntEnum):
     hot_seat_split = 7
 
 
-@attr.s(init=False, hash=True)
+@attr.s(init=False, hash=True, repr=False)
 class System(GameObject):
     bots = attr.ib(metadata={'abbrev': 'b', 'type': int_type})
     color = attr.ib(metadata={'abbrev': 'c', 'type': int_type})
@@ -95,7 +95,7 @@ class System(GameObject):
         return result
 
 
-@attr.s(init=False, hash=True)
+@attr.s(init=False, hash=True, repr=False)
 class Point(GameObject):
     pos_x = attr.ib(metadata={'abbrev': 'x', 'type': float_type})
     pos_y = attr.ib(metadata={'abbrev': 'y', 'type': float_type})
@@ -116,7 +116,7 @@ class Weapon(enum.IntEnum):
     railgun = 9
 
 
-@attr.s(init=False, hash=True)
+@attr.s(init=False, hash=True, repr=False)
 class Yozhik(GameObject):
     frags = attr.ib(metadata={'abbrev': 'f', 'type': int_type})
     pos_x = attr.ib(metadata={'abbrev': 'x', 'type': float_type})
@@ -147,7 +147,7 @@ class BotLevel(enum.IntEnum):
     impossible = 5
 
 
-@attr.s(init=False, hash=True)
+@attr.s(init=False, hash=True, repr=False)
 class Bot(GameObject):
     ai = attr.ib(metadata={'abbrev': 'i', 'type': bool_type})
     target = attr.ib(metadata={'abbrev': 't', 'type': Yozhik()})
@@ -159,7 +159,7 @@ class Bot(GameObject):
     metadata = {'abbrev': 'a'}
 
 
-@attr.s(init=False, hash=True)
+@attr.s(init=False, hash=True, repr=False)
 class Sheep(GameObject):
     metadata = {'abbrev': 'h'}
 
@@ -176,7 +176,7 @@ class DoorState(enum.IntEnum):
     closing = 3
 
 
-@attr.s(init=False, hash=True)
+@attr.s(init=False, hash=True, repr=False)
 class Door(GameObject):
     state = attr.ib(metadata={'abbrev': 's', 'type': int_type, 'readonly': True})
 
@@ -193,7 +193,7 @@ class Door(GameObject):
     close.metadata = {'abbrev': 'c'}
 
 
-@attr.s(init=False, hash=True)
+@attr.s(init=False, hash=True, repr=False)
 class Button(GameObject):
     is_pressed = attr.ib(metadata={'abbrev': 'u', 'type': bool_type, 'readonly': True})
 
@@ -205,7 +205,7 @@ class Button(GameObject):
     press.metadata = {'abbrev': 'd'}
 
 
-@attr.s(init=False, hash=True)
+@attr.s(init=False, hash=True, repr=False)
 class Viewport(GameObject):
     pos_x = attr.ib(metadata={'abbrev': 'x', 'type': int_type, 'readonly': True})
     pos_y = attr.ib(metadata={'abbrev': 'y', 'type': int_type, 'readonly': True})
