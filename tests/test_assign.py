@@ -187,6 +187,7 @@ def test_const_list():
 
 def test_range():
     assert compile_('X = range(5)') == ''
+    assert compile_('X = range(5, 10)') == ''
     assert compile_('X = range(11, 44, 11)') == ''
 
     assert compile_('X = range(11, 44, 11); y = X[0]; y = X[2]') == 'p1z 11 p1z 33'
