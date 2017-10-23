@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 import ast
+from collections import ChainMap
 from inspect import signature
 import string
 import _string
@@ -420,13 +421,13 @@ class GameObject(IntType):
         if slot.is_variable():
             slot = EvolvedSlot(slot, register=register, ref=True)
 
-        metadata_stub = {**attrib.metadata}
+        metadata_stub = dict(**attrib.metadata)
         attrib_type = metadata_stub.pop('type')
         attrib_abbrev = metadata_stub.pop('abbrev')
-        metadata = {**slot.metadata, **metadata_stub}
+        metadata = ChainMap(metadata_stub, slot.metadata)
 
         return EvolvedSlot(slot, type=attrib_type, attrib=attrib_abbrev,
-                              metadata=metadata)
+                           metadata=metadata)
 
 
 @attr.s(hash=True)

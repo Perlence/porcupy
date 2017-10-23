@@ -1,4 +1,5 @@
 import ast
+from collections import ChainMap
 from numbers import Number
 from operator import add, sub, mul, truediv, floordiv, mod
 
@@ -111,7 +112,7 @@ class EvolvedSlot(AST):
     def __init__(self, inst, **changes):
         if isinstance(inst, EvolvedSlot):
             super().__setattr__('_original', super(EvolvedSlot, inst).__getattribute__('_original'))
-            super().__setattr__('_changes', {**super(EvolvedSlot, inst).__getattribute__('_changes'), **changes})
+            super().__setattr__('_changes', ChainMap(changes, super(EvolvedSlot, inst).__getattribute__('_changes')))
         else:
             super().__setattr__('_original', inst)
             super().__setattr__('_changes', changes)
