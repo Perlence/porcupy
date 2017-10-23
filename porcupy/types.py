@@ -192,8 +192,8 @@ class Sequence(metaclass=ABCMeta):
         pass
 
 
-@attr.s(hash=True)
 @Sequence.register
+@attr.s(hash=True)
 class ListPointer(IntType):
     item_type = attr.ib()
     capacity = attr.ib()
@@ -265,8 +265,8 @@ def item_addr(converter, pointer, offset):
     return pointer_math_slot
 
 
-@attr.s(hash=True)
 @Sequence.register
+@attr.s(hash=True)
 class Slice(IntType):
     item_type = attr.ib()
 
@@ -325,8 +325,8 @@ class Slice(IntType):
         converter.visit(ast.AugAssign(slot, ast.Add(), ast.Num(1)))
 
 
-@attr.s(hash=True)
 @Sequence.register
+@attr.s(hash=True)
 class Range(Type):
     def _len(self, converter, slot):
         start = slot.metadata['start']
@@ -357,8 +357,8 @@ class Range(Type):
         return Const(None, self, metadata=metadata)
 
 
-@attr.s(hash=True)
 @Sequence.register
+@attr.s(hash=True)
 class Reversed(Type):
     def _call(self, converter, func, sequence):
         metadata = {
