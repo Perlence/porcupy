@@ -9,25 +9,27 @@ def test_no_args_no_return():
             'ym Hey')
 
 
-def test_no_args_return():
-    assert (compile_('def f():\n'
-                     '    return\n'
-                     'f()') ==
-            'g1z :1')
-
-
-def test_args_return():
+def test_args_no_return():
     assert (compile_('def f(x):\n'
                      '    print(x)\n'
                      'f(42)') ==
             'ym 42')
 
 
-def test_no_args():
+def test_no_args_return():
+    assert (compile_('def f():\n'
+                     '    return\n'
+                     'f()') ==
+            'g1z :1')
     assert (compile_('def f():\n'
                      '    return 42\n'
-                     'x = f()') ==
-            'p2z 42 g1z :1 p1z p2z')
+                     'x = f()\n'
+                     'x = f()\n') ==
+            'p2z 42 g1z :1 p1z p2z p2z 42 g2z :2 p1z p2z')
+    assert (compile_('def f():\n'
+                     '    return 42\n'
+                     'x = 1-f()\n') ==
+            'p2z 42 g1z :1 p3z 1 p1z p3z-p2z')
 
 
 def test_local_vars():

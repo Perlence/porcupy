@@ -478,6 +478,7 @@ class InlineFunc(Type):
         # TODO: Recycle result_slot?
         if self.does_return_value():
             converter.result_slot = converter.scope.get_temporary(NumberType())
+            converter.recycle_later(converter.result_slot)
         with self.args_in_scope(converter, args), self.push_end_label(converter):
             for stmt in self.func_node.body:
                 converter.visit(stmt)
