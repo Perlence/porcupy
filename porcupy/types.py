@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import ast
 from collections import ChainMap
+from contextlib import contextmanager
 from inspect import signature
 import string
 import _string
@@ -466,6 +467,52 @@ class GameObjectMethod(Type):
             return Call(func, args)
         else:
             return result
+
+
+@attr.s(hash=True)
+class InlineFunc(Type):
+    func_node = attr.ib()
+
+    def _call(self, converter, _, *args):
+        # TODO: Derive result type of the function
+        # TODO: Recycle result_slot?
+        if self.does_return_value():
+            converter.result_slot = converter.scope.get_temporary(NumberType())
+        with self.args_in_scope(converter, args), self.push_end_label(converter):
+            for stmt in self.func_node.body:
+                converter.visit(stmt)
+        return converter.result_slot
+
+    def does_return_value(self):
+        for node in ast.walk(self.func_node):
+            if isinstance(node, ast.Return):
+                if node.value is not None:
+                    return True
+        return False
+
+    def does_return(self):
+        for node in ast.walk(self.func_node):
+            if isinstance(node, ast.Return):
+                return True
+        return False
+
+    @contextmanager
+    def args_in_scope(self, converter, args):
+        arg_names = [arg.arg for arg in self.func_node.args.args]
+        local_scope = {name: value for name, value in zip(arg_names, args)}
+        with converter.scope.subscope(local_scope):
+            yield
+
+    @contextmanager
+    def push_end_label(self, converter):
+        if not self.does_return():
+            yield
+            return
+        end_label = converter.new_label()
+        converter.func_labels.append(end_label)
+        yield
+        converter.append_node(end_label)
+        converter.func_labels.pop()
 
 
 def check_type(dest_slot, src_slot):

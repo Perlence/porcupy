@@ -1,5 +1,6 @@
 import ast
-from collections import defaultdict
+from collections import defaultdict, ChainMap
+from contextlib import contextmanager
 from fractions import Fraction
 
 import attr
@@ -10,7 +11,7 @@ from .ast import (AST, Module, Assign, If, Const, Slot, EvolvedSlot, BoolOp,
 from .gameobjs import (Yozhik, Timer, Point, Bot, System, Button, Door,
                        Viewport, Sheep)
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
-                    ListPointer, Slice, CallableType, check_type)
+                    ListPointer, Slice, CallableType, InlineFunc, check_type)
 
 
 def compile(source, filename='<unknown>', separate_stmts=False):
@@ -49,6 +50,8 @@ class NodeConverter:
     body = attr.ib(default=attr.Factory(list))
     last_label = attr.ib(default=0)
     loop_labels = attr.ib(default=attr.Factory(list))
+    func_labels = attr.ib(default=attr.Factory(list))
+    result_slot = attr.ib(default=None)
     current_stmt = attr.ib(default=None)
     slots_to_recycle_later = attr.ib(default=attr.Factory(lambda: defaultdict(list)))
 
@@ -504,9 +507,9 @@ class NodeConverter:
             raise NotImplementedError("calling function '{}' is not implemented".format(func))
         result = func.type._call(self, func, *args)
 
-        if raise_if_returns:
-            if result is not None and not isinstance(result, Call):
-                raise ValueError('function return value is unused')
+        # if raise_if_returns:
+        #     if result is not None and not isinstance(result, Call):
+        #         raise ValueError('function return value is unused')
 
         return result
 
@@ -520,6 +523,25 @@ class NodeConverter:
         ]))
         self.recycle_later(tmp)
         return tmp
+
+    def visit_FunctionDef(self, node):
+        self.scope.define_const(node.name, Const(None, InlineFunc(node)))
+
+    def visit_Return(self, node):
+        goto_end = Slot('g', self.func_labels[-1].index, 'z', None)
+        if self.result_slot is not None and node.value is not None:
+            self.append_assign(self.result_slot, self.visit(node.value))
+        self.append_node(goto_end)
+
+    def visit_Global(self, node):
+        for name in node.names:
+            self.scope.names[name] = GLOBAL
+
+    def visit_Nonlocal(self, node):
+        for name in node.names:
+            if name not in self.scope.names.nonlocals:
+                raise NameError("no binding for nonlocal '{}' found".format(name))
+            self.scope.names[name] = NONLOCAL
 
     def negate_bool(self, expr):
         if isinstance(expr, Const):
@@ -558,9 +580,62 @@ class NodeConverter:
         return target.id is not None and target.id.isupper()
 
 
+class ScopeMap(ChainMap):
+    def __getitem__(self, name):
+        for mapping in self.maps:
+            try:
+                value = mapping[name]
+                ok = True
+            except KeyError:
+                value = None
+                ok = False
+            if value is GLOBAL:
+                return self.globals.get(name)
+            elif value is NONLOCAL:
+                continue
+            elif ok:
+                return value
+        return self.__missing__(name)
+
+    def get_local(self, name):
+        value = self.locals.get(name)
+        if value is GLOBAL:
+            return self.globals.get(name)
+        elif value is NONLOCAL:
+            return self.nonlocals.get_local(name)
+        else:
+            return value
+
+    def __setitem__(self, name, value):
+        old_value = self.locals.get(name)
+        if old_value is GLOBAL:
+            self.globals[name] = value
+        elif old_value is NONLOCAL:
+            self.nonlocals[name] = value
+        else:
+            self.locals[name] = value
+
+    def pop_locals(self):
+        self.maps = self.maps[1:]
+
+    @property
+    def locals(self):
+        return self.maps[0]
+
+    @property
+    def globals(self):
+        return self.maps[-1]
+
+    @property
+    def nonlocals(self):
+        if len(self.maps) < 3:
+            return {}
+        return self.__class__(*self.maps[1:-1])
+
+
 @attr.s
 class Scope:
-    names = attr.ib(default=attr.Factory(dict))
+    names = attr.ib(default=attr.Factory(ScopeMap))
     numeric_slots = attr.ib(default=attr.Factory(lambda: Slots(start=1)))
     string_slots = attr.ib(default=attr.Factory(lambda: Slots()))
     temporary_slots = attr.ib(default=attr.Factory(list))
@@ -669,7 +744,7 @@ class Scope:
         self.names[name] = value
 
     def assign(self, name, src_slot):
-        slot = self.names.get(name)
+        slot = self.names.get_local(name)
         if slot is not None:
             return slot
 
@@ -678,6 +753,14 @@ class Scope:
         slot.metadata = src_slot.metadata
         self.names[name] = slot
         return slot
+
+    @contextmanager
+    def subscope(self, scope=None):
+        self.names = self.names.new_child(scope)
+        yield
+        for slot in self.names.locals.values():
+            self.deallocate(slot)
+        self.names.pop_locals()
 
     def get_by_index(self, index, type):
         if isinstance(type, NumberType):
@@ -701,6 +784,14 @@ class Scope:
             return Slot('p', index, 'z', type)
         else:
             raise TypeError("cannot allocate slot of type '{}'".format(type))
+
+    def deallocate(self, slot):
+        if not isinstance(slot, Slot):
+            return
+        if isinstance(slot.type, NumberType):
+            self.numeric_slots.deallocate(slot.index)
+        else:
+            raise TypeError("cannot deallocate slot of type '{}'".format(slot.type))
 
     def allocate_many(self, type, length):
         return [self.allocate(type) for _ in range(length)]
@@ -757,8 +848,13 @@ class Slots:
                 return addr + self.start
         raise MemoryError('ran out of variable slots')
 
+    def deallocate(self, addr):
+        self.slots[addr-self.start] = None
+
     def is_reserved(self, addr):
         return self.slots[addr-self.start] is RESERVED
 
 
 RESERVED = object()
+GLOBAL = object()
+NONLOCAL = object()
