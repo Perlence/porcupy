@@ -371,6 +371,7 @@ class NodeConverter:
     def load_slice_subscript(self, value_slot, slice_slot):
         list_ptr = value_slot.type._getptr(self, value_slot)
         src_capacity = value_slot.type._cap(self, value_slot)
+        src_length = value_slot.type._len(self, value_slot)
 
         lower = slice_slot.start
         upper = slice_slot.stop
@@ -378,7 +379,7 @@ class NodeConverter:
         if lower is None:
             lower = Const(0)
         if upper is None:
-            upper = src_capacity
+            upper = src_length
 
         ptr_value = self.visit(ast.BinOp(list_ptr, ast.Add(), lower))
         len_value = self.visit(ast.BinOp(upper, ast.Sub(), lower))

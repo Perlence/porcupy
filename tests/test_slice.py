@@ -24,6 +24,12 @@ def test_assign():
             'p5z 1 '
             'p7z p4z+0 p8z p5z-0 p9z p7z*10000 p10z p8z+300 p6z p9z+p10z')
 
+    assert (compile_('xs = [11, 22, 33, 0, 0][:3]\n'
+                     'ys = xs[0:]') ==
+            'p1z 11 p2z 22 p3z 33 p4z 0 p5z 0 p6z 10503 '
+            'p8z p6z{100 p9z p6z{10000 p10z p6z}100 p11z p8z}100 p12z p9z+0 p13z p11z-0 p14z p13z*100 p15z p10z-0 '
+            'p16z p12z*10000 p17z p14z+p15z p7z p16z+p17z')
+
 
 def test_len_cap():
     assert (compile_('x = [11]\n'
