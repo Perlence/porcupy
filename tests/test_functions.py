@@ -102,6 +102,24 @@ def test_nonlocal_reference():
 
 
 @pytest.mark.xfail
+def test_temporary_vars():
+    assert (compile_('def f(x):\n'
+                     '    return 1-x\n'
+                     'x = 42\n'
+                     'y = f(x)') ==
+            'p1z 42 p3z 1 p4z p3z-p1z g1z :1 p2z p4z')
+
+
+@pytest.mark.xfail
+def test_call_by_value():
+    assert (compile_('def f(x):\n'
+                     '    x = 43\n'
+                     'x = 42\n'
+                     'f(x)') ==
+            'p1z 42 p2z p1z p2z 43')
+
+
+@pytest.mark.xfail
 def test_recursion():
     with pytest.raises(NotImplementedError) as exc_info:
         compile_('def f():\n'
