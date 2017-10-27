@@ -500,8 +500,9 @@ class InlineFunc(Type):
     @contextmanager
     def args_in_scope(self, converter, args):
         arg_names = [arg.arg for arg in self.func_node.args.args]
-        local_scope = {name: value for name, value in zip(arg_names, args)}
-        with converter.scope.subscope(local_scope):
+        with converter.scope.subscope():
+            for name, value in zip(arg_names, args):
+                converter.visit(ast.Assign([ast.Name(name, ast.Store())], value))
             yield
 
     @contextmanager

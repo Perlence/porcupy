@@ -13,7 +13,7 @@ def test_args_no_return():
     assert (compile_('def f(x):\n'
                      '    print(x)\n'
                      'f(42)') ==
-            'ym 42')
+            'p1z 42 ym ^1')
 
 
 def test_no_args_return():
@@ -110,7 +110,6 @@ def test_temporary_vars():
             'p1z 42 p3z 1 p4z p3z-p1z g1z :1 p2z p4z')
 
 
-@pytest.mark.xfail
 def test_call_by_value():
     assert (compile_('def f(x):\n'
                      '    x = 43\n'
