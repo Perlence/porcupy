@@ -231,6 +231,12 @@ def test_tuple_unpacking():
         assert 'not enough values to unpack' in str(exc_info)
 
 
+@pytest.mark.xfail
+def test_nested_tuple_unpacking():
+    assert (compile_('(x, y), z = (11, 22), 33') ==
+            'p1z 11 p2z 22 p3z 33')
+
+
 def test_game_objects():
     assert compile_('x = yozhiks[0].frags') == 'p1z e1f'
     assert compile_('x = 1; y = yozhiks[x].frags') == 'p1z 1 p3z p1z+1 p2z e^3f'

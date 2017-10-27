@@ -153,6 +153,10 @@ def test_return_tuple():
                  '    return 42\n'
                  'x, y = f()')
     assert 'not enough values to unpack' in str(exc_info)
+    assert (compile_('def f():\n'
+                     '    return 42\n'
+                     'x, y = f(), 43') ==
+            'p3z 42 g1z :1 p4z p3z p1z p4z p2z 43')
 
 
 def test_return_different_types():
