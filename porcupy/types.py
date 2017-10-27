@@ -475,14 +475,11 @@ class InlineFunc(Type):
 
     def _call(self, converter, _, *args):
         # TODO: Derive result type of the function
-        # TODO: Recycle result_slot?
-        if self.does_return_value():
-            converter.result_slot = converter.scope.get_temporary(NumberType())
-            converter.recycle_later(converter.result_slot)
-        with self.args_in_scope(converter, args), self.push_end_label(converter):
+        with self.reserve_result_slot(converter) as func_result_slot, self.args_in_scope(converter, args), \
+                self.push_end_label(converter):
             for stmt in self.func_node.body:
                 converter.visit(stmt)
-        return converter.result_slot
+            return func_result_slot
 
     def does_return_value(self):
         for node in ast.walk(self.func_node):
@@ -498,6 +495,18 @@ class InlineFunc(Type):
         return False
 
     @contextmanager
+    def reserve_result_slot(self, converter):
+        if not self.does_return_value():
+            yield
+            return
+
+        func_result_slot = converter.scope.get_temporary(NumberType())
+        converter.func_result_slots.append(func_result_slot)
+        converter.recycle_later(func_result_slot)
+        yield func_result_slot
+        converter.func_result_slots.remove(func_result_slot)
+
+    @contextmanager
     def args_in_scope(self, converter, args):
         arg_names = [arg.arg for arg in self.func_node.args.args]
         with converter.scope.subscope():
@@ -510,6 +519,7 @@ class InlineFunc(Type):
         if not self.does_return():
             yield
             return
+
         end_label = converter.new_label()
         converter.func_labels.append(end_label)
         yield

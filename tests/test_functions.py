@@ -92,6 +92,15 @@ def test_temporary_vars():
             'p2z p4z')
 
 
+def test_nested_return():
+    assert (compile_('def f():\n'
+                     '    def g():\n'
+                     '        return 42\n'
+                     '    return g()+1\n'
+                     'x = f()') ==
+            'p3z 42 g2z :2 p2z p3z+1 g1z :1 p1z p2z')
+
+
 def test_global_reference():
     assert (compile_('x = 99\n'
                      'def f():\n'

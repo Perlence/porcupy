@@ -51,7 +51,7 @@ class NodeConverter:
     last_label = attr.ib(default=0)
     loop_labels = attr.ib(default=attr.Factory(list))
     func_labels = attr.ib(default=attr.Factory(list))
-    result_slot = attr.ib(default=None)
+    func_result_slots = attr.ib(default=attr.Factory(list))
     current_stmt = attr.ib(default=None)
     slots_to_recycle_later = attr.ib(default=attr.Factory(lambda: defaultdict(list)))
 
@@ -529,8 +529,8 @@ class NodeConverter:
 
     def visit_Return(self, node):
         goto_end = Slot('g', self.func_labels[-1].index, 'z', None)
-        if self.result_slot is not None and node.value is not None:
-            self.append_assign(self.result_slot, self.visit(node.value))
+        if self.func_result_slots and node.value is not None:
+            self.append_assign(self.func_result_slots[-1], self.visit(node.value))
         self.append_node(goto_end)
 
     def visit_Global(self, node):
