@@ -78,7 +78,7 @@ def test_temporary_vars():
                      'x = 42\n'
                      'y = f(x)') ==
             'p1z 42 '
-            'p2z p1z p4z 1 p3z p4z-p2z g1z :1 p2z p3z')
+            'p2z p1z p3z 1 p4z p3z-p2z g1z :1 p2z p4z')
     assert (compile_('def f(x):\n'
                      '    y = 1-x\n'
                      '    return 1-y\n'
@@ -86,10 +86,10 @@ def test_temporary_vars():
                      'y = f(x)') ==
             'p1z 42 '
             'p2z p1z '
-            'p5z 1 p3z p5z-p2z '
-            'p5z 1 p4z p5z-p3z '
+            'p4z 1 p3z p4z-p2z '
+            'p4z 1 p5z p4z-p3z '
             'g1z :1 '
-            'p2z p4z')
+            'p2z p5z')
 
 
 def test_nested_return():
@@ -98,7 +98,7 @@ def test_nested_return():
                      '        return 42\n'
                      '    return g()+1\n'
                      'x = f()') ==
-            'p3z 42 g2z :2 p2z p3z+1 g1z :1 p1z p2z')
+            'p2z 42 g2z :2 p3z p2z+1 g1z :1 p1z p3z')
 
 
 def test_global_reference():
@@ -144,6 +144,27 @@ def test_return_tuple():
                      '    return 42, 42\n'
                      'x, y = f()') ==
             'p3z 42 p4z 42 g1z :1 p1z p3z p2z p4z')
+
+
+def test_return_different_types():
+    with pytest.raises(TypeError) as exc_info:
+        compile_('def f():\n'
+                 '    return 0\n'
+                 '    return slice(int, 5)\n'
+                 'x = f()')
+    assert "cannot assign value of type 'Slice(item_type=NumberType())' to variable of type 'NumberType()'" in str(exc_info)
+
+
+def test_return_slice():
+    assert (compile_('def myslice(xs, lower, upper):\n'
+                     '    return xs[lower:upper]\n'
+                     'xs = [11, 22, 33, 44, 55]\n'
+                     'ys = myslice(xs, 0, 3)') ==
+            'p1z 11 p2z 22 p3z 33 p4z 44 p5z 55 p6z 1 '
+            'p7z p6z p8z 0 p9z 3 '
+            'p10z 5 p11z p7z+p8z p12z p10z-p8z p13z p12z*100 p14z p9z-p8z p15z p11z*10000 p16z p13z+p14z '
+            'p17z p15z+p16z g1z :1 '
+            'p7z p17z')
 
 
 @pytest.mark.xfail

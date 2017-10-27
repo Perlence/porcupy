@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import ast
 from collections import ChainMap
+from concurrent.futures import Future
 from contextlib import contextmanager
 from inspect import signature
 import string
@@ -474,12 +475,12 @@ class InlineFunc(Type):
     func_node = attr.ib()
 
     def _call(self, converter, _, *args):
-        # TODO: Derive result type of the function
         with self.reserve_result_slot(converter) as func_result_slot, self.args_in_scope(converter, args), \
                 self.push_end_label(converter):
             for stmt in self.func_node.body:
                 converter.visit(stmt)
-            return func_result_slot
+            assert func_result_slot.done()
+            return func_result_slot.result()
 
     def does_return_value(self):
         for node in ast.walk(self.func_node):
@@ -496,15 +497,17 @@ class InlineFunc(Type):
 
     @contextmanager
     def reserve_result_slot(self, converter):
+        future_slot = Future()
         if not self.does_return_value():
-            yield
+            future_slot.set_result(None)
+            yield future_slot
             return
 
-        func_result_slot = converter.scope.get_temporary(NumberType())
-        converter.func_result_slots.append(func_result_slot)
-        converter.recycle_later(func_result_slot)
-        yield func_result_slot
-        converter.func_result_slots.remove(func_result_slot)
+        converter.func_result_slots.append(future_slot)
+        converter.recycle_later(future_slot)
+        yield future_slot
+        print('recycle_later', repr(future_slot.result()))
+        converter.func_result_slots.remove(future_slot)
 
     @contextmanager
     def args_in_scope(self, converter, args):

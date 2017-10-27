@@ -1,5 +1,6 @@
 import ast
 from collections import defaultdict, ChainMap
+from concurrent.futures import Future
 from contextlib import contextmanager
 from fractions import Fraction
 
@@ -66,6 +67,9 @@ class NodeConverter:
         result = visitor(node)
 
         for slot in self.slots_to_recycle_later[node]:
+            if isinstance(slot, Future):
+                assert slot.done()
+                slot = slot.result()
             self.scope.recycle_temporary(slot)
         del self.slots_to_recycle_later[node]
 
@@ -530,8 +534,19 @@ class NodeConverter:
     def visit_Return(self, node):
         goto_end = goto(self.func_labels[-1].index)
         if self.func_result_slots and node.value is not None:
-            self.append_assign(self.func_result_slots[-1], self.visit(node.value))
+            src_slot = self.visit(node.value)
+            result_slot = self.get_slot_for_result(src_slot.type)
+            self.append_assign(result_slot, src_slot)
         self.append_node(goto_end)
+
+    def get_slot_for_result(self, type):
+        future_result_slot = self.func_result_slots[-1]
+        if future_result_slot.done():
+            result_slot = future_result_slot.result()
+        else:
+            result_slot = self.scope.get_temporary(type)
+            future_result_slot.set_result(result_slot)
+        return result_slot
 
     def visit_Global(self, node):
         for name in node.names:
