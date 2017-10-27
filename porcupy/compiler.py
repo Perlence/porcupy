@@ -776,11 +776,11 @@ class Scope:
             raise IndexError("slot #{} is not reserved".format(index))
         return Slot(register, index, 'z', type)
 
-    def allocate(self, type):
+    def allocate(self, type, temporary=False):
         if isinstance(type, NumberType):
             # TODO: Allocate numeric variables on string slots, when all
             # numeric slots are already taken
-            index = self.numeric_slots.allocate()
+            index = self.numeric_slots.allocate(temporary=temporary)
             return Slot('p', index, 'z', type)
         else:
             raise TypeError("cannot allocate slot of type '{}'".format(type))
@@ -822,7 +822,7 @@ class Scope:
 
     def allocate_temporary(self):
         for slot in self.temporary_slots:
-            new_slot = self.allocate(slot.type)
+            new_slot = self.allocate(slot.type, temporary=True)
             slot.index = new_slot.index
 
     def get(self, name):
@@ -841,20 +841,22 @@ class Slots:
     def __attrs_post_init__(self):
         self.slots = [None for x in range(self.start, self.stop)]
 
-    def allocate(self):
+    def allocate(self, temporary=False):
         for addr, value in enumerate(self.slots):
-            if value is None:
+            if value is None or (value is FREED and not temporary):
                 self.slots[addr] = RESERVED
                 return addr + self.start
         raise MemoryError('ran out of variable slots')
 
     def deallocate(self, addr):
-        self.slots[addr-self.start] = None
+        self.slots[addr-self.start] = FREED
 
     def is_reserved(self, addr):
         return self.slots[addr-self.start] is RESERVED
 
 
 RESERVED = object()
+FREED = object()
+
 GLOBAL = object()
 NONLOCAL = object()

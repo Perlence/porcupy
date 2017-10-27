@@ -72,6 +72,26 @@ def test_nested():
     assert 'is not defined' in str(exc_info)
 
 
+def test_temporary_vars():
+    assert (compile_('def f(x):\n'
+                     '    return 1-x\n'
+                     'x = 42\n'
+                     'y = f(x)') ==
+            'p1z 42 '
+            'p2z p1z p4z 1 p3z p4z-p2z g1z :1 p2z p3z')
+    assert (compile_('def f(x):\n'
+                     '    y = 1-x\n'
+                     '    return 1-y\n'
+                     'x = 42\n'
+                     'y = f(x)') ==
+            'p1z 42 '
+            'p2z p1z '
+            'p5z 1 p3z p5z-p2z '
+            'p5z 1 p4z p5z-p3z '
+            'g1z :1 '
+            'p2z p4z')
+
+
 def test_global_reference():
     assert (compile_('x = 99\n'
                      'def f():\n'
@@ -99,15 +119,6 @@ def test_nonlocal_reference():
                  '    x = 101\n'
                  'f()')
     assert 'no binding for nonlocal' in str(exc_info)
-
-
-@pytest.mark.xfail
-def test_temporary_vars():
-    assert (compile_('def f(x):\n'
-                     '    return 1-x\n'
-                     'x = 42\n'
-                     'y = f(x)') ==
-            'p1z 42 p3z 1 p4z p3z-p1z g1z :1 p2z p4z')
 
 
 def test_call_by_value():
