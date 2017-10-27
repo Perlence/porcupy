@@ -7,7 +7,7 @@ import attr
 
 from .ast import (AST, Module, Assign, If, Const, Slot, EvolvedSlot, BoolOp,
                   operator, Add, Sub, Mult, Div, FloorDiv, Mod, Compare, Label,
-                  Call)
+                  Call, goto)
 from .gameobjs import (Yozhik, Timer, Point, Bot, System, Button, Door,
                        Viewport, Sheep)
 from .types import (NumberType, IntType, BoolType, FloatType, StringType,
@@ -246,14 +246,14 @@ class NodeConverter:
         not_test = self.negate_bool(test)
 
         label_end = self.new_label()
-        goto_end = Slot('g', label_end.index, 'z', None)
+        goto_end = goto(label_end.index)
         if is_loop:
             self.loop_labels.append((label_start, label_end))
 
         label_else = None
         if not self.is_body_empty(node.orelse):
             label_else = self.new_label()
-            goto_else = Slot('g', label_else.index, 'z', None)
+            goto_else = goto(label_else.index)
             self.append_node(If(not_test, [goto_else]))
         else:
             self.append_node(If(not_test, [goto_end]))
@@ -262,7 +262,7 @@ class NodeConverter:
             self.visit(stmt)
 
         if is_loop:
-            goto_start = Slot('g', label_start.index, 'z', None)
+            goto_start = goto(label_start.index)
             self.append_node(goto_start)
 
         if label_else is not None:
@@ -283,12 +283,12 @@ class NodeConverter:
 
     def visit_Continue(self, node):
         label_start, _ = self.loop_labels[-1]
-        goto_start = Slot('g', label_start.index, 'z', None)
+        goto_start = goto(label_start.index)
         self.append_node(goto_start)
 
     def visit_Break(self, node):
         _, label_end = self.loop_labels[-1]
-        goto_end = Slot('g', label_end.index, 'z', None)
+        goto_end = goto(label_end.index)
         self.append_node(goto_end)
 
     def visit_Pass(self, node):
@@ -528,7 +528,7 @@ class NodeConverter:
         self.scope.define_const(node.name, Const(None, InlineFunc(node)))
 
     def visit_Return(self, node):
-        goto_end = Slot('g', self.func_labels[-1].index, 'z', None)
+        goto_end = goto(self.func_labels[-1].index)
         if self.func_result_slots and node.value is not None:
             self.append_assign(self.func_result_slots[-1], self.visit(node.value))
         self.append_node(goto_end)

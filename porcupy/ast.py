@@ -308,3 +308,7 @@ class Label(AST):
 
     def __str__(self):
         return ':{}'.format(self.index)
+
+
+def goto(index):
+    return Slot('g', index, 'z', None)

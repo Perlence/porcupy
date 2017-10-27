@@ -139,6 +139,14 @@ def test_call_by_value():
 
 
 @pytest.mark.xfail
+def test_return_tuple():
+    assert (compile_('def f():\n'
+                     '    return 42, 42\n'
+                     'x, y = f()') ==
+            'p3z 42 p4z 42 g1z :1 p1z p3z p2z p4z')
+
+
+@pytest.mark.xfail
 def test_recursion():
     with pytest.raises(NotImplementedError) as exc_info:
         compile_('def f():\n'
