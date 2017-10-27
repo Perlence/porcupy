@@ -475,8 +475,8 @@ class InlineFunc(Type):
     func_node = attr.ib()
 
     def _call(self, converter, _, *args):
-        with self.reserve_result_slot(converter) as func_result_slot, self.args_in_scope(converter, args), \
-                self.push_end_label(converter):
+        with self.push_to_call_stack(converter), self.reserve_result_slot(converter) as func_result_slot, \
+                self.args_in_scope(converter, args), self.push_end_label(converter):
             for stmt in self.func_node.body:
                 converter.visit(stmt)
             assert func_result_slot.done()
@@ -494,6 +494,14 @@ class InlineFunc(Type):
             if isinstance(node, ast.Return):
                 return True
         return False
+
+    @contextmanager
+    def push_to_call_stack(self, converter):
+        if self.func_node in converter.call_stack:
+            raise NotImplementedError('recursive functions are not implemented')
+        converter.call_stack.append(self.func_node)
+        yield
+        converter.call_stack.pop()
 
     @contextmanager
     def reserve_result_slot(self, converter):

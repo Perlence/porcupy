@@ -53,6 +53,7 @@ class NodeConverter:
     loop_labels = attr.ib(default=attr.Factory(list))
     func_labels = attr.ib(default=attr.Factory(list))
     func_result_slots = attr.ib(default=attr.Factory(list))
+    call_stack = attr.ib(default=attr.Factory(list))
     current_stmt = attr.ib(default=None)
     slots_to_recycle_later = attr.ib(default=attr.Factory(lambda: defaultdict(list)))
 

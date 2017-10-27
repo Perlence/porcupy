@@ -189,7 +189,6 @@ def test_local_array():
             'p1z 42 p2z 11 p3z 22 p4z 33 p5z 44 p6z 55 p7z 2 p7z 42')
 
 
-@pytest.mark.xfail
 def test_recursion():
     with pytest.raises(NotImplementedError) as exc_info:
         compile_('def f():\n'
