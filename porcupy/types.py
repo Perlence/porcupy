@@ -497,6 +497,8 @@ class InlineFunc(Type):
 
     @contextmanager
     def reserve_result_slot(self, converter):
+        # TODO: Don't create temporary variables for results, but
+        # instead assign them directly to assign targets
         future_slot = Future()
         if not self.does_return_value():
             future_slot.set_result(None)
@@ -506,7 +508,6 @@ class InlineFunc(Type):
         converter.func_result_slots.append(future_slot)
         converter.recycle_later(future_slot)
         yield future_slot
-        print('recycle_later', repr(future_slot.result()))
         converter.func_result_slots.remove(future_slot)
 
     @contextmanager

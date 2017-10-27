@@ -70,7 +70,11 @@ class NodeConverter:
             if isinstance(slot, Future):
                 assert slot.done()
                 slot = slot.result()
-            self.scope.recycle_temporary(slot)
+                slots = slot.elts if isinstance(slot, ast.Tuple) else (slot,)
+                for slot in slots:
+                    self.scope.recycle_temporary(slot)
+            else:
+                self.scope.recycle_temporary(slot)
         del self.slots_to_recycle_later[node]
 
         return result
@@ -120,8 +124,14 @@ class NodeConverter:
                 self.append_assign(dest_slot, src_slot)
 
     def unpack_tuples(self, target, value):
-        targets = target.elts if isinstance(target, ast.Tuple) else [target]
-        values = value.elts if isinstance(value, ast.Tuple) else [value]
+        targets = target.elts if isinstance(target, ast.Tuple) else (target,)
+        values = value.elts if isinstance(value, ast.Tuple) else (value,)
+        values = [self.visit(value_item)
+                  if isinstance(value_item, ast.Call)
+                  else value_item
+                  for value_item in values]
+        if len(values) == 1 and isinstance(values[0], ast.Tuple):
+            values = values[0].elts
         if len(targets) < len(values):
             raise ValueError('too many values to unpack (expected {})'.format(len(targets)))
         elif len(targets) > len(values):
@@ -532,21 +542,27 @@ class NodeConverter:
         self.scope.define_const(node.name, Const(None, InlineFunc(node)))
 
     def visit_Return(self, node):
+        value = node.value
+        if self.func_result_slots and value is not None:
+            values = value.elts if isinstance(value, ast.Tuple) else (value,)
+            src_slots = ast.Tuple([self.visit(value) for value in values], ast.Load())
+            result_tuple = self.get_slot_for_result(src_slots.elts)
+            self.visit_Assign(ast.Assign([result_tuple], src_slots))
         goto_end = goto(self.func_labels[-1].index)
-        if self.func_result_slots and node.value is not None:
-            src_slot = self.visit(node.value)
-            result_slot = self.get_slot_for_result(src_slot.type)
-            self.append_assign(result_slot, src_slot)
         self.append_node(goto_end)
 
-    def get_slot_for_result(self, type):
+    def get_slot_for_result(self, src_slots):
         future_result_slot = self.func_result_slots[-1]
         if future_result_slot.done():
-            result_slot = future_result_slot.result()
+            return future_result_slot.result()
+
+        result_slots = [self.scope.get_temporary(src_slot.type) for src_slot in src_slots]
+        if len(result_slots) == 1:
+            result = result_slots[0]
         else:
-            result_slot = self.scope.get_temporary(type)
-            future_result_slot.set_result(result_slot)
-        return result_slot
+            result = ast.Tuple(result_slots, ast.Store())
+        future_result_slot.set_result(result)
+        return result
 
     def visit_Global(self, node):
         for name in node.names:

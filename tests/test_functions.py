@@ -138,12 +138,21 @@ def test_call_by_value():
             'p1z 42 p2z p1z p2z 43')
 
 
-@pytest.mark.xfail
 def test_return_tuple():
     assert (compile_('def f():\n'
                      '    return 42, 42\n'
                      'x, y = f()') ==
-            'p3z 42 p4z 42 g1z :1 p1z p3z p2z p4z')
+            'p3z 42 p4z 42 g1z :1 p5z p3z p6z p4z p1z p5z p2z p6z')
+    with pytest.raises(ValueError) as exc_info:
+        compile_('def f():\n'
+                 '    return 42, 42\n'
+                 'x = f()')
+    assert 'too many values to unpack' in str(exc_info)
+    with pytest.raises(ValueError) as exc_info:
+        compile_('def f():\n'
+                 '    return 42\n'
+                 'x, y = f()')
+    assert 'not enough values to unpack' in str(exc_info)
 
 
 def test_return_different_types():
@@ -165,6 +174,15 @@ def test_return_slice():
             'p10z 5 p11z p7z+p8z p12z p10z-p8z p13z p12z*100 p14z p9z-p8z p15z p11z*10000 p16z p13z+p14z '
             'p17z p15z+p16z g1z :1 '
             'p7z p17z')
+
+
+def test_local_array():
+    assert (compile_('def f():\n'
+                     '    xs = [11, 22, 33, 44, 55]\n'
+                     'x = 42\n'
+                     'f()\n'
+                     'y = 42') ==
+            'p1z 42 p2z 11 p3z 22 p4z 33 p5z 44 p6z 55 p7z 2 p7z 42')
 
 
 @pytest.mark.xfail
